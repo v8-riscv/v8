@@ -15,6 +15,6 @@
 
 // Use 1 for candidates and 0 otherwise.
 // (Boolean macro values are not supported by all preprocessors.)
-#define V8_IS_CANDIDATE_VERSION 1
+#define V8_IS_CANDIDATE_VERSION 0
 
 #endif  // V8_INCLUDE_VERSION_H_
