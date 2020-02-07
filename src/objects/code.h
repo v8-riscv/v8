@@ -465,6 +465,9 @@ class Code : public HeapObject {
                                          : (COMPRESS_POINTERS_BOOL ? 12 : 24);
 #elif V8_TARGET_ARCH_S390X
   static constexpr int kHeaderPaddingSize = COMPRESS_POINTERS_BOOL ? 12 : 24;
+#elif V8_TARGET_ARCH_RISCV
+  // FIXME(RISCV): Not confirmed by spec
+  static constexpr int kHeaderPaddingSize = 24;
 #else
 #error Unknown architecture.
 #endif
