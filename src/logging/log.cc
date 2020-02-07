@@ -590,6 +590,9 @@ void LowLevelLogger::LogCodeInfo() {
   const char arch[] = "arm64";
 #elif V8_TARGET_ARCH_S390
   const char arch[] = "s390";
+#elif V8_TARGET_ARCH_RISCV
+  //FIXME: RISCV porting: need more specific arch strings based on cpu features
+  const char arch[] = "riscv";
 #else
   const char arch[] = "unknown";
 #endif
