@@ -25,7 +25,7 @@ namespace v8 {
 namespace internal {
 
 namespace {
-#if V8_TARGET_ARCH_MIPS64
+#if V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_RISCV
 // MIPS64 has a user space of 2^40 bytes on most processors,
 // address space limits needs to be smaller.
 constexpr size_t kAddressSpaceLimit = 0x8000000000L;  // 512 GiB
