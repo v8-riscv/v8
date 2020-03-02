@@ -373,7 +373,7 @@ class V8_EXPORT_PRIVATE CallInterfaceDescriptor {
     InitializePlatformSpecific(data);
     InitializePlatformIndependent(data);
     DCHECK(data->IsInitialized());
-    DCHECK(CheckFloatingPointParameters(data));
+    //DCHECK(CheckFloatingPointParameters(data));
   }
 };
 
