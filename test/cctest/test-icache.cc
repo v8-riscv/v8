@@ -44,14 +44,14 @@ static void FloodWithInc(Isolate* isolate, TestingAssemblerBuffer* buffer) {
     __ add(r0, r0, Operand(1));
   }
 #elif V8_TARGET_ARCH_MIPS
-  __ mov(v0, a0);
+  __ mov(t0, a0);
   for (int i = 0; i < kNumInstr; ++i) {
-    __ Addu(v0, v0, Operand(1));
+    __ Addu(t0, t0, Operand(1));
   }
 #elif V8_TARGET_ARCH_MIPS64
-  __ mov(v0, a0);
+  __ mov(t0, a0);
   for (int i = 0; i < kNumInstr; ++i) {
-    __ Addu(v0, v0, Operand(1));
+    __ Addu(t0, t0, Operand(1));
   }
 #elif V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_PPC64
   for (int i = 0; i < kNumInstr; ++i) {
@@ -63,9 +63,9 @@ static void FloodWithInc(Isolate* isolate, TestingAssemblerBuffer* buffer) {
   }
 #elif V8_TARGET_ARCH_RISCV
   //FIXME: RISCV Porting use riscv code
-  __ mov(v0, a0);
+  __ mov(t0, a0);
   for (int i = 0; i < kNumInstr; ++i) {
-    __ Addu(v0, v0, Operand(1));
+    __ Addu(t0, t0, Operand(1));
   }
 #else
 #error Unsupported architecture
@@ -84,9 +84,9 @@ static void FloodWithNop(Isolate* isolate, TestingAssemblerBuffer* buffer) {
 #elif V8_TARGET_ARCH_ARM64
   __ CodeEntry();
 #elif V8_TARGET_ARCH_MIPS
-  __ mov(v0, a0);
+  __ mov(t0, a0);
 #elif V8_TARGET_ARCH_MIPS64
-  __ mov(v0, a0);
+  __ mov(t0, a0);
 #endif
   for (int i = 0; i < kNumInstr; ++i) {
     __ nop();
