@@ -12,6 +12,8 @@
 #include "src/base/logging.h"
 #include "src/base/platform/wrappers.h"
 
+#define DEBUG_PRINTF(...) if (FLAG_debug_riscv) { printf(__VA_ARGS__); }
+
 // No-op macro which is used to work around MSVC's funky VA_ARGS support.
 #define EXPAND(x) x
 
