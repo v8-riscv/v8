@@ -1832,56 +1832,137 @@ void TurboAssembler::Floor_w_d(Register rd, FPURegister fs, Register result) {
       });
 }
 
-template <typename F_TYPE>
+// According to JS ECMA specification, for floating-point round operations, if
+// the input is NaN, +/-infinity, or +/-0, the same input is returned as the
+// rounded result; this differs from behavior of RISCV fcvt instructions (which
+// round out-of-range values to the nearest max or min value), therefore special
+// handling is needed by NaN, +/-Infinity, +/-0
+template <typename F>
 void TurboAssembler::RoundHelper(FPURegister dst, FPURegister src,
-                                 RoundingMode frm) {
+                                 FPURegister fpu_scratch, RoundingMode frm) {
   BlockTrampolinePoolScope block_trampoline_pool(this);
   UseScratchRegisterScope temps(this);
   Register scratch = temps.hasAvailable() ? temps.Acquire() : t5;
 
-  if (std::is_same<F_TYPE, double>::value) {
-    // Round into integer register, then convert back to double
-    RV_fcvt_l_d(scratch, src, frm);
-    RV_fcvt_d_l(dst, scratch);
-  } else if (std::is_same<F_TYPE, float>::value) {
-    // Round into integer register, then convert back to float
-    RV_fcvt_w_s(scratch, src, frm);
-    RV_fcvt_s_w(dst, scratch);
+  DCHECK((std::is_same<float, F>::value) || (std::is_same<double, F>::value));
+  // Need at least two FPRs, so check against dst == src == fpu_scratch
+  DCHECK(!(dst == src && dst == fpu_scratch));
+
+  const int kFloat32ExponentBias = 127;
+  const int kFloat32MantissaBits = 23;
+  const int kFloat32ExponentBits = 8;
+  const int kFloat64ExponentBias = 1023;
+  const int kFloat64MantissaBits = 52;
+  const int kFloat64ExponentBits = 11;
+  const int kFloatMantissaBits =
+      sizeof(F) == 4 ? kFloat32MantissaBits : kFloat64MantissaBits;
+  const int kFloatExponentBits =
+      sizeof(F) == 4 ? kFloat32ExponentBits : kFloat64ExponentBits;
+  const int kFloatExponentBias =
+      sizeof(F) == 4 ? kFloat32ExponentBias : kFloat64ExponentBias;
+
+  Label done;
+
+  // extract exponent value of the source floating-point to t6
+  if (std::is_same<F, double>::value) {
+    RV_fmv_x_d(scratch, src);
+    Dext(t6, scratch, kFloatMantissaBits, kFloatExponentBits);
   } else {
-    UNREACHABLE();
+    RV_fmv_x_w(scratch, src);
+    Ext(t6, scratch, kFloatMantissaBits, kFloatExponentBits);
   }
+
+  // if src is NaN/+-Infinity/+-Zero or if the exponent is larger than # of bits
+  // in mantissa, the result is the same as src, so move src to dest  (to avoid
+  // generating another branch)
+  Move(dst, src);
+
+  // If real exponent (i.e., t6 - kFloatExponentBias) is greater than
+  // kFloat32MantissaBits, it means the floating-point value has no fractional
+  // part, thus the input is already rounded, jump to done. Note that, NaN and
+  // Infinity in floating-point representation sets maximal exponent value, so
+  // they also satisfy (t6-kFloatExponentBias >= kFloatMantissaBits), and JS
+  // round semantics specify that rounding of NaN (Infinity) returns NaN
+  // (Infinity), so NaN and Infinity are considered rounded value too.
+  Branch(&done, greater_equal, t6,
+         Operand(kFloatExponentBias + kFloatMantissaBits));
+
+  // Actual rounding is needed along this path
+
+  // old_src holds the original input, needed for the case of src == dst
+  FPURegister old_src = src;
+  if (src == dst) {
+    DCHECK(fpu_scratch != dst);
+    Move(fpu_scratch, src);
+    old_src = fpu_scratch;
+  }
+
+  // Since only input whose real exponent value is less than kMantissaBits
+  // (i.e., 23 or 52-bits) falls into this path, the value range of the input
+  // falls into that of 23- or 53-bit integers. So we round the input to integer
+  // values, then convert them back to floating-point.
+  if (std::is_same<F, double>::value) {
+    RV_fcvt_l_d(scratch, src, frm);
+    RV_fcvt_d_l(dst, scratch, frm);
+  } else {
+    RV_fcvt_w_s(scratch, src, frm);
+    RV_fcvt_s_w(dst, scratch, frm);
+  }
+
+  // A special handling is needed if the input is a very small positive/negative
+  // number that rounds to zero. JS semantics requires that the rounded result
+  // retains the sign of the input, so a very small positive (negative)
+  // floating-point number should be rounded to positive (negative) 0.
+  // Therefore, we use sign-bit injection to produce +/-0 correctly. Instead of
+  // testing for zero w/ a branch, we just insert sign-bit for everyone on this
+  // path (this is where old_src is needed)
+  if (std::is_same<F, double>::value) {
+    RV_fsgnj_d(dst, dst, old_src);
+  } else {
+    RV_fsgnj_s(dst, dst, old_src);
+  }
+
+  bind(&done);
 }
 
-void TurboAssembler::Floor_d_d(FPURegister dst, FPURegister src) {
-  RoundHelper<double>(dst, src, RDN);
+void TurboAssembler::Floor_d_d(FPURegister dst, FPURegister src,
+                               FPURegister fpu_scratch) {
+  RoundHelper<double>(dst, src, fpu_scratch, RDN);
 }
 
-void TurboAssembler::Ceil_d_d(FPURegister dst, FPURegister src) {
-  RoundHelper<double>(dst, src, RUP);
+void TurboAssembler::Ceil_d_d(FPURegister dst, FPURegister src,
+                              FPURegister fpu_scratch) {
+  RoundHelper<double>(dst, src, fpu_scratch, RUP);
 }
 
-void TurboAssembler::Trunc_d_d(FPURegister dst, FPURegister src) {
-  RoundHelper<double>(dst, src, RTZ);
+void TurboAssembler::Trunc_d_d(FPURegister dst, FPURegister src,
+                               FPURegister fpu_scratch) {
+  RoundHelper<double>(dst, src, fpu_scratch, RTZ);
 }
 
-void TurboAssembler::Round_d_d(FPURegister dst, FPURegister src) {
-  RoundHelper<double>(dst, src, RNE);
+void TurboAssembler::Round_d_d(FPURegister dst, FPURegister src,
+                               FPURegister fpu_scratch) {
+  RoundHelper<double>(dst, src, fpu_scratch, RNE);
 }
 
-void TurboAssembler::Floor_s_s(FPURegister dst, FPURegister src) {
-  RoundHelper<float>(dst, src, RDN);
+void TurboAssembler::Floor_s_s(FPURegister dst, FPURegister src,
+                               FPURegister fpu_scratch) {
+  RoundHelper<float>(dst, src, fpu_scratch, RDN);
 }
 
-void TurboAssembler::Ceil_s_s(FPURegister dst, FPURegister src) {
-  RoundHelper<float>(dst, src, RUP);
+void TurboAssembler::Ceil_s_s(FPURegister dst, FPURegister src,
+                              FPURegister fpu_scratch) {
+  RoundHelper<float>(dst, src, fpu_scratch, RUP);
 }
 
-void TurboAssembler::Trunc_s_s(FPURegister dst, FPURegister src) {
-  RoundHelper<float>(dst, src, RTZ);
+void TurboAssembler::Trunc_s_s(FPURegister dst, FPURegister src,
+                               FPURegister fpu_scratch) {
+  RoundHelper<float>(dst, src, fpu_scratch, RTZ);
 }
 
-void TurboAssembler::Round_s_s(FPURegister dst, FPURegister src) {
-  RoundHelper<float>(dst, src, RNE);
+void TurboAssembler::Round_s_s(FPURegister dst, FPURegister src,
+                               FPURegister fpu_scratch) {
+  RoundHelper<float>(dst, src, fpu_scratch, RNE);
 }
 
 void MacroAssembler::Madd_s(FPURegister fd, FPURegister fr, FPURegister fs,
