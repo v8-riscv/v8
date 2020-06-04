@@ -330,8 +330,8 @@ bool RelocInfo::OffHeapTargetIsCodedSpecially() {
   return false;
 #elif defined(V8_TARGET_ARCH_IA32) || defined(V8_TARGET_ARCH_MIPS) || \
     defined(V8_TARGET_ARCH_MIPS64) || defined(V8_TARGET_ARCH_PPC) ||  \
-    defined(V8_TARGET_ARCH_PPC64) || defined(V8_TARGET_ARCH_S390) || defined(V8_TARGET_ARCH_RISCV)
-  //FIXME: RISCV porting confirm the value
+    defined(V8_TARGET_ARCH_PPC64) || defined(V8_TARGET_ARCH_S390) ||  \
+    defined(V8_TARGET_ARCH_RISCV)
   return true;
 #endif
 }
