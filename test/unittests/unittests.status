@@ -49,7 +49,6 @@
 
 ##############################################################################
 ['arch == riscv32 or arch == riscv64', {
-  'InstructionSelectorTest/InstructionSelectorMemoryAccessUnalignedImmTest.StoreZero/*': [SKIP],
   'MicrotaskQueueTest.PromiseHandlerContext': [SKIP],
   
   'TestWithNativeContext.EvictDeoptedEntriesCompact': [SKIP],
