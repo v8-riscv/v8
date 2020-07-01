@@ -82,10 +82,15 @@ constexpr RegList kLiftoffAssemblerFpCacheRegs = DoubleRegister::ListOf(
 // Any change of kLiftoffAssemblerGpCacheRegs also need to update
 // kPushedGpRegs in frame-constants-riscv64.h
 constexpr RegList kLiftoffAssemblerGpCacheRegs =
-  Register::ListOf(a0, a1, a2, a3, a4, a5, a6, a7, t0, t1, t2, s7, t4);
+    Register::ListOf(a0, a1, a2, a3, a4, a5, a6, a7, t0, t1, t2, s7, t4);
 
-constexpr RegList kLiftoffAssemblerFpCacheRegs = DoubleRegister::ListOf(ft0, ft1, ft2,
-    ft3, ft4, ft5, ft6, ft7, fa0, fa1, fa2, fa3, fa4, fa5, fa6, fa7, ft8, ft9, ft10, ft11);
+constexpr RegList kLiftoffAssemblerFpCacheRegs =
+    DoubleRegister::ListOf(ft0, ft1, ft2, ft3, ft4, ft5, ft6, ft7, fa0, fa1,
+                           fa2, fa3, fa4, fa5, fa6, fa7, ft8, ft9, ft10, ft11);
+
+#elif V8_TARGET_ARCH_RISCV32
+
+#error Unsupported architecture
 
 #elif V8_TARGET_ARCH_RISCV
 
@@ -98,6 +103,77 @@ constexpr RegList kLiftoffAssemblerGpCacheRegs = 0xff;
 constexpr RegList kLiftoffAssemblerFpCacheRegs = 0xff;
 
 #endif
+<<<<<<< HEAD
+=======
+
+#if V8_TARGET_ARCH_IA32 || V8_TARGET_ARCH_X64
+
+constexpr Condition kEqual = equal;
+constexpr Condition kUnequal = not_equal;
+constexpr Condition kSignedLessThan = less;
+constexpr Condition kSignedLessEqual = less_equal;
+constexpr Condition kSignedGreaterThan = greater;
+constexpr Condition kSignedGreaterEqual = greater_equal;
+constexpr Condition kUnsignedLessThan = below;
+constexpr Condition kUnsignedLessEqual = below_equal;
+constexpr Condition kUnsignedGreaterThan = above;
+constexpr Condition kUnsignedGreaterEqual = above_equal;
+
+#elif V8_TARGET_ARCH_MIPS || V8_TARGET_ARCH_MIPS64
+
+constexpr Condition kEqual = eq;
+constexpr Condition kUnequal = ne;
+constexpr Condition kSignedLessThan = lt;
+constexpr Condition kSignedLessEqual = le;
+constexpr Condition kSignedGreaterThan = gt;
+constexpr Condition kSignedGreaterEqual = ge;
+constexpr Condition kUnsignedLessThan = ult;
+constexpr Condition kUnsignedLessEqual = ule;
+constexpr Condition kUnsignedGreaterThan = ugt;
+constexpr Condition kUnsignedGreaterEqual = uge;
+
+#elif V8_TARGET_ARCH_ARM || V8_TARGET_ARCH_ARM64
+
+constexpr Condition kEqual = eq;
+constexpr Condition kUnequal = ne;
+constexpr Condition kSignedLessThan = lt;
+constexpr Condition kSignedLessEqual = le;
+constexpr Condition kSignedGreaterThan = gt;
+constexpr Condition kSignedGreaterEqual = ge;
+constexpr Condition kUnsignedLessThan = lo;
+constexpr Condition kUnsignedLessEqual = ls;
+constexpr Condition kUnsignedGreaterThan = hi;
+constexpr Condition kUnsignedGreaterEqual = hs;
+
+#elif V8_TARGET_ARCH_RISCV64 || V8_TARGET_ARCH_RISCV32
+constexpr Condition kEqual = eq;
+constexpr Condition kUnequal = ne;
+constexpr Condition kSignedLessThan = lt;
+constexpr Condition kSignedLessEqual = le;
+constexpr Condition kSignedGreaterThan = gt;
+constexpr Condition kSignedGreaterEqual = ge;
+constexpr Condition kUnsignedLessThan = ult;
+constexpr Condition kUnsignedLessEqual = ule;
+constexpr Condition kUnsignedGreaterThan = ugt;
+constexpr Condition kUnsignedGreaterEqual = uge;
+
+#else
+
+// On unimplemented platforms, just make this compile.
+constexpr Condition kEqual = static_cast<Condition>(0);
+constexpr Condition kUnequal = static_cast<Condition>(0);
+constexpr Condition kSignedLessThan = static_cast<Condition>(0);
+constexpr Condition kSignedLessEqual = static_cast<Condition>(0);
+constexpr Condition kSignedGreaterThan = static_cast<Condition>(0);
+constexpr Condition kSignedGreaterEqual = static_cast<Condition>(0);
+constexpr Condition kUnsignedLessThan = static_cast<Condition>(0);
+constexpr Condition kUnsignedLessEqual = static_cast<Condition>(0);
+constexpr Condition kUnsignedGreaterThan = static_cast<Condition>(0);
+constexpr Condition kUnsignedGreaterEqual = static_cast<Condition>(0);
+
+#endif
+
+>>>>>>> Separate RISCV32/64 into separate directories
 }  // namespace wasm
 }  // namespace internal
 }  // namespace v8
