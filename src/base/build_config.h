@@ -47,10 +47,11 @@
 #define V8_HOST_ARCH_32_BIT 1
 #endif
 #elif defined(__riscv) || defined(__riscv__)
-#define V8_HOST_ARCH_RISCV 1
 #if __riscv_xlen == 64
+#define V8_HOST_ARCH_RISCV64 1
 #define V8_HOST_ARCH_64_BIT 1
 #elif __riscv_xlen == 32
+#define V8_HOST_ARCH_RISCV32 1
 #define V8_HOST_ARCH_32_BIT 1
 #else
 #error "Cannot detect Riscv's bitwidth"
@@ -85,7 +86,7 @@
 #if !V8_TARGET_ARCH_X64 && !V8_TARGET_ARCH_IA32 && !V8_TARGET_ARCH_ARM &&      \
     !V8_TARGET_ARCH_ARM64 && !V8_TARGET_ARCH_MIPS && !V8_TARGET_ARCH_MIPS64 && \
     !V8_TARGET_ARCH_PPC && !V8_TARGET_ARCH_PPC64 && !V8_TARGET_ARCH_S390 &&    \
-    !V8_TARGET_ARCH_RISCV
+    !V8_TARGET_ARCH_RISCV64 && !V8_TARGET_ARCH_RISCV32
 #if defined(_M_X64) || defined(__x86_64__)
 #define V8_TARGET_ARCH_X64 1
 #elif defined(_M_IX86) || defined(__i386__)
@@ -103,7 +104,11 @@
 #elif defined(_ARCH_PPC)
 #define V8_TARGET_ARCH_PPC 1
 #elif defined(__riscv) || defined(__riscv__)
-#define V8_TARGET_ARCH_RISCV 1
+#if __riscv_xlen == 64
+#define V8_TARGET_ARCH_RISCV64 1
+#elif __riscv_xlen == 32
+#define V8_TARGET_ARCH_RISCV32 1
+#endif
 #else
 #error Target architecture was not detected as supported by v8
 #endif
@@ -138,14 +143,10 @@
 #else
 #define V8_TARGET_ARCH_32_BIT 1
 #endif
-#elif V8_TARGET_ARCH_RISCV
-#if __riscv_xlen == 64
+#elif V8_TARGET_ARCH_RISCV64
 #define V8_TARGET_ARCH_64_BIT 1
-#elif __riscv_xlen == 32
+#elif V8_TARGET_ARCH_RISCV32
 #define V8_TARGET_ARCH_32_BIT 1
-#else
-#error "Cannot detect Riscv's bitwidth"
-#endif
 #else
 #error Unknown target architecture pointer size
 #endif
@@ -174,8 +175,12 @@
 #if (V8_TARGET_ARCH_MIPS64 && !(V8_HOST_ARCH_X64 || V8_HOST_ARCH_MIPS64))
 #error Target architecture mips64 is only supported on mips64 and x64 host
 #endif
-#if (V8_TARGET_ARCH_RISCV && !(V8_HOST_ARCH_X64 || V8_HOST_ARCH_RISCV))
-#error Target architecture riscv is only supported on riscv and x64 host
+#if (V8_TARGET_ARCH_RISCV64 && !(V8_HOST_ARCH_X64 || V8_HOST_ARCH_RISCV64))
+#error Target architecture riscv64 is only supported on riscv64 and x64 host
+#endif
+#if (V8_TARGET_ARCH_RISCV32 && \
+     !(V8_HOST_ARCH_X64 || V8_HOST_ARCH_RISCV32 || V8_HOST_ARCH_RISCV64))
+#error Target architecture riscv32 is only supported on riscv32, riscv64, and x64 host
 #endif
 
 // Determine architecture endianness.
@@ -211,7 +216,7 @@
 #else
 #define V8_TARGET_BIG_ENDIAN 1
 #endif
-#elif V8_TARGET_ARCH_RISCV
+#elif V8_TARGET_ARCH_RISCV64 || V8_TARGET_ARCH_RISCV32
 #define V8_TARGET_LITTLE_ENDIAN 1
 #else
 #error Unknown target architecture endianness
