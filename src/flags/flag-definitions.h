@@ -55,7 +55,7 @@
   {Flag::TYPE_##ftype, #nam, &FLAG_##nam, &FLAGDEFAULT_##nam, cmt, false},
 #define FLAG_ALIAS(ftype, ctype, alias, nam)                     \
   {Flag::TYPE_##ftype,  #alias, &FLAG_##nam, &FLAGDEFAULT_##nam, \
-    "alias for --" #nam, false},
+   "alias for --" #nam, false},
 
 // We produce the code to set flags when it is implied by another flag.
 #elif defined(FLAG_MODE_DEFINE_IMPLICATIONS)
@@ -227,8 +227,8 @@ DEFINE_IMPLICATION(harmony_weak_refs_with_cleanup_some, harmony_weak_refs)
   V(harmony_atomics_waitasync, "harmony Atomics.waitAsync")
 
 #ifdef V8_INTL_SUPPORT
-#define HARMONY_INPROGRESS(V)                       \
-  HARMONY_INPROGRESS_BASE(V)                        \
+#define HARMONY_INPROGRESS(V) \
+  HARMONY_INPROGRESS_BASE(V)  \
   V(harmony_intl_displaynames_date_types, "Intl.DisplayNames date types")
 #else
 #define HARMONY_INPROGRESS(V) HARMONY_INPROGRESS_BASE(V)
@@ -1322,7 +1322,7 @@ DEFINE_BOOL(check_icache, false,
             "Check icache flushes in ARM and MIPS simulator")
 DEFINE_INT(stop_sim_at, 0, "Simulator stop after x number of instructions")
 #if defined(V8_TARGET_ARCH_ARM64) || defined(V8_TARGET_ARCH_MIPS64) || \
-    defined(V8_TARGET_ARCH_PPC64) || defined(V8_TARGET_ARCH_RISCV)
+    defined(V8_TARGET_ARCH_PPC64) || defined(V8_TARGET_ARCH_RISCV64)
 DEFINE_INT(sim_stack_alignment, 16,
            "Stack alignment in bytes in simulator. This must be a power of two "
            "and it must be at least 16. 16 is default.")
