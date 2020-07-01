@@ -375,7 +375,8 @@ TF_BUILTIN(AtomicsExchange, SharedArrayBufferBuiltinsAssembler) {
   // 2. Let i be ? ValidateAtomicAccess(typedArray, index).
   TNode<UintPtrT> index_word = ValidateAtomicAccess(array, index, context);
 
-#if V8_TARGET_ARCH_MIPS || V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_RISCV
+#if V8_TARGET_ARCH_MIPS || V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_RISCV64 || \
+    V8_TARGET_ARCH_RISCV32
   // FIXME(RISCV): Review this special case once atomics are added
   TNode<Number> index_number = ChangeUintPtrToTagged(index_word);
   Return(CallRuntime(Runtime::kAtomicsExchange, context, array, index_number,
@@ -476,7 +477,8 @@ TF_BUILTIN(AtomicsExchange, SharedArrayBufferBuiltinsAssembler) {
   // This shouldn't happen, we've already validated the type.
   BIND(&other);
   Unreachable();
-#endif  // V8_TARGET_ARCH_MIPS || V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_RISCV
+#endif  // V8_TARGET_ARCH_MIPS || V8_TARGET_ARCH_MIPS64 ||
+        // V8_TARGET_ARCH_RISCV64 || V8_TARGET_ARCH_RISCV32
 
   BIND(&detached);
   {
@@ -505,8 +507,8 @@ TF_BUILTIN(AtomicsCompareExchange, SharedArrayBufferBuiltinsAssembler) {
   TNode<UintPtrT> index_word = ValidateAtomicAccess(array, index, context);
 
 #if V8_TARGET_ARCH_MIPS || V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_PPC64 || \
-    V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_S390 || V8_TARGET_ARCH_S390X || \
-    V8_TARGET_ARCH_RISCV
+    V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_S390 || V8_TARGET_ARCH_S390X ||    \
+    V8_TARGET_ARCH_RISCV64 || V8_TARGET_ARCH_RISCV32
   // FIXME(RISCV): Review this special case once atomics are added
   TNode<Number> index_number = ChangeUintPtrToTagged(index_word);
   Return(CallRuntime(Runtime::kAtomicsCompareExchange, context, array,
@@ -628,7 +630,7 @@ TF_BUILTIN(AtomicsCompareExchange, SharedArrayBufferBuiltinsAssembler) {
   Unreachable();
 #endif  // V8_TARGET_ARCH_MIPS || V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_PPC64
         // || V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_S390 || V8_TARGET_ARCH_S390X
-        // || V8_TARGET_ARCH_RISCV
+        // || V8_TARGET_ARCH_RISCV64 || V8_TARGET_ARCH_RISCV32
 
   BIND(&detached);
   {
@@ -680,8 +682,8 @@ void SharedArrayBufferBuiltinsAssembler::AtomicBinopBuiltinCommon(
   TNode<UintPtrT> index_word = ValidateAtomicAccess(array, index, context);
 
 #if V8_TARGET_ARCH_MIPS || V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_PPC64 || \
-    V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_S390 || V8_TARGET_ARCH_S390X || \
-    V8_TARGET_ARCH_RISCV
+    V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_S390 || V8_TARGET_ARCH_S390X ||    \
+    V8_TARGET_ARCH_RISCV64 || V8_TARGET_ARCH_RISCV32
   // FIXME(RISCV): Review this special case once atomics are added
   TNode<Number> index_number = ChangeUintPtrToTagged(index_word);
   Return(CallRuntime(runtime_function, context, array, index_number, value));
@@ -774,7 +776,7 @@ void SharedArrayBufferBuiltinsAssembler::AtomicBinopBuiltinCommon(
   Unreachable();
 #endif  // V8_TARGET_ARCH_MIPS || V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_PPC64
         // || V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_S390 || V8_TARGET_ARCH_S390X
-        // || V8_TARGET_ARCH_RISCV
+        // || V8_TARGET_ARCH_RISCV64 || V8_TARGET_ARCH_RISCV32
 
   BIND(&detached);
   ThrowTypeError(context, MessageTemplate::kDetachedOperation, method_name);
