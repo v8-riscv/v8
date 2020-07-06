@@ -113,6 +113,8 @@ SLOW_ARCHS = [
   "mips64el",
   "s390",
   "s390x",
+  "riscv32",
+  "riscv64"
 ]
 
 
