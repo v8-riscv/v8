@@ -467,7 +467,7 @@ class Code : public HeapObject {
   static constexpr int kHeaderPaddingSize = COMPRESS_POINTERS_BOOL ? 12 : 24;
 #elif V8_TARGET_ARCH_RISCV64
   static constexpr int kHeaderPaddingSize = 24;
-#elif V8_TARGET_ARCH_RISCV32
+#elif V8_TARGET_ARCH_RISCV
 #error riscv32 unsupported yet
 #else
 #error Unknown architecture.
