@@ -781,7 +781,7 @@ bool RegExpImpl::Compile(Isolate* isolate, Zone* zone, RegExpCompileData* data,
 #elif V8_TARGET_ARCH_MIPS64
     macro_assembler.reset(new RegExpMacroAssemblerMIPS(isolate, zone, mode,
                                                        output_register_count));
-#elif V8_TARGET_ARCH_RISCV64 || V8_TARGET_ARCH_RISCV32
+#elif V8_TARGET_ARCH_RISCV64 || V8_TARGET_ARCH_RISCV
     macro_assembler.reset(new RegExpMacroAssemblerRISCV(isolate, zone, mode,
                                                         output_register_count));
 #else

@@ -81,7 +81,7 @@
   'proposals/tail-call/skip-stack-guard-page': '--sim-stack-size=8192',
 }],  # '(arch == mipsel or arch == mips64el) and simulator_run'
 
-['arch == riscv32 or arch == riscv64', {
+['arch == riscv or arch == riscv64', {
   'conversions': [SKIP],
   'proposals/JS-BigInt-integration/conversions': [SKIP],
   'proposals/bulk-memory-operations/conversions': [SKIP],
