@@ -572,7 +572,7 @@ UTEST_LOAD_STORE(lw, sw, int32_t, 0x456AF894)
 // set the 32th least significant bit of
 // value-to-store to 1 to test
 // zero-extension by lwu
-UTEST_LOAD_STORE(lwu, sw, int32_t, 0x856AF894)
+UTEST_LOAD_STORE(lwu, sw, int32_t, 0x756AF894)
 // due to sign-extension of lh
 // instruction, value-to-stored must have
 // its 16th least significant bit be 0
