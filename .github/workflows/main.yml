@@ -32,7 +32,19 @@ jobs:
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
         echo "::add-path::$GITHUB_WORKSPACE/depot_tools"
 
+    # - name: Cache upstream v8
+    #   id: cache-upstream
+    #   uses: actions/cache@v2
+    #   env:
+    #     cache-name: cache-upstream-v8
+    #   with:
+    #     path: v8
+    #     key: ${{ env.cache-name }}-8.1.268
+    #     restore-keys: |
+    #       ${{ env.cache-name }}-
+
     - name: Fetch upstream v8
+      # if: steps.cache-upstream.outputs.cache-hit != 'true'
       run: |
         fetch v8
         (cd v8 && git checkout 8.1.268)
@@ -53,6 +65,16 @@ jobs:
       run: |
         cp v8/patches/build.patch v8/build/
         (cd v8/build && git apply build.patch)
+
+    - name: Cache build
+      uses: actions/cache@v2
+      env:
+        cache-name: cache-build
+      with:
+        path: v8/out/riscv64.sim
+        key: ${{ env.cache-name }}-$GITHUB_SHA
+        restore-keys: |
+          ${{ env.cache-name }}
 
     - name: Configure with GN
       run: |
