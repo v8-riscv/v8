@@ -491,17 +491,15 @@ void TurboAssembler::Mulh32(Register rd, Register rs, const Operand& rt) {
   srai(rd, rd, 32);
 }
 
-void TurboAssembler::Mulhu32(Register rd, Register rs, const Operand& rt) {
-  if (rt.is_reg()) {
-    mulhu(rd, rs, rt.rm());
-  } else {
-    // li handles the relocation.
-    UseScratchRegisterScope temps(this);
-    Register scratch = temps.Acquire();
-    DCHECK(rs != scratch);
-    RV_li(scratch, rt.immediate());
-    mulhu(rd, rs, scratch);
-  }
+void TurboAssembler::Mulhu32(Register rd, Register rs, const Operand& rt,
+                             Register rsz, Register rtz) {
+  slli(rsz, rs, 32);
+  if (rt.is_reg())
+    slli(rtz, rt.rm(), 32);
+  else
+    RV_li(rtz, rt.immediate() << 32);
+  mulhu(rd, rsz, rtz);
+  srli(rd, rd, 32);
 }
 
 void TurboAssembler::Mul64(Register rd, Register rs, const Operand& rt) {
@@ -1239,23 +1237,23 @@ void MacroAssembler::StoreWordPair(Register rd, const MemOperand& rs,
   Sw(scratch, MemOperand(rs.rm(), rs.offset() + kPointerSize / 2));
 }
 
-void TurboAssembler::Ulwc1(FPURegister fd, const MemOperand& rs,
-                           Register scratch) {
+void TurboAssembler::ULoadFloat(FPURegister fd, const MemOperand& rs,
+                                Register scratch) {
   UnalignedFLoadHelper<4>(fd, rs, scratch);
 }
 
-void TurboAssembler::Uswc1(FPURegister fd, const MemOperand& rs,
-                           Register scratch) {
+void TurboAssembler::UStoreFloat(FPURegister fd, const MemOperand& rs,
+                                 Register scratch) {
   UnalignedFStoreHelper<4>(fd, rs, scratch);
 }
 
-void TurboAssembler::Uldc1(FPURegister fd, const MemOperand& rs,
-                           Register scratch) {
+void TurboAssembler::ULoadDouble(FPURegister fd, const MemOperand& rs,
+                                 Register scratch) {
   UnalignedFLoadHelper<8>(fd, rs, scratch);
 }
 
-void TurboAssembler::Usdc1(FPURegister fd, const MemOperand& rs,
-                           Register scratch) {
+void TurboAssembler::UStoreDouble(FPURegister fd, const MemOperand& rs,
+                                  Register scratch) {
   UnalignedFStoreHelper<8>(fd, rs, scratch);
 }
 
@@ -3185,7 +3183,7 @@ void TurboAssembler::BranchLong(Label* L) {
     int32_t Hi20 = (((int32_t)imm64 + 0x800) >> 12);
     int32_t Lo12 = (int32_t)imm64 << 20 >> 20;
     auipc(t5, Hi20);  // Read PC + Hi20 into t5.
-    jr(t5, Lo12);   // jump PC + Hi20 + Lo12
+    jr(t5, Lo12);     // jump PC + Hi20 + Lo12
   }
 }
 
