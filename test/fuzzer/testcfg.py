@@ -16,7 +16,7 @@ SUB_TESTS = [
   'wasm',
   'wasm_async',
   'wasm_code',
-  'wasm_compile',
+  'wasm_compile'
 ]
 
 class VariantsGenerator(testsuite.VariantsGenerator):
@@ -28,6 +28,9 @@ class TestLoader(testsuite.GenericTestLoader):
   @property
   def test_dirs(self):
     return SUB_TESTS
+  
+  def _should_filter_by_name(self, filename):
+    return False
 
   def _to_relpath(self, abspath, _):
     return os.path.relpath(abspath, self.suite.root)
