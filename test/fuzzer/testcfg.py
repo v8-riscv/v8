@@ -16,7 +16,7 @@ SUB_TESTS = [
   'wasm',
   'wasm_async',
   'wasm_code',
-  'wasm_compile'
+  'wasm_compile',
 ]
 
 class VariantsGenerator(testsuite.VariantsGenerator):
