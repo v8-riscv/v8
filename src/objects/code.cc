@@ -84,6 +84,7 @@ void Code::FlushICache() const {
 
 void Code::CopyFromNoFlush(Heap* heap, const CodeDesc& desc) {
   // Copy code.
+  DEBUG_PRINTF("CopyFromNoFlush: %p -> %p\n", desc.buffer, reinterpret_cast<byte*>(raw_instruction_start()));
   CopyBytes(reinterpret_cast<byte*>(raw_instruction_start()), desc.buffer,
             static_cast<size_t>(desc.instr_size));
 

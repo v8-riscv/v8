@@ -129,9 +129,10 @@ TEST(LoadAddress) {
   __ jr(ra);
   __ nop();
   __ bind(&skip);
-  __ li(a4, Operand(masm->jump_address(&to_jump)), ADDRESS_LOAD);
+  __ LoadAddress(a4, &to_jump);
+  // __ li(a4, Operand(masm->jump_address(&to_jump)), ADDRESS_LOAD);
   int check_size = masm->InstructionsGeneratedSince(&skip);
-  // FIXME (RISCV): current li generates 8 instructions, if the sequence has
+  // NOTE (RISCV): current li generates 8 instructions, if the sequence is
   // changed, need to adjust the CHECK_EQ value too
   CHECK_EQ(8, check_size);
   __ jr(a4);

@@ -3261,7 +3261,9 @@ void TurboAssembler::Call(Label* target) { BranchAndLink(target); }
 
 void TurboAssembler::LoadAddress(Register dst, Label* target) {
   uint64_t address = jump_address(target);
-  li(dst, address);
+  DEBUG_PRINTF("LoadAddress: %p: %p\n", pc_, (void*)address);
+  RecordRelocInfo(RelocInfo::CODE_TARGET, address);
+  li(dst, address, ADDRESS_LOAD);
 }
 
 void TurboAssembler::Push(Smi smi) {

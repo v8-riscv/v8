@@ -1868,6 +1868,7 @@ void Assembler::AdjustBaseAndOffset(MemOperand* src, Register scratch,
 // FIXME (RISCV): not yet ported (or not used?)
 int Assembler::RelocateInternalReference(RelocInfo::Mode rmode, Address pc,
                                          intptr_t pc_delta) {
+  DEBUG_PRINTF("RelocateInternalReference\n");
   if (RelocInfo::IsInternalReference(rmode)) {
     int64_t* p = reinterpret_cast<int64_t*>(pc);
     if (*p == kEndOfJumpChain) {
@@ -2173,6 +2174,21 @@ void Assembler::set_target_value_at(Address pc, uint64_t target,
   *(p + 7) = OP_IMM | (rd_code << kRdShift) | (0b000 << kFunct3Shift) |
              (rd_code << kRs1Shift) |
              ((uint32_t)(target << 52 >> 52) << kImm12Shift);
+
+  disasm::NameConverter converter;
+  disasm::Disassembler disasm(converter);
+  EmbeddedVector<char, 128> disasm_buffer;
+
+  disasm.InstructionDecode(disasm_buffer, reinterpret_cast<byte*>(instr0));
+  DEBUG_PRINTF("%p: %s\n", instr0, disasm_buffer.begin());
+  disasm.InstructionDecode(disasm_buffer, reinterpret_cast<byte*>(instr1));
+  DEBUG_PRINTF("%p: %s\n", instr1, disasm_buffer.begin());
+  disasm.InstructionDecode(disasm_buffer, reinterpret_cast<byte*>(instr3));
+  DEBUG_PRINTF("%p: %s\n", instr3, disasm_buffer.begin());
+  disasm.InstructionDecode(disasm_buffer, reinterpret_cast<byte*>(instr5));
+  DEBUG_PRINTF("%p: %s\n", instr5, disasm_buffer.begin());
+  disasm.InstructionDecode(disasm_buffer, reinterpret_cast<byte*>(instr7));
+  DEBUG_PRINTF("%p: %s\n", instr7, disasm_buffer.begin());
 
   if (icache_flush_mode != SKIP_ICACHE_FLUSH) {
     FlushInstructionCache(pc, 8 * kInstrSize);
