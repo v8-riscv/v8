@@ -792,6 +792,9 @@
   'regress/regress-752764': [SKIP],
   'regress/regress-779407': [SKIP],
   'harmony/bigint/regressions': [SKIP],
+
+  #BUG(ISSUE #56) 
+  'es6/promises': [SKIP],
 }],  # 'arch == riscv64 or arch == riscv'
 
 # copied from mips
