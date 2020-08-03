@@ -736,7 +736,7 @@ void Assembler::GenInstrB(uint8_t funct3, Opcode opcode, Register rs1,
 }
 
 void Assembler::GenInstrU(Opcode opcode, Register rd, int32_t imm20) {
-  DCHECK(rd.is_valid() && is_int20(imm20));
+  DCHECK(rd.is_valid() && (is_int20(imm20) || is_uint20(imm20)));
   Instr instr = opcode | (rd.code() << kRdShift) | (imm20 << kImm20Shift);
   emit(instr);
 }
@@ -1693,75 +1693,106 @@ void Assembler::sfence_vma(Register rs1, Register rs2) {
 // Assembler Pseudo Instructions (Tables 25.2 and 25.3, RISC-V Unprivileged ISA)
 
 void Assembler::nop() { addi(ToRegister(0), ToRegister(0), 0); }
-
-// The code in *this function only* is based on LLVM's `generateInstSeq`
-// (RISCVMatInt.cpp), part of the LLVM Project, under the Apache License v2.0
-// with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
-// information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 void Assembler::RV_li(Register rd, int64_t imm) {
+  // Put 64-bit immediate in register rd.
+  // In the worst case, for a full 64-bit constant, a sequence of 6 instructions
+  // are generated. If imm is 32-bit it generates two instructions, lui and
+  // addi. If imm is more than 32-bits and the bit 32 of the lower 32 bit is 1
+  // (a negative 32-bit), the value 0xffffffff00000000 is subtracted from mm, to
+  // compensate for sign extension that lui instruction generates. First the
+  // lower part of mm is built in rd (2 inst). The upper part is built in rd_up
+  // the temp register (2 instr).
+  // rd_up is shifted left 32 bits and added to lower part in rd (2 inst).
   if (is_int32(imm + 0x800)) {
-    // Depending on the active bits in the immediate Value v, the following
-    // instruction sequences are emitted:
-    //
-    // v == 0                        : ADDI
-    // v[0,12) != 0 && v[12,32) == 0 : ADDI
-    // v[0,12) == 0 && v[12,32) != 0 : LUI
-    // v[0,32) != 0                  : LUI+ADDI(W)
-    int64_t Hi20 = ((imm + 0x800) >> 12);
-    int64_t Lo12 = imm << 52 >> 52;
-    Register base = zero_reg;
-
-    if (Hi20) {
-      lui(rd, (int32_t)Hi20);
-      base = rd;
-    }
-
-    if (Lo12 || Hi20 == 0) {
-      addi(rd, base, Lo12);
+    int64_t high_20 = ((imm + 0x800) >> 12);
+    int64_t low_12 = imm << 52 >> 52;
+    if (high_20) {
+      lui(rd, (int32_t)high_20);
+      if (low_12) {
+        addi(rd, rd, low_12);
+      }
+    } else {
+      addi(rd, zero_reg, low_12);
     }
     return;
+  } else {
+    // Devid imm to two 32-bit parts, upper and lower
+    if (imm == -1) {
+      addi(rd, zero_reg, -1);
+      return;
+    }
+    if (imm & 0x80000000ull) {
+      imm -= 0xffffffff00000000ull;
+    }
+    // Get parts
+    int64_t up_32 = (((imm & 0xffffffff00000000ull) >> 32)) << 32 >> 32;
+    int64_t low_32 = (((imm & 0xffffffffull))) << 32 >> 32;
+    // Build lower part
+    bool is_neg = false;
+    if (up_32 == 0xffffffff) {
+      is_neg = true;
+    }
+    if (low_32 != 0) {
+      int64_t high_20 = ((low_32 + 0x800) >> 12);
+      int64_t low_12 = low_32 & 0xfff;
+      if (high_20) {
+        if (high_20 & 0x100000) {
+          // Adjust it to 20
+          high_20 &= 0xfffff;
+        }
+        lui(rd, (int32_t)high_20);
+        if (low_12) {
+          addi(rd, rd, low_12);
+        }
+      } else {
+        addi(rd, zero_reg, low_12);
+      }
+
+      if (low_32 & 0x80000000) {
+        // Upper 32-bit of lower part is 0xffffffff
+        if (is_neg) {
+          return;
+        }
+      }
+    } else {
+      // low_32 is zero
+      if (is_neg) {
+        addi(rd, zero_reg, -1);
+        srli(rd, rd, 32);
+        slli(rd, rd, 32);
+        return;
+      }
+    }
+    // Build upper part in a temporary register
+    Register rd_up = rd;
+    if (low_32 != 0) {
+      UseScratchRegisterScope temps(this);
+      BlockTrampolinePoolScope block_trampoline_pool(this);
+      rd_up = temps.hasAvailable() ? temps.Acquire() : t5;
+      if (rd == rd_up) {
+        rd_up = t6;
+      }
+    }
+    int64_t high_20 = ((up_32 + 0x800) >> 12);
+    int64_t low_12 = up_32 & 0xfff;
+    if (high_20) {
+      if (((high_20)&0x100000) == 1) {
+        // Adjust overflow
+        high_20 &= 0xfffff;
+      }
+      lui(rd_up, (int32_t)high_20);
+      if (low_12) {
+        addi(rd_up, rd_up, low_12);
+      }
+    } else {
+      addi(rd_up, zero_reg, low_12);
+    }
+    // Put it at the bgining
+    slli(rd_up, rd_up, 32);
+    if (low_32 != 0) {
+      add(rd, rd, rd_up);
+    }
   }
-
-  assert(V8_TARGET_ARCH_64_BIT && "Can't emit >32-bit imm for non-RV64 target");
-
-  // In the worst case, for a full 64-bit constant, a sequence of 8 instructions
-  // (i.e., LUI+ADDIW+SLLI+ADDI+SLLI+ADDI+SLLI+ADDI) has to be emmitted. Note
-  // that the first two instructions (LUI+ADDIW) can contribute up to 32 bits
-  // while the following ADDI instructions contribute up to 12 bits each.
-  //
-  // On the first glance, implementing this seems to be possible by simply
-  // emitting the most significant 32 bits (LUI+ADDIW) followed by as many left
-  // shift (SLLI) and immediate additions (ADDI) as needed. However, due to the
-  // fact that ADDI performs a sign extended addition, doing it like that would
-  // only be possible when at most 11 bits of the ADDI instructions are used.
-  // Using all 12 bits of the ADDI instructions, like done by GAS, actually
-  // requires that the constant is processed starting with the least significant
-  // bit.
-  //
-  // In the following, constants are processed from LSB to MSB but instruction
-  // emission is performed from MSB to LSB by recursively calling
-  // generateInstSeq. In each recursion, first the lowest 12 bits are removed
-  // from the constant and the optimal shift amount, which can be greater than
-  // 12 bits if the constant is sparse, is determined. Then, the shifted
-  // remaining constant is processed recursively and gets emitted as soon as it
-  // fits into 32 bits. The emission of the shifts and additions is subsequently
-  // performed when the recursion returns.
-
-  int64_t Lo12 = imm << 52 >> 52;
-  int64_t Hi52 = ((uint64_t)imm + 0x800ull) >> 12;
-  int FirstBit = 0;
-  uint64_t Val = Hi52;
-  while ((Val & 1) == 0) {
-    Val = Val >> 1;
-    FirstBit++;
-  }
-  int ShiftAmount = 12 + FirstBit;
-  Hi52 = (Hi52 >> (ShiftAmount - 12)) << ShiftAmount >> ShiftAmount;
-
-  RV_li(rd, Hi52);
-
-  slli(rd, rd, ShiftAmount);
-  if (Lo12) addi(rd, rd, Lo12);
 }
 int Assembler::li_count(int64_t imm) {
   int count = 0;
