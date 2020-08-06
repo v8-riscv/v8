@@ -45,9 +45,7 @@ namespace compiler {
   V(RiscvShr32)                             \
   V(RiscvSar32)                             \
   V(RiscvExt32)                             \
-  V(RiscvIns32)                             \
   V(RiscvExt64)                             \
-  V(RiscvIns64)                             \
   V(RiscvClz64)                             \
   V(RiscvCtz32)                             \
   V(RiscvCtz64)                             \
