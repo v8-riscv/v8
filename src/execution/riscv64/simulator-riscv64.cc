@@ -892,7 +892,7 @@ void Simulator::set_fpu_register_hi_word(int fpureg, int32_t value) {
 
 void Simulator::set_fpu_register_float(int fpureg, float value) {
   DCHECK((fpureg >= 0) && (fpureg < kNumFPURegisters));
-  *bit_cast<float*>(&FPUregisters_[fpureg]) = value;
+  FPUregisters_[fpureg] = box_float(value);
 }
 
 void Simulator::set_fpu_register_double(int fpureg, double value) {
@@ -945,6 +945,9 @@ int32_t Simulator::get_fpu_register_hi_word(int fpureg) const {
 
 float Simulator::get_fpu_register_float(int fpureg) const {
   DCHECK((fpureg >= 0) && (fpureg < kNumFPURegisters));
+  if (!is_boxed_float(FPUregisters_[fpureg])) {
+    return std::numeric_limits<float>::quiet_NaN();
+  }
   return *bit_cast<float*>(const_cast<int64_t*>(&FPUregisters_[fpureg]));
 }
 
@@ -2368,7 +2371,7 @@ void Simulator::DecodeRVRFPType() {
         case 0b000: {
           if (instr_.Rs2Value() == 0b00000) {
             // RO_FMV_X_W
-            set_rd(bit_cast<int32_t>(frs1()));
+            set_rd(sext_xlen(get_fpu_register_word(rs1_reg())));
           } else {
             UNSUPPORTED();
           }
@@ -3012,7 +3015,9 @@ void Simulator::DecodeRVSType() {
 #endif /*V8_TARGET_ARCH_64_BIT*/
     // TODO: use F Extension macro block
     case RO_FSW: {
-      WriteMem<float>(rs1() + s_imm12(), frs2(), instr_.instr());
+      WriteMem<uint32_t>(rs1() + s_imm12(), 
+                         (uint32_t)get_fpu_register_word(rs2_reg()), 
+                         instr_.instr());
       break;
     }
     // TODO: use D Extension macro block
