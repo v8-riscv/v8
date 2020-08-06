@@ -150,6 +150,13 @@ inline double fsgnj64(double rs1, double rs2, bool n, bool x) {
   return res.d;
 }
 
+inline bool is_boxed_float(int64_t v) {
+  return (uint32_t)((v >> 32) + 1) == 0;
+}
+inline int64_t box_float(float v) { 
+  return (0xFFFFFFFF00000000 | bit_cast<int32_t>(v)); 
+}
+
 // -----------------------------------------------------------------------------
 // Utility functions
 
