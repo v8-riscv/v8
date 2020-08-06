@@ -934,17 +934,8 @@ void TurboAssembler::Seleqz(Register rd, Register rs, const Operand& rt) {
   mul(rd, rs, scratch);    // scratch * rs = rs or zero
 }
 
-void TurboAssembler::Lsa32(Register rd, Register rt, Register rs, uint8_t sa,
-                           Register scratch) {
-  DCHECK(sa >= 1 && sa <= 31);
-  Register tmp = rd == rt ? scratch : rd;
-  DCHECK(tmp != rt);
-  slliw(tmp, rs, sa);
-  Add32(rd, rt, tmp);
-}
-
-void TurboAssembler::Lsa64(Register rd, Register rt, Register rs, uint8_t sa,
-                           Register scratch) {
+void TurboAssembler::CalcScaledAddress(Register rd, Register rt, Register rs,
+                                       uint8_t sa, Register scratch) {
   DCHECK(sa >= 1 && sa <= 31);
   Register tmp = rd == rt ? scratch : rd;
   DCHECK(tmp != rt);
@@ -3127,7 +3118,8 @@ void TurboAssembler::LoadEntryFromBuiltinIndex(Register builtin_index) {
 
   // The builtin_index register contains the builtin index as a Smi.
   SmiUntag(builtin_index, builtin_index);
-  Lsa64(builtin_index, kRootRegister, builtin_index, kSystemPointerSizeLog2);
+  CalcScaledAddress(builtin_index, kRootRegister, builtin_index,
+                    kSystemPointerSizeLog2);
   Ld(builtin_index,
      MemOperand(builtin_index, IsolateData::builtin_entry_table_offset()));
 }
@@ -3384,13 +3376,13 @@ void TurboAssembler::PrepareForTailCall(Register callee_args_count,
   // after we drop current frame. We add kPointerSize to count the receiver
   // argument which is not included into formal parameters count.
   Register dst_reg = scratch0;
-  Lsa64(dst_reg, fp, caller_args_count, kPointerSizeLog2);
+  CalcScaledAddress(dst_reg, fp, caller_args_count, kPointerSizeLog2);
   Add64(dst_reg, dst_reg,
         Operand(StandardFrameConstants::kCallerSPOffset + kPointerSize));
 
   Register src_reg = caller_args_count;
   // Calculate the end of source area. +kPointerSize is for the receiver.
-  Lsa64(src_reg, sp, callee_args_count, kPointerSizeLog2);
+  CalcScaledAddress(src_reg, sp, callee_args_count, kPointerSizeLog2);
   Add64(src_reg, src_reg, Operand(kPointerSize));
 
   if (FLAG_debug_code) {
@@ -3466,7 +3458,7 @@ void MacroAssembler::CheckDebugHook(Register fun, Register new_target,
 
   {
     // Load receiver to pass it later to DebugOnFunctionCall hook.
-    Lsa64(t0, sp, actual_parameter_count, kPointerSizeLog2);
+    CalcScaledAddress(t0, sp, actual_parameter_count, kPointerSizeLog2);
     Ld(t0, MemOperand(t0));
     FrameScope frame(this,
                      has_frame() ? StackFrame::NONE : StackFrame::INTERNAL);
@@ -3977,7 +3969,7 @@ void MacroAssembler::LeaveExitFrame(bool save_doubles, Register argument_count,
     if (argument_count_is_length) {
       add(sp, sp, argument_count);
     } else {
-      Lsa64(sp, sp, argument_count, kPointerSizeLog2, t5);
+      CalcScaledAddress(sp, sp, argument_count, kPointerSizeLog2, t5);
     }
   }
 
