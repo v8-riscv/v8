@@ -524,13 +524,20 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void Popcnt32(Register rd, Register rs);
   void Popcnt64(Register rd, Register rs);
 
-  void Ext32(Register rt, Register rs, uint16_t pos, uint16_t size);
-  void Ext64(Register rt, Register rs, uint16_t pos, uint16_t size);
-  void Ins32(Register rt, Register rs, uint16_t pos, uint16_t size);
-  void Ins64(Register rt, Register rs, uint16_t pos, uint16_t size);
-  void ExtractBits(Register dest, Register source, Register pos, int size,
-                   bool sign_extend = false);
-  void InsertBits(Register dest, Register source, Register pos, int size);
+  // Extract bits [pos, pos+size) from 32-bit word of rs to bits [0, size) of
+  // rt; higher bits of rt are set to zero
+  void ExtractBits32(Register rt, Register rs, uint16_t pos, uint16_t size);
+  // Extract bits [pos, pos+size) of rs to bits [0, size) of rt; higher bits
+  // of rt are set to zero
+  void ExtractBits64(Register rt, Register rs, uint16_t pos, uint16_t size);
+  // Extract bits [pos, pos+size) of rs to bits [0, size) of rt; higher bits
+  // of rt are zero- or sign-extended depending on sign_extend
+  void ExtractBits64(Register dest, Register source, Register pos, int size,
+                     bool sign_extend = false);
+
+  // Insert bits [0, size) of source to bits [pos, pos+size) of dest
+  void InsertBits64(Register dest, Register source, Register pos, int size);
+
   void Neg_s(FPURegister fd, FPURegister fs);
   void Neg_d(FPURegister fd, FPURegister fs);
 
@@ -1111,7 +1118,7 @@ class V8_EXPORT_PRIVATE MacroAssembler : public TurboAssembler {
 
   template <typename Field>
   void DecodeField(Register dst, Register src) {
-    Ext32(dst, src, Field::kShift, Field::kSize);
+    ExtractBits32(dst, src, Field::kShift, Field::kSize);
   }
 
   template <typename Field>
