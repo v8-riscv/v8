@@ -346,12 +346,12 @@ void EmitWordLoadPoisoningIfNeeded(CodeGenerator* codegen,
     __ sync();                                                                 \
     __ bind(&binop);                                                           \
     __ load_linked(i.TempRegister(1), MemOperand(i.TempRegister(0), 0));       \
-    __ ExtractBits64(i.OutputRegister(0), i.TempRegister(1),                   \
-                     i.TempRegister(3), size, sign_extend);                    \
+    __ ExtractBits(i.OutputRegister(0), i.TempRegister(1), i.TempRegister(3),  \
+                   size, sign_extend);                                         \
     __ bin_instr(i.TempRegister(2), i.OutputRegister(0),                       \
                  Operand(i.InputRegister(2)));                                 \
-    __ InsertBits64(i.TempRegister(1), i.TempRegister(2), i.TempRegister(3),   \
-                    size);                                                     \
+    __ InsertBits(i.TempRegister(1), i.TempRegister(2), i.TempRegister(3),     \
+                  size);                                                       \
     __ store_conditional(i.TempRegister(1), MemOperand(i.TempRegister(0), 0)); \
     __ BranchShort(&binop, ne, i.TempRegister(1), Operand(zero_reg));          \
     __ sync();                                                                 \
@@ -387,10 +387,10 @@ void EmitWordLoadPoisoningIfNeeded(CodeGenerator* codegen,
     __ sync();                                                                 \
     __ bind(&exchange);                                                        \
     __ load_linked(i.TempRegister(2), MemOperand(i.TempRegister(0), 0));       \
-    __ ExtractBits64(i.OutputRegister(0), i.TempRegister(2),                   \
-                     i.TempRegister(1), size, sign_extend);                    \
-    __ InsertBits64(i.TempRegister(2), i.InputRegister(2), i.TempRegister(1),  \
-                    size);                                                     \
+    __ ExtractBits(i.OutputRegister(0), i.TempRegister(2), i.TempRegister(1),  \
+                   size, sign_extend);                                         \
+    __ InsertBits(i.TempRegister(2), i.InputRegister(2), i.TempRegister(1),    \
+                  size);                                                       \
     __ store_conditional(i.TempRegister(2), MemOperand(i.TempRegister(0), 0)); \
     __ BranchShort(&exchange, ne, i.TempRegister(2), Operand(zero_reg));       \
     __ sync();                                                                 \
@@ -433,14 +433,14 @@ void EmitWordLoadPoisoningIfNeeded(CodeGenerator* codegen,
     __ sync();                                                                 \
     __ bind(&compareExchange);                                                 \
     __ load_linked(i.TempRegister(2), MemOperand(i.TempRegister(0), 0));       \
-    __ ExtractBits64(i.OutputRegister(0), i.TempRegister(2),                   \
-                     i.TempRegister(1), size, sign_extend);                    \
-    __ ExtractBits64(i.InputRegister(2), i.InputRegister(2),                   \
-                     i.TempRegister(1), size, sign_extend);                    \
+    __ ExtractBits(i.OutputRegister(0), i.TempRegister(2), i.TempRegister(1),  \
+                   size, sign_extend);                                         \
+    __ ExtractBits(i.InputRegister(2), i.InputRegister(2), i.TempRegister(1),  \
+                   size, sign_extend);                                         \
     __ BranchShort(&exit, ne, i.InputRegister(2),                              \
                    Operand(i.OutputRegister(0)));                              \
-    __ InsertBits64(i.TempRegister(2), i.InputRegister(3), i.TempRegister(1),  \
-                    size);                                                     \
+    __ InsertBits(i.TempRegister(2), i.InputRegister(3), i.TempRegister(1),    \
+                  size);                                                       \
     __ store_conditional(i.TempRegister(2), MemOperand(i.TempRegister(0), 0)); \
     __ BranchShort(&compareExchange, ne, i.TempRegister(2),                    \
                    Operand(zero_reg));                                         \
@@ -1136,13 +1136,12 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
                  static_cast<uint16_t>(imm));
       }
       break;
-    case kRiscvExt32:
-      __ ExtractBits32(i.OutputRegister(), i.InputRegister(0), i.InputInt8(1),
-                       i.InputInt8(2));
+    case kRiscvZeroExtendWord: {
+      __ ZeroExtendWord(i.OutputRegister(), i.InputRegister(0));
       break;
-    case kRiscvExt64: {
-      __ ExtractBits64(i.OutputRegister(), i.InputRegister(0), i.InputInt8(1),
-                       i.InputInt8(2));
+    }
+    case kRiscvSignExtendWord: {
+      __ SignExtendWord(i.OutputRegister(), i.InputRegister(0));
       break;
     }
     case kRiscvShl64:
