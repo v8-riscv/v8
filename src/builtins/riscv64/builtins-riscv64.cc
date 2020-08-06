@@ -118,7 +118,7 @@ void Generate_JSBuiltinsConstructStubHelper(MacroAssembler* masm) {
     // -----------------------------------
     __ Branch(&entry);
     __ bind(&loop);
-    __ Lsa64(t0, t2, t4, kPointerSizeLog2);
+    __ CalcScaledAddress(t0, t2, t4, kPointerSizeLog2);
     __ Ld(t1, MemOperand(t0));
     __ push(t1);
     __ bind(&entry);
@@ -278,7 +278,7 @@ void Builtins::Generate_JSConstructStubGeneric(MacroAssembler* masm) {
     // -----------------------------------
     __ Branch(&entry);
     __ bind(&loop);
-    __ Lsa64(t0, t2, t4, kPointerSizeLog2);
+    __ CalcScaledAddress(t0, t2, t4, kPointerSizeLog2);
     __ Ld(t1, MemOperand(t0));
     __ push(t1);
     __ bind(&entry);
@@ -431,7 +431,7 @@ void Builtins::Generate_ResumeGeneratorTrampoline(MacroAssembler* masm) {
     __ bind(&loop);
     __ Sub64(a3, a3, Operand(1));
     __ Branch(&done_loop, lt, a3, Operand(zero_reg));
-    __ Lsa64(kScratchReg, t1, t2, kPointerSizeLog2);
+    __ CalcScaledAddress(kScratchReg, t1, t2, kPointerSizeLog2);
     __ Ld(kScratchReg, FieldMemOperand(kScratchReg, FixedArray::kHeaderSize));
     __ Push(kScratchReg);
     __ Add64(t2, t2, Operand(1));
@@ -760,7 +760,7 @@ static void Generate_JSEntryTrampolineHelper(MacroAssembler* masm,
     // a3: argc
     // a5: argv, i.e. points to first arg
     Label loop, entry;
-    __ Lsa64(s1, a5, a4, kPointerSizeLog2);
+    __ CalcScaledAddress(s1, a5, a4, kPointerSizeLog2);
     __ Branch(&entry);
     // s1 points past last arg.
     __ bind(&loop);
@@ -992,7 +992,7 @@ static void AdvanceBytecodeOffsetOrReturn(MacroAssembler* masm,
 
   __ bind(&not_jump_loop);
   // Otherwise, load the size of the current bytecode and advance the offset.
-  __ Lsa64(scratch2, bytecode_size_table, bytecode, 2);
+  __ CalcScaledAddress(scratch2, bytecode_size_table, bytecode, 2);
   __ Lw(scratch2, MemOperand(scratch2));
   __ Add64(bytecode_offset, bytecode_offset, scratch2);
 
@@ -1124,7 +1124,7 @@ void Builtins::Generate_InterpreterEntryTrampoline(MacroAssembler* masm) {
                 BytecodeArray::kIncomingNewTargetOrGeneratorRegisterOffset));
   __ Branch(&no_incoming_new_target_or_generator_register, eq, a5,
             Operand(zero_reg));
-  __ Lsa64(a5, fp, a5, kPointerSizeLog2);
+  __ CalcScaledAddress(a5, fp, a5, kPointerSizeLog2);
   __ Sd(a3, MemOperand(a5));
   __ bind(&no_incoming_new_target_or_generator_register);
 
@@ -1147,8 +1147,8 @@ void Builtins::Generate_InterpreterEntryTrampoline(MacroAssembler* masm) {
   __ Add64(a1, kInterpreterBytecodeArrayRegister,
            kInterpreterBytecodeOffsetRegister);
   __ Lbu(a7, MemOperand(a1));
-  __ Lsa64(kScratchReg, kInterpreterDispatchTableRegister, a7,
-           kPointerSizeLog2);
+  __ CalcScaledAddress(kScratchReg, kInterpreterDispatchTableRegister, a7,
+                       kPointerSizeLog2);
   __ Ld(kJavaScriptCallCodeStartRegister, MemOperand(kScratchReg));
   __ Call(kJavaScriptCallCodeStartRegister);
   masm->isolate()->heap()->SetInterpreterEntryReturnPCOffset(masm->pc_offset());
@@ -1418,7 +1418,8 @@ static void Generate_InterpreterEnterBytecode(MacroAssembler* masm) {
   __ Add64(a1, kInterpreterBytecodeArrayRegister,
            kInterpreterBytecodeOffsetRegister);
   __ Lbu(a7, MemOperand(a1));
-  __ Lsa64(a1, kInterpreterDispatchTableRegister, a7, kPointerSizeLog2);
+  __ CalcScaledAddress(a1, kInterpreterDispatchTableRegister, a7,
+                       kPointerSizeLog2);
   __ Ld(kJavaScriptCallCodeStartRegister, MemOperand(a1));
   __ Jump(kJavaScriptCallCodeStartRegister);
 }
@@ -1595,7 +1596,7 @@ void Builtins::Generate_FunctionPrototypeApply(MacroAssembler* masm) {
     // consistent state for a simple pop operation.
 
     __ Sub64(sp, sp, Operand(2 * kPointerSize));
-    __ Lsa64(sp, sp, argc, kPointerSizeLog2);
+    __ CalcScaledAddress(sp, sp, argc, kPointerSizeLog2);
     __ Move(scratch, argc);
     __ Pop(this_arg, arg_array);                   // Overwrite argc
     __ Movz(arg_array, undefined_value, scratch);  // if argc == 0
@@ -1650,7 +1651,7 @@ void Builtins::Generate_FunctionPrototypeCall(MacroAssembler* masm) {
 
   // 2. Get the function to call (passed as receiver) from the stack.
   // a0: actual number of arguments
-  __ Lsa64(kScratchReg, sp, a0, kPointerSizeLog2);
+  __ CalcScaledAddress(kScratchReg, sp, a0, kPointerSizeLog2);
   __ Ld(a1, MemOperand(kScratchReg));
 
   // 3. Shift arguments and return address one slot down on the stack
@@ -1661,7 +1662,7 @@ void Builtins::Generate_FunctionPrototypeCall(MacroAssembler* masm) {
   {
     Label loop;
     // Calculate the copy start address (destination). Copy end address is sp.
-    __ Lsa64(a2, sp, a0, kPointerSizeLog2);
+    __ CalcScaledAddress(a2, sp, a0, kPointerSizeLog2);
 
     __ bind(&loop);
     __ Ld(kScratchReg, MemOperand(a2, -kPointerSize));
@@ -1704,7 +1705,7 @@ void Builtins::Generate_ReflectApply(MacroAssembler* masm) {
     // consistent state for a simple pop operation.
 
     __ Sub64(sp, sp, Operand(3 * kPointerSize));
-    __ Lsa64(sp, sp, argc, kPointerSizeLog2);
+    __ CalcScaledAddress(sp, sp, argc, kPointerSizeLog2);
     __ Move(scratch, argc);
     __ Pop(target, this_argument, arguments_list);
     __ Movz(arguments_list, undefined_value, scratch);  // if argc == 0
@@ -1761,7 +1762,7 @@ void Builtins::Generate_ReflectConstruct(MacroAssembler* masm) {
     // consistent state for a simple pop operation.
 
     __ Sub64(sp, sp, Operand(3 * kPointerSize));
-    __ Lsa64(sp, sp, argc, kPointerSizeLog2);
+    __ CalcScaledAddress(sp, sp, argc, kPointerSizeLog2);
     __ Move(scratch, argc);
     __ Pop(target, arguments_list, new_target);
     __ Movz(arguments_list, undefined_value, scratch);  // if argc == 0
@@ -1945,7 +1946,7 @@ void Builtins::Generate_CallOrConstructForwardVarargs(MacroAssembler* masm,
       __ Add64(a0, a0, a7);
       __ bind(&loop);
       {
-        __ Lsa64(kScratchReg, a6, a7, kPointerSizeLog2);
+        __ CalcScaledAddress(kScratchReg, a6, a7, kPointerSizeLog2);
         __ Ld(kScratchReg, MemOperand(kScratchReg, 1 * kPointerSize));
         __ push(kScratchReg);
         __ Sub32(a7, a7, Operand(1));
@@ -2004,7 +2005,7 @@ void Builtins::Generate_CallFunction(MacroAssembler* masm,
       __ LoadGlobalProxy(a3);
     } else {
       Label convert_to_object, convert_receiver;
-      __ Lsa64(kScratchReg, sp, a0, kPointerSizeLog2);
+      __ CalcScaledAddress(kScratchReg, sp, a0, kPointerSizeLog2);
       __ Ld(a3, MemOperand(kScratchReg));
       __ JumpIfSmi(a3, &convert_to_object);
       STATIC_ASSERT(LAST_JS_RECEIVER_TYPE == LAST_TYPE);
@@ -2042,7 +2043,7 @@ void Builtins::Generate_CallFunction(MacroAssembler* masm,
       __ Ld(a2, FieldMemOperand(a1, JSFunction::kSharedFunctionInfoOffset));
       __ bind(&convert_receiver);
     }
-    __ Lsa64(kScratchReg, sp, a0, kPointerSizeLog2);
+    __ CalcScaledAddress(kScratchReg, sp, a0, kPointerSizeLog2);
     __ Sd(a3, MemOperand(kScratchReg));
   }
   __ bind(&done_convert);
@@ -2078,7 +2079,7 @@ void Builtins::Generate_CallBoundFunctionImpl(MacroAssembler* masm) {
   // Patch the receiver to [[BoundThis]].
   {
     __ Ld(kScratchReg, FieldMemOperand(a1, JSBoundFunction::kBoundThisOffset));
-    __ Lsa64(a4, sp, a0, kPointerSizeLog2);
+    __ CalcScaledAddress(a4, sp, a0, kPointerSizeLog2);
     __ Sd(kScratchReg, MemOperand(a4));
   }
 
@@ -2118,9 +2119,9 @@ void Builtins::Generate_CallBoundFunctionImpl(MacroAssembler* masm) {
     __ Move(a5, zero_reg);
     __ bind(&loop);
     __ Branch(&done_loop, gt, a5, Operand(a0));
-    __ Lsa64(a6, sp, a4, kPointerSizeLog2);
+    __ CalcScaledAddress(a6, sp, a4, kPointerSizeLog2);
     __ Ld(kScratchReg, MemOperand(a6));
-    __ Lsa64(a6, sp, a5, kPointerSizeLog2);
+    __ CalcScaledAddress(a6, sp, a5, kPointerSizeLog2);
     __ Sd(kScratchReg, MemOperand(a6));
     __ Add64(a4, a4, Operand(1));
     __ Add64(a5, a5, Operand(1));
@@ -2136,9 +2137,9 @@ void Builtins::Generate_CallBoundFunctionImpl(MacroAssembler* masm) {
     __ bind(&loop);
     __ Sub64(a4, a4, Operand(1));
     __ Branch(&done_loop, lt, a4, Operand(zero_reg));
-    __ Lsa64(a5, a2, a4, kPointerSizeLog2);
+    __ CalcScaledAddress(a5, a2, a4, kPointerSizeLog2);
     __ Ld(kScratchReg, MemOperand(a5));
-    __ Lsa64(a5, sp, a0, kPointerSizeLog2);
+    __ CalcScaledAddress(a5, sp, a0, kPointerSizeLog2);
     __ Sd(kScratchReg, MemOperand(a5));
     __ Add64(a0, a0, Operand(1));
     __ Branch(&loop);
@@ -2178,7 +2179,7 @@ void Builtins::Generate_Call(MacroAssembler* masm, ConvertReceiverMode mode) {
   // 2. Call to something else, which might have a [[Call]] internal method (if
   // not we raise an exception).
   // Overwrite the original receiver with the (original) target.
-  __ Lsa64(kScratchReg, sp, a0, kPointerSizeLog2);
+  __ CalcScaledAddress(kScratchReg, sp, a0, kPointerSizeLog2);
   __ Sd(a1, MemOperand(kScratchReg));
   // Let the "call_as_function_delegate" take care of the rest.
   __ LoadNativeContextSlot(Context::CALL_AS_FUNCTION_DELEGATE_INDEX, a1);
@@ -2271,9 +2272,9 @@ void Builtins::Generate_ConstructBoundFunction(MacroAssembler* masm) {
     __ Move(a5, zero_reg);
     __ bind(&loop);
     __ Branch(&done_loop, ge, a5, Operand(a0));
-    __ Lsa64(a6, sp, a4, kPointerSizeLog2);
+    __ CalcScaledAddress(a6, sp, a4, kPointerSizeLog2);
     __ Ld(kScratchReg, MemOperand(a6));
-    __ Lsa64(a6, sp, a5, kPointerSizeLog2);
+    __ CalcScaledAddress(a6, sp, a5, kPointerSizeLog2);
     __ Sd(kScratchReg, MemOperand(a6));
     __ Add64(a4, a4, Operand(1));
     __ Add64(a5, a5, Operand(1));
@@ -2289,9 +2290,9 @@ void Builtins::Generate_ConstructBoundFunction(MacroAssembler* masm) {
     __ bind(&loop);
     __ Sub64(a4, a4, Operand(1));
     __ Branch(&done_loop, lt, a4, Operand(zero_reg));
-    __ Lsa64(a5, a2, a4, kPointerSizeLog2);
+    __ CalcScaledAddress(a5, a2, a4, kPointerSizeLog2);
     __ Ld(kScratchReg, MemOperand(a5));
-    __ Lsa64(a5, sp, a0, kPointerSizeLog2);
+    __ CalcScaledAddress(a5, sp, a0, kPointerSizeLog2);
     __ Sd(kScratchReg, MemOperand(a5));
     __ Add64(a0, a0, Operand(1));
     __ Branch(&loop);
@@ -2349,7 +2350,7 @@ void Builtins::Generate_Construct(MacroAssembler* masm) {
   __ bind(&non_proxy);
   {
     // Overwrite the original receiver with the (original) target.
-    __ Lsa64(kScratchReg, sp, a0, kPointerSizeLog2);
+    __ CalcScaledAddress(kScratchReg, sp, a0, kPointerSizeLog2);
     __ Sd(a1, MemOperand(kScratchReg));
     // Let the "call_as_constructor_delegate" take care of the rest.
     __ LoadNativeContextSlot(Context::CALL_AS_CONSTRUCTOR_DELEGATE_INDEX, a1);
@@ -2583,7 +2584,7 @@ void Builtins::Generate_CEntry(MacroAssembler* masm, int result_size,
     __ Move(s1, a2);
   } else {
     // Compute the argv pointer in a callee-saved register.
-    __ Lsa64(s1, sp, a0, kPointerSizeLog2);
+    __ CalcScaledAddress(s1, sp, a0, kPointerSizeLog2);
     __ Sub64(s1, s1, kPointerSize);
   }
 
@@ -2987,7 +2988,7 @@ void Builtins::Generate_CallApiCallback(MacroAssembler* masm) {
 
   // Set up the base register for addressing through MemOperands. It will point
   // at the receiver (located at sp + argc * kPointerSize).
-  __ Lsa64(base, sp, argc, kPointerSizeLog2);
+  __ CalcScaledAddress(base, sp, argc, kPointerSizeLog2);
 
   // Reserve space on the stack.
   __ Sub64(sp, sp, Operand(FCA::kArgsLength * kPointerSize));
