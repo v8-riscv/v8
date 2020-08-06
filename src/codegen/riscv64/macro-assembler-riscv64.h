@@ -790,14 +790,9 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   // Get the actual activation frame alignment for target environment.
   static int ActivationFrameAlignment();
 
-  // Load Scaled Address instructions. Parameter sa (shift argument) must be
-  // between [1, 31] (inclusive). On pre-r6 architectures the scratch register
-  // may be clobbered.
-  // FIXME: MIPS legacy, need to be removed
-  void Lsa32(Register rd, Register rs, Register rt, uint8_t sa,
-             Register scratch = t3);
-  void Lsa64(Register rd, Register rs, Register rt, uint8_t sa,
-             Register scratch = t3);
+  // Calculated scaled address (rd) as rt + rs << sa
+  void CalcScaledAddress(Register rd, Register rs, Register rt, uint8_t sa,
+                         Register scratch = t3);
 
   // Compute the start of the generated instruction stream from the current PC.
   // This is an alternative to embedding the {CodeObject} handle as a reference.
