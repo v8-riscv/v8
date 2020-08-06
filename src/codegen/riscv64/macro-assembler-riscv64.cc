@@ -1597,8 +1597,8 @@ void TurboAssembler::MultiPopFPU(RegList regs) {
   addi(sp, sp, stack_offset);
 }
 
-void TurboAssembler::Ext32(Register rt, Register rs, uint16_t pos,
-                           uint16_t size) {
+void TurboAssembler::ExtractBits32(Register rt, Register rs, uint16_t pos,
+                                   uint16_t size) {
   DCHECK_LT(pos, 32);
   DCHECK_LT(pos + size, 33);
   // RISC-V does not have an extract-type instruction, so we need to use shifts
@@ -1608,8 +1608,8 @@ void TurboAssembler::Ext32(Register rt, Register rs, uint16_t pos,
   }
 }
 
-void TurboAssembler::Ext64(Register rt, Register rs, uint16_t pos,
-                           uint16_t size) {
+void TurboAssembler::ExtractBits64(Register rt, Register rs, uint16_t pos,
+                                   uint16_t size) {
   DCHECK(pos < 64 && 0 < size && size <= 64 && 0 < pos + size &&
          pos + size <= 64);
   // RISC-V does not have an extract-type instruction, so we need to use shifts
@@ -1617,45 +1617,10 @@ void TurboAssembler::Ext64(Register rt, Register rs, uint16_t pos,
   srli(rt, rt, 64 - size);
 }
 
-void TurboAssembler::Ins32(Register rt, Register rs, uint16_t pos,
-                           uint16_t size) {
-  DCHECK_LT(pos, 32);
-  DCHECK_LE(pos + size, 32);
-  DCHECK_NE(size, 0);
-  DCHECK(rt != t5 && rt != t6 && rs != t5 && rs != t6);
-  BlockTrampolinePoolScope block_trampoline_pool(this);
-  Register scratch1 = t5;
-
-  uint32_t src_mask = (1 << size) - 1;
-  uint32_t dest_mask = ~(src_mask << pos);
-
-  And(scratch1, rs, Operand(src_mask));
-  slliw(scratch1, scratch1, pos);
-  And(rt, rt, Operand(dest_mask));
-  or_(rt, rt, scratch1);
-}
-
-void TurboAssembler::Ins64(Register rt, Register rs, uint16_t pos,
-                           uint16_t size) {
-  DCHECK(pos < 64 && 0 < size && size <= 64 && 0 < pos + size &&
-         pos + size <= 64);
-  DCHECK(rt != t5 && rt != t6 && rs != t5 && rs != t6);
-  BlockTrampolinePoolScope block_trampoline_pool(this);
-  Register scratch1 = t5;
-
-  uint64_t src_mask = (1 << size) - 1;
-  uint64_t dest_mask = ~(src_mask << pos);
-
-  And(scratch1, rs, Operand(src_mask));
-  slli(scratch1, scratch1, pos);
-  And(rt, rt, Operand(dest_mask));
-  or_(rt, rt, scratch1);
-}
-
-void TurboAssembler::ExtractBits(Register dest, Register source, Register pos,
-                                 int size, bool sign_extend) {
+void TurboAssembler::ExtractBits64(Register dest, Register source, Register pos,
+                                   int size, bool sign_extend) {
   sra(dest, source, pos);
-  Ext64(dest, dest, 0, size);
+  ExtractBits64(dest, dest, 0, size);
   if (sign_extend) {
     switch (size) {
       case 8:
@@ -1676,8 +1641,8 @@ void TurboAssembler::ExtractBits(Register dest, Register source, Register pos,
   }
 }
 
-void TurboAssembler::InsertBits(Register dest, Register source, Register pos,
-                                int size) {
+void TurboAssembler::InsertBits64(Register dest, Register source, Register pos,
+                                  int size) {
   DCHECK(size < 64);
   UseScratchRegisterScope temps(this);
   Register mask = temps.Acquire();
@@ -1894,10 +1859,10 @@ void TurboAssembler::RoundHelper(FPURegister dst, FPURegister src,
   // extract exponent value of the source floating-point to t6
   if (std::is_same<F, double>::value) {
     fmv_x_d(scratch, src);
-    Ext64(t6, scratch, kFloatMantissaBits, kFloatExponentBits);
+    ExtractBits64(t6, scratch, kFloatMantissaBits, kFloatExponentBits);
   } else {
     fmv_x_w(scratch, src);
-    Ext32(t6, scratch, kFloatMantissaBits, kFloatExponentBits);
+    ExtractBits32(t6, scratch, kFloatMantissaBits, kFloatExponentBits);
   }
 
   // if src is NaN/+-Infinity/+-Zero or if the exponent is larger than # of bits
