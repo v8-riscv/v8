@@ -973,7 +973,7 @@ bool LiftoffAssembler::emit_type_conversion(WasmOpcode opcode,
                                             LiftoffRegister src, Label* trap) {
   switch (opcode) {
     case kExprI32ConvertI64:
-      TurboAssembler::Ext32(dst.gp(), src.gp(), 0, 32);
+      TurboAssembler::ExtractBits32(dst.gp(), src.gp(), 0, 32);
       return true;
     case kExprI32SConvertF32:
     case kExprI32UConvertF32:
@@ -1032,7 +1032,7 @@ bool LiftoffAssembler::emit_type_conversion(WasmOpcode opcode,
       slliw(dst.gp(), src.gp(), 0);
       return true;
     case kExprI64UConvertI32:
-      TurboAssembler::Ext64(dst.gp(), src.gp(), 0, 32);
+      TurboAssembler::ExtractBits64(dst.gp(), src.gp(), 0, 32);
       return true;
     case kExprI64ReinterpretF64:
       fmv_x_d(dst.gp(), src.fp());
