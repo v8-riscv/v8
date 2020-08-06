@@ -52,7 +52,6 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvDiv64:
     case kRiscvDivU64:
     case kRiscvExt64:
-    case kRiscvIns64:
     case kRiscvDiv32:
     case kRiscvDivD:
     case kRiscvDivS:
@@ -219,7 +218,6 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvI8x16SubSaturateS:
     case kRiscvI8x16SubSaturateU:
     case kRiscvI8x16RoundingAverageU:
-    case kRiscvIns32:
     case kRiscvMaxD:
     case kRiscvMaxS:
     case kRiscvMinD:
@@ -1274,9 +1272,7 @@ int InstructionScheduler::GetInstructionLatency(const Instruction* instr) {
     case kRiscvSar32:
       return 2;
     case kRiscvExt32:
-    case kRiscvIns32:
     case kRiscvExt64:
-    case kRiscvIns64:
     case kRiscvShl64:
     case kRiscvShr64:
     case kRiscvSar64:
