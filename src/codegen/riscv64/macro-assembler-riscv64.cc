@@ -812,18 +812,6 @@ void TurboAssembler::Sll32(Register rd, Register rs, const Operand& rt) {
   }
 }
 
-void TurboAssembler::SignExtendByte(Register rd, const Operand& rt) {
-  DCHECK(rt.is_reg());
-  slli(rd, rt.rm(), 64 - 8);
-  srai(rd, rd, 64 - 8);
-}
-
-void TurboAssembler::SignExtendShort(Register rd, const Operand& rt) {
-  DCHECK(rt.is_reg());
-  slli(rd, rt.rm(), 64 - 16);
-  srai(rd, rd, 64 - 16);
-}
-
 void TurboAssembler::Sra32(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg())
     sraw(rd, rs, rt.rm());
@@ -1598,52 +1586,20 @@ void TurboAssembler::MultiPopFPU(RegList regs) {
   addi(sp, sp, stack_offset);
 }
 
-void TurboAssembler::ExtractBits32(Register rt, Register rs, uint16_t pos,
-                                   uint16_t size) {
-  DCHECK_LT(pos, 32);
-  DCHECK_LT(pos + size, 33);
-  // RISC-V does not have an extract-type instruction, so we need to use shifts
-  slliw(rt, rs, 32 - (pos + size));
-  if (size != 32) {
-    srliw(rt, rt, 32 - size);
-  }
-}
-
-void TurboAssembler::ExtractBits64(Register rt, Register rs, uint16_t pos,
-                                   uint16_t size) {
+void TurboAssembler::ExtractBits(Register rt, Register rs, uint16_t pos,
+                                 uint16_t size, bool sign_extend) {
   DCHECK(pos < 64 && 0 < size && size <= 64 && 0 < pos + size &&
          pos + size <= 64);
-  // RISC-V does not have an extract-type instruction, so we need to use shifts
   slli(rt, rs, 64 - (pos + size));
-  srli(rt, rt, 64 - size);
-}
-
-void TurboAssembler::ExtractBits64(Register dest, Register source, Register pos,
-                                   int size, bool sign_extend) {
-  sra(dest, source, pos);
-  ExtractBits64(dest, dest, 0, size);
   if (sign_extend) {
-    switch (size) {
-      case 8:
-        slli(dest, dest, 56);
-        srai(dest, dest, 56);
-        break;
-      case 16:
-        slli(dest, dest, 48);
-        srai(dest, dest, 48);
-        break;
-      case 32:
-        // sign-extend word
-        sext_w(dest, dest);
-        break;
-      default:
-        UNREACHABLE();
-    }
+    srai(rt, rt, 64 - size);
+  } else {
+    srli(rt, rt, 64 - size);
   }
 }
 
-void TurboAssembler::InsertBits64(Register dest, Register source, Register pos,
-                                  int size) {
+void TurboAssembler::InsertBits(Register dest, Register source, Register pos,
+                                int size) {
   DCHECK(size < 64);
   UseScratchRegisterScope temps(this);
   Register mask = temps.Acquire();
@@ -1860,11 +1816,10 @@ void TurboAssembler::RoundHelper(FPURegister dst, FPURegister src,
   // extract exponent value of the source floating-point to t6
   if (std::is_same<F, double>::value) {
     fmv_x_d(scratch, src);
-    ExtractBits64(t6, scratch, kFloatMantissaBits, kFloatExponentBits);
   } else {
     fmv_x_w(scratch, src);
-    ExtractBits32(t6, scratch, kFloatMantissaBits, kFloatExponentBits);
   }
+  ExtractBits(t6, scratch, kFloatMantissaBits, kFloatExponentBits);
 
   // if src is NaN/+-Infinity/+-Zero or if the exponent is larger than # of bits
   // in mantissa, the result is the same as src, so move src to dest  (to avoid
