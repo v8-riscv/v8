@@ -380,9 +380,10 @@ INSTANTIATE_TEST_SUITE_P(InstructionSelectorTest, InstructionSelectorShiftTest,
                          ::testing::ValuesIn(kShiftInstructions));
 
 TEST_F(InstructionSelectorTest, Word32ShrWithWord32AndWithImmediate) {
-  // The available shift operand range is `0 <= imm < 32`, but we also test
-  // that immediates outside this range are handled properly (modulo-32).
-  TRACED_FORRANGE(int32_t, shift, -32, 63) {
+  The available shift operand range is `0 <= imm < 32`,
+      but we also test that immediates outside this range are handled properly(
+          modulo - 32)
+          .TRACED_FORRANGE(int32_t, shift, -32, 63) {
     int32_t lsb = shift & 0x1F;
     TRACED_FORRANGE(int32_t, width, 1, 32 - lsb) {
       uint32_t jnk = rng()->NextInt();
@@ -419,9 +420,10 @@ TEST_F(InstructionSelectorTest, Word32ShrWithWord32AndWithImmediate) {
 }
 
 TEST_F(InstructionSelectorTest, Word64ShrWithWord64AndWithImmediate) {
-  // The available shift operand range is `0 <= imm < 64`, but we also test
-  // that immediates outside this range are handled properly (modulo-64).
-  TRACED_FORRANGE(int32_t, shift, -64, 127) {
+  The available shift operand range is `0 <= imm < 64`,
+      but we also test that immediates outside this range are handled properly(
+          modulo - 64)
+          .TRACED_FORRANGE(int32_t, shift, -64, 127) {
     int32_t lsb = shift & 0x3F;
     TRACED_FORRANGE(int32_t, width, 1, 64 - lsb) {
       uint64_t jnk = rng()->NextInt64();
@@ -456,56 +458,6 @@ TEST_F(InstructionSelectorTest, Word64ShrWithWord64AndWithImmediate) {
       EXPECT_EQ(lsb, s.ToInt64(s[0]->InputAt(1)));
       EXPECT_EQ(width, s.ToInt64(s[0]->InputAt(2)));
     }
-  }
-}
-
-TEST_F(InstructionSelectorTest, Word32AndToClearBits) {
-  TRACED_FORRANGE(int32_t, shift, 1, 31) {
-    int32_t mask = ~((1 << shift) - 1);
-    StreamBuilder m(this, MachineType::Int32(), MachineType::Int32());
-    m.Return(m.Word32And(m.Parameter(0), m.Int32Constant(mask)));
-    Stream s = m.Build();
-    ASSERT_EQ(1U, s.size());
-    EXPECT_EQ(kRiscvIns32, s[0]->arch_opcode());
-    ASSERT_EQ(3U, s[0]->InputCount());
-    EXPECT_EQ(0, s.ToInt32(s[0]->InputAt(1)));
-    EXPECT_EQ(shift, s.ToInt32(s[0]->InputAt(2)));
-  }
-  TRACED_FORRANGE(int32_t, shift, 1, 31) {
-    int32_t mask = ~((1 << shift) - 1);
-    StreamBuilder m(this, MachineType::Int32(), MachineType::Int32());
-    m.Return(m.Word32And(m.Int32Constant(mask), m.Parameter(0)));
-    Stream s = m.Build();
-    ASSERT_EQ(1U, s.size());
-    EXPECT_EQ(kRiscvIns32, s[0]->arch_opcode());
-    ASSERT_EQ(3U, s[0]->InputCount());
-    EXPECT_EQ(0, s.ToInt32(s[0]->InputAt(1)));
-    EXPECT_EQ(shift, s.ToInt32(s[0]->InputAt(2)));
-  }
-}
-
-TEST_F(InstructionSelectorTest, Word64AndToClearBits) {
-  TRACED_FORRANGE(int32_t, shift, 1, 31) {
-    int64_t mask = ~((1 << shift) - 1);
-    StreamBuilder m(this, MachineType::Int64(), MachineType::Int64());
-    m.Return(m.Word64And(m.Parameter(0), m.Int64Constant(mask)));
-    Stream s = m.Build();
-    ASSERT_EQ(1U, s.size());
-    EXPECT_EQ(kRiscvIns64, s[0]->arch_opcode());
-    ASSERT_EQ(3U, s[0]->InputCount());
-    EXPECT_EQ(0, s.ToInt32(s[0]->InputAt(1)));
-    EXPECT_EQ(shift, s.ToInt32(s[0]->InputAt(2)));
-  }
-  TRACED_FORRANGE(int32_t, shift, 1, 31) {
-    int64_t mask = ~((1 << shift) - 1);
-    StreamBuilder m(this, MachineType::Int64(), MachineType::Int64());
-    m.Return(m.Word64And(m.Int64Constant(mask), m.Parameter(0)));
-    Stream s = m.Build();
-    ASSERT_EQ(1U, s.size());
-    EXPECT_EQ(kRiscvIns64, s[0]->arch_opcode());
-    ASSERT_EQ(3U, s[0]->InputCount());
-    EXPECT_EQ(0, s.ToInt32(s[0]->InputAt(1)));
-    EXPECT_EQ(shift, s.ToInt32(s[0]->InputAt(2)));
   }
 }
 
@@ -620,9 +572,10 @@ TEST_F(InstructionSelectorTest, Word32XorMinusOneWithWord32Or) {
 }
 
 TEST_F(InstructionSelectorTest, Word32AndWithImmediateWithWord32Shr) {
-  // The available shift operand range is `0 <= imm < 32`, but we also test
-  // that immediates outside this range are handled properly (modulo-32).
-  TRACED_FORRANGE(int32_t, shift, -32, 63) {
+  The available shift operand range is `0 <= imm < 32`,
+      but we also test that immediates outside this range are handled properly(
+          modulo - 32)
+          .TRACED_FORRANGE(int32_t, shift, -32, 63) {
     int32_t lsb = shift & 0x1F;
     TRACED_FORRANGE(int32_t, width, 1, 31) {
       uint32_t msk = (1 << width) - 1;
@@ -658,9 +611,10 @@ TEST_F(InstructionSelectorTest, Word32AndWithImmediateWithWord32Shr) {
 }
 
 TEST_F(InstructionSelectorTest, Word64AndWithImmediateWithWord64Shr) {
-  // The available shift operand range is `0 <= imm < 64`, but we also test
-  // that immediates outside this range are handled properly (modulo-64).
-  TRACED_FORRANGE(int64_t, shift, -64, 127) {
+  The available shift operand range is `0 <= imm < 64`,
+      but we also test that immediates outside this range are handled properly(
+          modulo - 64)
+          .TRACED_FORRANGE(int64_t, shift, -64, 127) {
     int64_t lsb = shift & 0x3F;
     TRACED_FORRANGE(int64_t, width, 1, 63) {
       uint64_t msk = (uint64_t{1} << width) - 1;
@@ -1130,7 +1084,8 @@ TEST_P(InstructionSelectorElidedChangeUint32ToUint64Test, Parameter) {
   m.Return(m.ChangeUint32ToUint64(
       (m.*binop.constructor)(m.Parameter(0), m.Parameter(1))));
   Stream s = m.Build();
-  // Make sure the `ChangeUint32ToUint64` node turned into two op(sli 32 and sri 32).
+  // Make sure the `ChangeUint32ToUint64` node turned into two op(sli 32 and sri
+  // 32).
   ASSERT_EQ(2U, s.size());
   EXPECT_EQ(binop.arch_opcode, s[0]->arch_opcode());
   EXPECT_EQ(2U, s[0]->InputCount());
