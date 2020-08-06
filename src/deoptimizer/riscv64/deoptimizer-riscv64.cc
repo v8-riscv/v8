@@ -158,7 +158,7 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
   // a1 = one past the last FrameDescription**.
   __ Lw(a1, MemOperand(a0, Deoptimizer::output_count_offset()));
   __ Ld(a4, MemOperand(a0, Deoptimizer::output_offset()));  // a4 is output_.
-  __ Lsa64(a1, a4, a1, kPointerSizeLog2);
+  __ CalcScaledAddress(a1, a4, a1, kPointerSizeLog2);
   __ BranchShort(&outer_loop_header);
   __ bind(&outer_push_loop);
   // Inner loop state: a2 = current FrameDescription*, a3 = loop index.

@@ -1047,16 +1047,6 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kRiscvModU64:
       __ Modu64(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
       break;
-    case kRiscvLsa64:
-      DCHECK(instr->InputAt(2)->IsImmediate());
-      __ Lsa64(i.OutputRegister(), i.InputRegister(0), i.InputRegister(1),
-               i.InputInt8(2));
-      break;
-    case kRiscvLsa32:
-      DCHECK(instr->InputAt(2)->IsImmediate());
-      __ Lsa32(i.OutputRegister(), i.InputRegister(0), i.InputRegister(1),
-               i.InputInt8(2));
-      break;
     case kRiscvAnd:
       __ And(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
       break;

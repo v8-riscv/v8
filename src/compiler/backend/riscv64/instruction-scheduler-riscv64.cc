@@ -57,7 +57,6 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvDivD:
     case kRiscvDivS:
     case kRiscvDivU32:
-    case kRiscvLsa64:
     case kRiscvMod64:
     case kRiscvModU64:
     case kRiscvMul64:
@@ -221,7 +220,6 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvI8x16SubSaturateU:
     case kRiscvI8x16RoundingAverageU:
     case kRiscvIns32:
-    case kRiscvLsa32:
     case kRiscvMaxD:
     case kRiscvMaxS:
     case kRiscvMinD:
@@ -667,11 +665,6 @@ int MovzLatency() { return 1; }
 
 int MovnLatency() { return 1; }
 
-int Lsa64Latency() {
-  // Estimated max.
-  return Add64Latency() + 1;
-}
-
 int CallLatency() {
   // Estimated.
   return Add64Latency(false) + Latency::BRANCH + 5;
@@ -686,7 +679,7 @@ int SmiUntagLatency() { return 1; }
 
 int PrepareForTailCallLatency() {
   // Estimated max.
-  return 2 * (Lsa64Latency() + Add64Latency(false)) + 2 + Latency::BRANCH +
+  return 2 * (Add64Latency() + 1 + Add64Latency(false)) + 2 + Latency::BRANCH +
          Latency::BRANCH + 2 * Sub64Latency(false) + 2 + Latency::BRANCH + 1;
 }
 
@@ -1220,9 +1213,6 @@ int InstructionScheduler::GetInstructionLatency(const Instruction* instr) {
       return Mod64Latency();
     case kRiscvModU64:
       return Modu64Latency();
-    case kRiscvLsa64:
-    case kRiscvLsa32:
-      return Lsa64Latency();
     case kRiscvAnd:
       return AndLatency(instr->InputAt(1)->IsRegister());
     case kRiscvAnd32: {
