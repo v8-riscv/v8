@@ -297,88 +297,13 @@ TEST(jump_tables6) {
   }
 }
 
-static uint64_t run_lsa(uint32_t rt, uint32_t rs, int8_t sa) {
+static uint64_t run_CalcScaledAddress(uint64_t rt, uint64_t rs, int8_t sa) {
   Isolate* isolate = CcTest::i_isolate();
   HandleScope scope(isolate);
   MacroAssembler assembler(isolate, v8::internal::CodeObjectRequired::kYes);
   MacroAssembler* masm = &assembler;
 
-  __ Lsa32(a0, a0, a1, sa);
-  __ jr(ra);
-  __ nop();
-
-  CodeDesc desc;
-  assembler.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-
-  auto f = GeneratedCode<F1>::FromCode(*code);
-
-  uint64_t res = reinterpret_cast<uint64_t>(f.Call(rt, rs, 0, 0, 0));
-
-  return res;
-}
-
-TEST(Lsa32) {
-  CcTest::InitializeVM();
-  struct TestCaseLsa {
-    int32_t rt;
-    int32_t rs;
-    uint8_t sa;
-    uint64_t expected_res;
-  };
-
-  struct TestCaseLsa tc[] = {// rt, rs, sa, expected_res
-                             {0x4, 0x1, 1, 0x6},
-                             {0x4, 0x1, 2, 0x8},
-                             {0x4, 0x1, 3, 0xC},
-                             {0x4, 0x1, 4, 0x14},
-                             {0x4, 0x1, 5, 0x24},
-                             {0x0, 0x1, 1, 0x2},
-                             {0x0, 0x1, 2, 0x4},
-                             {0x0, 0x1, 3, 0x8},
-                             {0x0, 0x1, 4, 0x10},
-                             {0x0, 0x1, 5, 0x20},
-                             {0x4, 0x0, 1, 0x4},
-                             {0x4, 0x0, 2, 0x4},
-                             {0x4, 0x0, 3, 0x4},
-                             {0x4, 0x0, 4, 0x4},
-                             {0x4, 0x0, 5, 0x4},
-
-                             // Shift overflow.
-                             {0x4, INT32_MAX, 1, 0x2},
-                             {0x4, INT32_MAX >> 1, 2, 0x0},
-                             {0x4, INT32_MAX >> 2, 3, 0xFFFFFFFFFFFFFFFC},
-                             {0x4, INT32_MAX >> 3, 4, 0xFFFFFFFFFFFFFFF4},
-                             {0x4, INT32_MAX >> 4, 5, 0xFFFFFFFFFFFFFFE4},
-
-                             // Signed addition overflow.
-                             {INT32_MAX - 1, 0x1, 1, 0xFFFFFFFF80000000},
-                             {INT32_MAX - 3, 0x1, 2, 0xFFFFFFFF80000000},
-                             {INT32_MAX - 7, 0x1, 3, 0xFFFFFFFF80000000},
-                             {INT32_MAX - 15, 0x1, 4, 0xFFFFFFFF80000000},
-                             {INT32_MAX - 31, 0x1, 5, 0xFFFFFFFF80000000},
-
-                             // Addition overflow.
-                             {-2, 0x1, 1, 0x0},
-                             {-4, 0x1, 2, 0x0},
-                             {-8, 0x1, 3, 0x0},
-                             {-16, 0x1, 4, 0x0},
-                             {-32, 0x1, 5, 0x0}};
-
-  size_t nr_test_cases = sizeof(tc) / sizeof(TestCaseLsa);
-  for (size_t i = 0; i < nr_test_cases; ++i) {
-    uint64_t res = run_lsa(tc[i].rt, tc[i].rs, tc[i].sa);
-    CHECK_EQ(tc[i].expected_res, res);
-  }
-}
-
-static uint64_t run_dlsa(uint64_t rt, uint64_t rs, int8_t sa) {
-  Isolate* isolate = CcTest::i_isolate();
-  HandleScope scope(isolate);
-  MacroAssembler assembler(isolate, v8::internal::CodeObjectRequired::kYes);
-  MacroAssembler* masm = &assembler;
-
-  __ Lsa64(a0, a0, a1, sa);
+  __ CalcScaledAddress(a0, a0, a1, sa);
   __ jr(ra);
   __ nop();
 
@@ -442,7 +367,7 @@ TEST(Lsa64) {
 
   size_t nr_test_cases = sizeof(tc) / sizeof(TestCaseLsa);
   for (size_t i = 0; i < nr_test_cases; ++i) {
-    uint64_t res = run_dlsa(tc[i].rt, tc[i].rs, tc[i].sa);
+    uint64_t res = run_CalcScaledAddress(tc[i].rt, tc[i].rs, tc[i].sa);
     CHECK_EQ(tc[i].expected_res, res);
   }
 }
