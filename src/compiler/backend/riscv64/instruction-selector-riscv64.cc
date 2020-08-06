@@ -1199,8 +1199,8 @@ void InstructionSelector::VisitChangeUint32ToUint64(Node* node) {
     default:
       break;
   }
-  Emit(kRiscvExt64, g.DefineAsRegister(node), g.UseRegister(node->InputAt(0)),
-       g.TempImmediate(0), g.TempImmediate(32));
+  Emit(kRiscvZeroExtendWord, g.DefineAsRegister(node),
+       g.UseRegister(node->InputAt(0)));
 }
 
 void InstructionSelector::VisitTruncateInt64ToInt32(Node* node) {
@@ -1229,8 +1229,12 @@ void InstructionSelector::VisitTruncateInt64ToInt32(Node* node) {
     }
   }
 
-  Emit(kRiscvExt32, g.DefineAsRegister(node), g.UseRegister(node->InputAt(0)),
-       g.TempImmediate(0), g.TempImmediate(32));
+  // Semantics of this machine IR is not clear. For example, x86 zero-extend the
+  // truncated value; arm treats it as nop thus the upper 32-bit as undefined;
+  // mips emits ext instruction which zero-extend the 32-bit value; for riscv,
+  // we do sign-extension of the truncated value
+  Emit(kRiscvSignExtendWord, g.DefineAsRegister(node),
+       g.UseRegister(node->InputAt(0)));
 }
 
 void InstructionSelector::VisitTruncateFloat64ToFloat32(Node* node) {
