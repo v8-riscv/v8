@@ -1429,6 +1429,60 @@ TEST(RISCV9) {
   USE(code);
 }
 
+TEST(NAN_BOX) {
+  // Test float NaN-boxing.
+  CcTest::InitializeVM();
+
+  // Test NaN boxing in FMV.W.X 
+  {
+    auto fn = [](MacroAssembler& assm) { __ fmv_x_d(a0, fa0); };
+    GenAndRunTest(1234.56f,
+        0xFFFFFFFF00000000 | bit_cast<int32_t>(1234.56f),
+        fn);
+  }
+  // Test NaN boxing in FMV.X.W 
+  {
+    auto fn = [](MacroAssembler& assm) { 
+      __ fmv_x_w(a0, fa0); 
+    };
+    GenAndRunTest(1234.56f, (int64_t)bit_cast<int32_t>(1234.56f), fn);
+  }
+
+  // Test FLW and FSW
+  Isolate* isolate = CcTest::i_isolate();
+  HandleScope scope(isolate);
+
+  struct T {
+    float a;
+    uint64_t box;
+    uint64_t res;
+  };
+  T t;
+
+  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
+
+  // Load all structure elements to registers.
+  __ flw(fa0, a0, offsetof(T, a));
+  // Check boxing when flw
+  __ fsd(fa0, a0, offsetof(T, box));
+  // Check only transfer low 32bits when fsw
+  __ fsw(fa0, a0, offsetof(T, res));
+
+  __ jr(ra);
+
+  CodeDesc desc;
+  assm.GetCode(isolate, &desc);
+  Handle<Code> code = Factory::CodeBuilder(isolate, desc, Code::STUB).Build();
+  auto f = GeneratedCode<F3>::FromCode(*code);
+  t.a = -123.45;
+  t.box = 0;
+  t.res = 0;
+  f.Call(&t, 0, 0, 0, 0);
+
+  CHECK_EQ(0xFFFFFFFF00000000 | bit_cast<int32_t>(t.a), t.box);
+  CHECK_EQ((uint64_t)bit_cast<uint32_t>(t.a), t.res);
+}
+
 TEST(TARGET_ADDR) {
   CcTest::InitializeVM();
   Isolate* isolate = CcTest::i_isolate();
