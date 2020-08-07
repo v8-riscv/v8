@@ -659,18 +659,22 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
 
   inline void Move(FPURegister dst, Register src) { fmv_d_x(dst, src); }
 
-  inline void FmoveHigh(Register dst_high, FPURegister src) {
+  // Extract sign-extended word from high-half of FPR to GPR
+  inline void ExtractHighWordFromF64(Register dst_high, FPURegister src) {
     fmv_x_d(dst_high, src);
     srai(dst_high, dst_high, 32);
   }
 
-  void FmoveHigh(FPURegister dst, Register src_high);
+  // Insert low-word from GPR (src_high) to the high-half of FPR (dst)
+  void InsertHighWordF64(FPURegister dst, Register src_high);
 
-  inline void FmoveLow(Register dst_low, FPURegister src) {
+  // Extract sign-extended word from low-half of FPR to GPR
+  inline void ExtractLowWordFromF64(Register dst_low, FPURegister src) {
     fmv_x_w(dst_low, src);
   }
 
-  void FmoveLow(FPURegister dst, Register src_low);
+  // Insert low-word from GPR (src_high) to the low-half of FPR (dst)
+  void InsertLowWordF64(FPURegister dst, Register src_low);
 
   void Move(FPURegister dst, Register src_low, Register src_high);
 
