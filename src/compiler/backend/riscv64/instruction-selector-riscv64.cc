@@ -132,6 +132,20 @@ static void VisitRRI(InstructionSelector* selector, ArchOpcode opcode,
                  g.UseRegister(node->InputAt(0)), g.UseImmediate(imm));
 }
 
+static void VisitSimdShift(InstructionSelector* selector, ArchOpcode opcode,
+                           Node* node) {
+  RiscvOperandGenerator g(selector);
+  if (g.IsIntegerConstant(node->InputAt(1))) {
+    selector->Emit(opcode, g.DefineAsRegister(node),
+                   g.UseRegister(node->InputAt(0)),
+                   g.UseImmediate(node->InputAt(1)));
+  } else {
+    selector->Emit(opcode, g.DefineAsRegister(node),
+                   g.UseRegister(node->InputAt(0)),
+                   g.UseRegister(node->InputAt(1)));
+  }
+}
+
 static void VisitRRIR(InstructionSelector* selector, ArchOpcode opcode,
                       Node* node) {
   RiscvOperandGenerator g(selector);
@@ -837,6 +851,10 @@ void InstructionSelector::VisitWord64Sar(Node* node) {
   if (TryEmitExtendingLoad(this, node, node)) return;
   VisitRRO(this, kRiscvSar64, node);
 }
+
+void InstructionSelector::VisitWord32Rol(Node* node) { UNREACHABLE(); }
+
+void InstructionSelector::VisitWord64Rol(Node* node) { UNREACHABLE(); }
 
 void InstructionSelector::VisitWord32Ror(Node* node) {
   VisitRRO(this, kRiscvRor32, node);
@@ -2184,7 +2202,7 @@ void InstructionSelector::VisitSwitch(Node* node, const SwitchInfo& sw) {
   RiscvOperandGenerator g(this);
   InstructionOperand value_operand = g.UseRegister(node->InputAt(0));
 
-  // Emit either ArchTableSwitch or ArchLookupSwitch.
+  // Emit either ArchTableSwitch or ArchBinarySearchSwitch.
   if (enable_switch_jump_table_ == kEnableSwitchJumpTable) {
     static const size_t kMaxTableSwitchValueRange = 2 << 16;
     size_t table_space_cost = 10 + 2 * sw.value_range();
@@ -2651,19 +2669,22 @@ void InstructionSelector::VisitInt64AbsWithOverflow(Node* node) {
   V(I32x4SConvertI16x8High, kRiscvI32x4SConvertI16x8High) \
   V(I32x4UConvertI16x8Low, kRiscvI32x4UConvertI16x8Low)   \
   V(I32x4UConvertI16x8High, kRiscvI32x4UConvertI16x8High) \
+  V(I32x4Abs, kRiscvI32x4Abs)                             \
   V(I16x8Neg, kRiscvI16x8Neg)                             \
   V(I16x8SConvertI8x16Low, kRiscvI16x8SConvertI8x16Low)   \
   V(I16x8SConvertI8x16High, kRiscvI16x8SConvertI8x16High) \
   V(I16x8UConvertI8x16Low, kRiscvI16x8UConvertI8x16Low)   \
   V(I16x8UConvertI8x16High, kRiscvI16x8UConvertI8x16High) \
+  V(I16x8Abs, kRiscvI16x8Abs)                             \
   V(I8x16Neg, kRiscvI8x16Neg)                             \
+  V(I8x16Abs, kRiscvI8x16Abs)                             \
   V(S128Not, kRiscvS128Not)                               \
-  V(S1x4AnyTrue, kRiscvS1x4AnyTrue)                       \
-  V(S1x4AllTrue, kRiscvS1x4AllTrue)                       \
-  V(S1x8AnyTrue, kRiscvS1x8AnyTrue)                       \
-  V(S1x8AllTrue, kRiscvS1x8AllTrue)                       \
-  V(S1x16AnyTrue, kRiscvS1x16AnyTrue)                     \
-  V(S1x16AllTrue, kRiscvS1x16AllTrue)
+  V(V32x4AnyTrue, kRiscvV32x4AnyTrue)                     \
+  V(V32x4AllTrue, kRiscvV32x4AllTrue)                     \
+  V(V16x8AnyTrue, kRiscvV16x8AnyTrue)                     \
+  V(V16x8AllTrue, kRiscvV16x8AllTrue)                     \
+  V(V8x16AnyTrue, kRiscvV8x16AnyTrue)                     \
+  V(V8x16AllTrue, kRiscvV8x16AllTrue)
 
 #define SIMD_SHIFT_OP_LIST(V) \
   V(I64x2Shl)                 \
@@ -2761,14 +2782,33 @@ void InstructionSelector::VisitInt64AbsWithOverflow(Node* node) {
   V(I8x16UConvertI16x8, kRiscvI8x16UConvertI16x8)       \
   V(S128And, kRiscvS128And)                             \
   V(S128Or, kRiscvS128Or)                               \
-  V(S128Xor, kRiscvS128Xor)
+  V(S128Xor, kRiscvS128Xor)                             \
+  V(S128AndNot, kRiscvS128AndNot)
+
+void InstructionSelector::VisitS128Const(Node* node) {
+  RiscvOperandGenerator g(this);
+  static const int kUint32Immediates = kSimd128Size / sizeof(uint32_t);
+  uint32_t val[kUint32Immediates];
+  memcpy(val, S128ImmediateParameterOf(node->op()).data(), kSimd128Size);
+  // If all bytes are zeros or ones, avoid emitting code for generic constants
+  bool all_zeros = !(val[0] || val[1] || val[2] || val[3]);
+  bool all_ones = val[0] == UINT32_MAX && val[1] == UINT32_MAX &&
+                  val[2] == UINT32_MAX && val[3] == UINT32_MAX;
+  InstructionOperand dst = g.DefineAsRegister(node);
+  if (all_zeros) {
+    Emit(kRiscvS128Zero, dst);
+  } else if (all_ones) {
+    Emit(kRiscvS128AllOnes, dst);
+  } else {
+    Emit(kRiscvS128Const, dst, g.UseImmediate(val[0]), g.UseImmediate(val[1]),
+         g.UseImmediate(val[2]), g.UseImmediate(val[3]));
+  }
+}
 
 void InstructionSelector::VisitS128Zero(Node* node) {
   RiscvOperandGenerator g(this);
-  Emit(kRiscvS128Zero, g.DefineSameAsFirst(node));
+  Emit(kRiscvS128Zero, g.DefineAsRegister(node));
 }
-
-void InstructionSelector::VisitS128AndNot(Node* node) { UNIMPLEMENTED(); }
 
 #define SIMD_VISIT_SPLAT(Type)                               \
   void InstructionSelector::Visit##Type##Splat(Node* node) { \
@@ -2808,7 +2848,7 @@ SIMD_UNOP_LIST(SIMD_VISIT_UNOP)
 
 #define SIMD_VISIT_SHIFT_OP(Name)                     \
   void InstructionSelector::Visit##Name(Node* node) { \
-    VisitRRI(this, kRiscv##Name, node);               \
+    VisitSimdShift(this, kRiscv##Name, node);        \
   }
 SIMD_SHIFT_OP_LIST(SIMD_VISIT_SHIFT_OP)
 #undef SIMD_VISIT_SHIFT_OP
@@ -2916,21 +2956,23 @@ void InstructionSelector::VisitS8x16Shuffle(Node* node) {
   Node* input1 = node->InputAt(1);
   uint8_t offset;
   RiscvOperandGenerator g(this);
-  if (TryMatchConcat(shuffle, &offset)) {
+  if (wasm::SimdShuffle::TryMatchConcat(shuffle, &offset)) {
     Emit(kRiscvS8x16Concat, g.DefineSameAsFirst(node), g.UseRegister(input1),
          g.UseRegister(input0), g.UseImmediate(offset));
     return;
   }
-  if (TryMatch32x4Shuffle(shuffle, shuffle32x4)) {
+  if (wasm::SimdShuffle::TryMatch32x4Shuffle(shuffle, shuffle32x4)) {
     Emit(kRiscvS32x4Shuffle, g.DefineAsRegister(node), g.UseRegister(input0),
-         g.UseRegister(input1), g.UseImmediate(Pack4Lanes(shuffle32x4)));
+         g.UseRegister(input1),
+         g.UseImmediate(wasm::SimdShuffle::Pack4Lanes(shuffle32x4)));
     return;
   }
   Emit(kRiscvS8x16Shuffle, g.DefineAsRegister(node), g.UseRegister(input0),
-       g.UseRegister(input1), g.UseImmediate(Pack4Lanes(shuffle)),
-       g.UseImmediate(Pack4Lanes(shuffle + 4)),
-       g.UseImmediate(Pack4Lanes(shuffle + 8)),
-       g.UseImmediate(Pack4Lanes(shuffle + 12)));
+       g.UseRegister(input1),
+       g.UseImmediate(wasm::SimdShuffle::Pack4Lanes(shuffle)),
+       g.UseImmediate(wasm::SimdShuffle::Pack4Lanes(shuffle + 4)),
+       g.UseImmediate(wasm::SimdShuffle::Pack4Lanes(shuffle + 8)),
+       g.UseImmediate(wasm::SimdShuffle::Pack4Lanes(shuffle + 12)));
 }
 
 void InstructionSelector::VisitS8x16Swizzle(Node* node) {

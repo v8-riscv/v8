@@ -16,7 +16,7 @@
 #include "src/codegen/register-configuration.h"
 #include "src/debug/debug.h"
 #include "src/execution/frames-inl.h"
-#include "src/heap/heap-inl.h"  // For MemoryChunk.
+#include "src/heap/memory-chunk.h"
 #include "src/init/bootstrapper.h"
 #include "src/logging/counters.h"
 #include "src/objects/heap-number.h"
@@ -2049,10 +2049,10 @@ void TurboAssembler::CompareF64(Register rd, FPUCondition cc, FPURegister cmp1,
     case EQ:  // Equal.
       feq_d(rd, cmp1, cmp2);
       break;
-    case LT:  // Ordered or Less Than, on Mips release >= 6.
+    case LT:  // Ordered or Less Than
       flt_d(rd, cmp1, cmp2);
       break;
-    case LE:  // Ordered or Less Than or Equal, on Mips release >= 6.
+    case LE:  // Ordered or Less Than or Equal
       fle_d(rd, cmp1, cmp2);
       break;
     default:
@@ -3748,6 +3748,7 @@ void MacroAssembler::DecrementCounter(StatsCounter* counter, int value,
 // Debugging.
 
 void TurboAssembler::Trap() { stop(); }
+void TurboAssembler::DebugBreak() { stop(); }
 
 void TurboAssembler::Assert(Condition cc, AbortReason reason, Register rs,
                             Operand rt) {
@@ -4303,8 +4304,6 @@ void TurboAssembler::CallCFunctionHelper(Register function,
   // provides more information.
   // The argument stots are presumed to have been set up by
   // PrepareCallCFunction.
-  // FIXME(RISC-V): The MIPS ABI requires a C function must be called via t9,
-  //                does RISC-V have a similar requirement? We currently use t6
 
 #if V8_HOST_ARCH_RISCV64
   if (emit_debug_code()) {
@@ -4340,24 +4339,27 @@ void TurboAssembler::CallCFunctionHelper(Register function,
     // Save the frame pointer and PC so that the stack layout remains
     // iterable, even without an ExitFrame which normally exists between JS
     // and C frames.
-    if (isolate() != nullptr) {
-      // 't' registers are caller-saved so this is safe as a scratch register.
-      Register scratch1 = t1;
-      Register scratch2 = t2;
-      DCHECK(!AreAliased(scratch1, scratch2, function));
+    // 't' registers are caller-saved so this is safe as a scratch register.
+    Register pc_scratch = t1;
+    Register scratch = t2;
+    DCHECK(!AreAliased(pc_scratch, scratch, function));
 
-      Label get_pc;
-      mv(scratch1, ra);
-      Call(&get_pc);
+    auipc(pc_scratch, 0);
+    // FIXME(RISCV): Does this need an offset? It seems like this should be the
+    // PC of the call, but MIPS does not seem to do that.
 
-      bind(&get_pc);
-      mv(scratch2, ra);
-      mv(ra, scratch1);
-
-      li(scratch1, ExternalReference::fast_c_call_caller_pc_address(isolate()));
-      Sd(scratch2, MemOperand(scratch1));
-      li(scratch1, ExternalReference::fast_c_call_caller_fp_address(isolate()));
-      Sd(fp, MemOperand(scratch1));
+    // See x64 code for reasoning about how to address the isolate data fields.
+    if (root_array_available()) {
+      Sd(pc_scratch, MemOperand(kRootRegister,
+                                IsolateData::fast_c_call_caller_pc_offset()));
+      Sd(fp, MemOperand(kRootRegister,
+                        IsolateData::fast_c_call_caller_fp_offset()));
+    } else {
+      DCHECK_NOT_NULL(isolate());
+      li(scratch, ExternalReference::fast_c_call_caller_pc_address(isolate()));
+      Sd(pc_scratch, MemOperand(scratch));
+      li(scratch, ExternalReference::fast_c_call_caller_fp_address(isolate()));
+      Sd(fp, MemOperand(scratch));
     }
 
     Call(function);
@@ -4385,7 +4387,7 @@ void TurboAssembler::CallCFunctionHelper(Register function,
 void TurboAssembler::CheckPageFlag(Register object, Register scratch, int mask,
                                    Condition cc, Label* condition_met) {
   And(scratch, object, Operand(~kPageAlignmentMask));
-  Ld(scratch, MemOperand(scratch, MemoryChunk::kFlagsOffset));
+  Ld(scratch, MemOperand(scratch, BasicMemoryChunk::kFlagsOffset));
   And(scratch, scratch, Operand(mask));
   Branch(condition_met, cc, scratch, Operand(zero_reg));
 }
@@ -4429,7 +4431,9 @@ void TurboAssembler::ResetSpeculationPoisonRegister() {
   li(kSpeculationPoisonRegister, -1);
 }
 
-void TurboAssembler::CallForDeoptimization(Address target, int deopt_id) {
+void TurboAssembler::CallForDeoptimization(Address target, int deopt_id,
+                                           Label* exit, DeoptimizeKind kind) {
+  USE(exit, kind);
   NoRootArrayScope no_root_array(this);
 
   // Save the deopt id in kRootRegister (we don't need the roots array from
