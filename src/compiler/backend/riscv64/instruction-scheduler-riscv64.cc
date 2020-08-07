@@ -82,6 +82,15 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvF64x2Ne:
     case kRiscvF64x2Lt:
     case kRiscvF64x2Le:
+    case kRiscvF64x2Pmin:
+    case kRiscvF64x2Pmax:
+    case kRiscvF64x2Ceil:
+    case kRiscvF64x2Floor:
+    case kRiscvF64x2Trunc:
+    case kRiscvF64x2NearestInt:
+    case kRiscvI64x2Splat:
+    case kRiscvI64x2ExtractLane:
+    case kRiscvI64x2ReplaceLane:
     case kRiscvI64x2Add:
     case kRiscvI64x2Sub:
     case kRiscvI64x2Mul:
@@ -110,6 +119,12 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvF32x4Splat:
     case kRiscvF32x4Sub:
     case kRiscvF32x4UConvertI32x4:
+    case kRiscvF32x4Pmin:
+    case kRiscvF32x4Pmax:
+    case kRiscvF32x4Ceil:
+    case kRiscvF32x4Floor:
+    case kRiscvF32x4Trunc:
+    case kRiscvF32x4NearestInt:
     case kRiscvF64x2Splat:
     case kRiscvF64x2ExtractLane:
     case kRiscvF64x2ReplaceLane:
@@ -167,6 +182,8 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvI16x8UConvertI8x16High:
     case kRiscvI16x8UConvertI8x16Low:
     case kRiscvI16x8RoundingAverageU:
+    case kRiscvI16x8Abs:
+    case kRiscvI16x8BitMask:
     case kRiscvI32x4Add:
     case kRiscvI32x4AddHoriz:
     case kRiscvI32x4Eq:
@@ -194,6 +211,8 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvI32x4UConvertF32x4:
     case kRiscvI32x4UConvertI16x8High:
     case kRiscvI32x4UConvertI16x8Low:
+    case kRiscvI32x4Abs:
+    case kRiscvI32x4BitMask:
     case kRiscvI8x16Add:
     case kRiscvI8x16AddSaturateS:
     case kRiscvI8x16AddSaturateU:
@@ -220,6 +239,8 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvI8x16SubSaturateS:
     case kRiscvI8x16SubSaturateU:
     case kRiscvI8x16RoundingAverageU:
+    case kRiscvI8x16Abs:
+    case kRiscvI8x16BitMask:
     case kRiscvIns32:
     case kRiscvLsa32:
     case kRiscvMaxD:
@@ -248,8 +269,11 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvS128Or:
     case kRiscvS128Not:
     case kRiscvS128Select:
+    case kRiscvS128AndNot:
     case kRiscvS128Xor:
+    case kRiscvS128Const:
     case kRiscvS128Zero:
+    case kRiscvS128AllOnes:
     case kRiscvS16x8InterleaveEven:
     case kRiscvS16x8InterleaveOdd:
     case kRiscvS16x8InterleaveLeft:
@@ -258,12 +282,12 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvS16x8PackOdd:
     case kRiscvS16x2Reverse:
     case kRiscvS16x4Reverse:
-    case kRiscvS1x16AllTrue:
-    case kRiscvS1x16AnyTrue:
-    case kRiscvS1x4AllTrue:
-    case kRiscvS1x4AnyTrue:
-    case kRiscvS1x8AllTrue:
-    case kRiscvS1x8AnyTrue:
+    case kRiscvV8x16AllTrue:
+    case kRiscvV8x16AnyTrue:
+    case kRiscvV32x4AllTrue:
+    case kRiscvV32x4AnyTrue:
+    case kRiscvV16x8AllTrue:
+    case kRiscvV16x8AnyTrue:
     case kRiscvS32x4InterleaveEven:
     case kRiscvS32x4InterleaveOdd:
     case kRiscvS32x4InterleaveLeft:
@@ -412,14 +436,8 @@ enum Latency {
   MULT = 4,
   MULTU = 4,
   DMULT = 4,
-  // DMULTU = 4,
 
   MUL32 = 7,
-  // MUL64 = 7,
-  // MUH = 7,
-  // MUHU = 7,
-  // DMUH = 7,
-  // DMUHU = 7,
 
   DIV32 = 50,  // Min:11 Max:50
   DIV64 = 50,
@@ -833,14 +851,6 @@ int AssembleArchJumpLatency() {
   return Latency::BRANCH;
 }
 
-int AssembleArchLookupSwitchLatency(const Instruction* instr) {
-  int latency = 0;
-  for (size_t index = 2; index < instr->InputCount(); index += 2) {
-    latency += 1 + Latency::BRANCH;
-  }
-  return latency + AssembleArchJumpLatency();
-}
-
 int GenerateSwitchTableLatency() {
   int latency = 6;
   latency += 2;
@@ -1126,8 +1136,6 @@ int InstructionScheduler::GetInstructionLatency(const Instruction* instr) {
       return CallCFunctionLatency();
     case kArchJmp:
       return AssembleArchJumpLatency();
-    case kArchLookupSwitch:
-      return AssembleArchLookupSwitchLatency(instr);
     case kArchTableSwitch:
       return AssembleArchTableSwitchLatency();
     case kArchAbortCSAAssert:
