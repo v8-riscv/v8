@@ -1507,16 +1507,16 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ fmv_d_x(i.OutputDoubleRegister(), i.InputRegister(0));
       break;
     case kRiscvFloat64ExtractLowWord32:
-      __ FmoveLow(i.OutputRegister(), i.InputDoubleRegister(0));
+      __ ExtractLowWordFromF64(i.OutputRegister(), i.InputDoubleRegister(0));
       break;
     case kRiscvFloat64ExtractHighWord32:
-      __ FmoveHigh(i.OutputRegister(), i.InputDoubleRegister(0));
+      __ ExtractHighWordFromF64(i.OutputRegister(), i.InputDoubleRegister(0));
       break;
     case kRiscvFloat64InsertLowWord32:
-      __ FmoveLow(i.OutputDoubleRegister(), i.InputRegister(1));
+      __ InsertLowWordF64(i.OutputDoubleRegister(), i.InputRegister(1));
       break;
     case kRiscvFloat64InsertHighWord32:
-      __ FmoveHigh(i.OutputDoubleRegister(), i.InputRegister(1));
+      __ InsertHighWordF64(i.OutputDoubleRegister(), i.InputRegister(1));
       break;
       // ... more basic instructions ...
 
