@@ -1070,7 +1070,7 @@ bool LiftoffAssembler::emit_type_conversion(WasmOpcode opcode,
       return true;
     }
     case kExprI32ReinterpretF32:
-      TurboAssembler::FmoveLow(dst.gp(), src.fp());
+      TurboAssembler::ExtractLowWordFromF64(dst.gp(), src.fp());
       return true;
     case kExprI64SConvertI32:
       sll(dst.gp(), src.gp(), 0);
