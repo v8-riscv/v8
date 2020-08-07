@@ -109,41 +109,20 @@ int Assembler::deserialization_special_target_size(
   return kSpecialTargetSize;
 }
 
-// RISCV (FIXME): still use MIPS constant kImm28Mask
 void Assembler::set_target_internal_reference_encoded_at(Address pc,
                                                          Address target) {
-  UNIMPLEMENTED();
-  /*
-    // Encoded internal references are j/jal instructions.
-    Instr instr = Assembler::instr_at(pc + 0 * kInstrSize);
-    DCHECK(IsJump(instr));
-
-    uint64_t imm28 = target & static_cast<uint64_t>(kImm28Mask);
-
-    instr &= ~kImm26Mask;
-    uint64_t imm26 = imm28 >> 2;
-    DCHECK(is_uint26(imm26));
-
-    instr_at_put(pc, instr | (imm26 & kImm26Mask));
-    // Currently used only by deserializer, and all code will be flushed
-    // after complete deserialization, no need to flush on each reference.
-  */
+    set_target_value_at(pc, static_cast<uint64_t>(target));
 }
 
-// FIXME (RISCV): still use MIPS function IsJ
 void Assembler::deserialization_set_target_internal_reference_at(
     Address pc, Address target, RelocInfo::Mode mode) {
-  UNIMPLEMENTED();
-  /*
-
-  if (mode == RelocInfo::INTERNAL_REFERENCE_ENCODED) {
-    DCHECK(IsJ(instr_at(pc)));
+  if (RelocInfo::IsInternalReferenceEncoded(mode)) {
+    DCHECK(IsLui(instr_at(pc)));
     set_target_internal_reference_encoded_at(pc, target);
   } else {
-    DCHECK(mode == RelocInfo::INTERNAL_REFERENCE);
+    DCHECK(RelocInfo::IsInternalReference(mode));
     Memory<Address>(pc) = target;
   }
-  */
 }
 
 HeapObject RelocInfo::target_object() {
@@ -244,80 +223,23 @@ void Assembler::CheckBuffer() {
   }
 }
 
-// FIXME (RISCV): MIPS constants SPECIAL and SLL are still in use
-void Assembler::CheckForEmitInForbiddenSlot() {
-  if (!is_buffer_growth_blocked()) {
-    CheckBuffer();
-  }
-  if (IsPrevInstrCompactBranch()) {
-    UNIMPLEMENTED();
-    /*
-    // Nop instruction to precede a CTI in forbidden slot:
-    Instr nop = SPECIAL | SLL;
-    *reinterpret_cast<Instr*>(pc_) = nop;
-    pc_ += kInstrSize;
-
-    ClearCompactBranchState();
-    */
-  }
-}
-
-// FIXME (RISCV): MIPS constants SPECIAL and SLL are still in use
-void Assembler::EmitHelper(Instr x, CompactBranchType is_compact_branch) {
-  if (IsPrevInstrCompactBranch()) {
-    UNIMPLEMENTED();
-    /*
-    if (Instruction::IsForbiddenAfterBranchInstr(x)) {
-      // Nop instruction to precede a CTI in forbidden slot:
-      Instr nop = SPECIAL | SLL;
-      *reinterpret_cast<Instr*>(pc_) = nop;
-      pc_ += kInstrSize;
-    }
-    ClearCompactBranchState();
-    */
-  }
-  DEBUG_PRINTF("%p: ", pc_);
-  disassembleInstr(x);
-  *reinterpret_cast<Instr*>(pc_) = x;
-  pc_ += kInstrSize;
-  if (is_compact_branch == CompactBranchType::COMPACT_BRANCH) {
-    EmittedCompactBranchInstruction();
-  }
-  CheckTrampolinePoolQuick();
-}
-
-template <>
-inline void Assembler::EmitHelper(uint8_t x);
-
 template <typename T>
 void Assembler::EmitHelper(T x) {
   DEBUG_PRINTF("%p: ", pc_);
   disassembleInstr((int)x);
   *reinterpret_cast<T*>(pc_) = x;
   pc_ += sizeof(x);
-  CheckTrampolinePoolQuick();
 }
 
-template <>
-void Assembler::EmitHelper(uint8_t x) {
-  DEBUG_PRINTF("%p: ", pc_);
-  disassembleInstr(x);
-  *reinterpret_cast<uint8_t*>(pc_) = x;
-  pc_ += sizeof(x);
-  if (reinterpret_cast<intptr_t>(pc_) % kInstrSize == 0) {
-    CheckTrampolinePoolQuick();
-  }
-}
-
-void Assembler::emit(Instr x, CompactBranchType is_compact_branch) {
+void Assembler::emit(Instr x) {
   if (!is_buffer_growth_blocked()) {
     CheckBuffer();
   }
-  EmitHelper(x, is_compact_branch);
+  EmitHelper(x);
 }
 
 void Assembler::emit(uint64_t data) {
-  CheckForEmitInForbiddenSlot();
+  if (!is_buffer_growth_blocked()) CheckBuffer();
   EmitHelper(data);
 }
 
