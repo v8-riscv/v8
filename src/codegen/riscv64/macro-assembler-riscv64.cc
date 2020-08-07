@@ -2060,20 +2060,6 @@ void TurboAssembler::InsertLowWordF64(FPURegister dst, Register src_low) {
   fmv_d_x(dst, scratch);
 }
 
-void TurboAssembler::Move(FPURegister dst, Register src_low,
-                          Register src_high) {
-  UseScratchRegisterScope temps(this);
-  Register scratch = temps.Acquire();
-  BlockTrampolinePoolScope block_trampoline_pool(this);
-
-  DCHECK(src_high != t5 && src_high != scratch);
-  slli(scratch, src_low, 32);
-  slli(t5, src_high, 32);
-  srli(scratch, scratch, 32);
-  or_(scratch, scratch, t5);
-  fmv_d_x(dst, scratch);
-}
-
 void TurboAssembler::Move(FPURegister dst, uint32_t src) {
   // Handle special values first.
   if (src == bit_cast<uint32_t>(0.0f) && has_single_zero_reg_set_) {
