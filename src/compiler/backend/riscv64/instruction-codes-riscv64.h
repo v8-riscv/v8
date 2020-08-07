@@ -165,7 +165,9 @@ namespace compiler {
   V(RiscvSignExtendShort)                   \
   V(RiscvSync)                              \
   V(RiscvAssertEqual)                       \
+  V(RiscvS128Const)                         \
   V(RiscvS128Zero)                          \
+  V(RiscvS128AllOnes)                       \
   V(RiscvI32x4Splat)                        \
   V(RiscvI32x4ExtractLane)                  \
   V(RiscvI32x4ReplaceLane)                  \
@@ -203,6 +205,15 @@ namespace compiler {
   V(RiscvF64x2Splat)                        \
   V(RiscvF64x2ExtractLane)                  \
   V(RiscvF64x2ReplaceLane)                  \
+  V(RiscvF64x2Pmin)                         \
+  V(RiscvF64x2Pmax)                         \
+  V(RiscvF64x2Ceil)                         \
+  V(RiscvF64x2Floor)                        \
+  V(RiscvF64x2Trunc)                        \
+  V(RiscvF64x2NearestInt)                   \
+  V(RiscvI64x2Splat)                        \
+  V(RiscvI64x2ExtractLane)                  \
+  V(RiscvI64x2ReplaceLane)                  \
   V(RiscvI64x2Add)                          \
   V(RiscvI64x2Sub)                          \
   V(RiscvI64x2Mul)                          \
@@ -226,6 +237,12 @@ namespace compiler {
   V(RiscvF32x4Ne)                           \
   V(RiscvF32x4Lt)                           \
   V(RiscvF32x4Le)                           \
+  V(RiscvF32x4Pmin)                         \
+  V(RiscvF32x4Pmax)                         \
+  V(RiscvF32x4Ceil)                         \
+  V(RiscvF32x4Floor)                        \
+  V(RiscvF32x4Trunc)                        \
+  V(RiscvF32x4NearestInt)                   \
   V(RiscvI32x4SConvertF32x4)                \
   V(RiscvI32x4UConvertF32x4)                \
   V(RiscvI32x4Neg)                          \
@@ -233,6 +250,8 @@ namespace compiler {
   V(RiscvI32x4GeS)                          \
   V(RiscvI32x4GtU)                          \
   V(RiscvI32x4GeU)                          \
+  V(RiscvI32x4Abs)                          \
+  V(RiscvI32x4BitMask)                      \
   V(RiscvI16x8Splat)                        \
   V(RiscvI16x8ExtractLaneU)                 \
   V(RiscvI16x8ExtractLaneS)                 \
@@ -260,6 +279,8 @@ namespace compiler {
   V(RiscvI16x8GtU)                          \
   V(RiscvI16x8GeU)                          \
   V(RiscvI16x8RoundingAverageU)             \
+  V(RiscvI16x8Abs)                          \
+  V(RiscvI16x8BitMask)                      \
   V(RiscvI8x16Splat)                        \
   V(RiscvI8x16ExtractLaneU)                 \
   V(RiscvI8x16ExtractLaneS)                 \
@@ -286,17 +307,20 @@ namespace compiler {
   V(RiscvI8x16GtU)                          \
   V(RiscvI8x16GeU)                          \
   V(RiscvI8x16RoundingAverageU)             \
+  V(RiscvI8x16Abs)                          \
+  V(RiscvI8x16BitMask)                      \
   V(RiscvS128And)                           \
   V(RiscvS128Or)                            \
   V(RiscvS128Xor)                           \
   V(RiscvS128Not)                           \
   V(RiscvS128Select)                        \
-  V(RiscvS1x4AnyTrue)                       \
-  V(RiscvS1x4AllTrue)                       \
-  V(RiscvS1x8AnyTrue)                       \
-  V(RiscvS1x8AllTrue)                       \
-  V(RiscvS1x16AnyTrue)                      \
-  V(RiscvS1x16AllTrue)                      \
+  V(RiscvS128AndNot)                        \
+  V(RiscvV32x4AnyTrue)                      \
+  V(RiscvV32x4AllTrue)                      \
+  V(RiscvV16x8AnyTrue)                      \
+  V(RiscvV16x8AllTrue)                      \
+  V(RiscvV8x16AnyTrue)                      \
+  V(RiscvV8x16AllTrue)                      \
   V(RiscvS32x4InterleaveRight)              \
   V(RiscvS32x4InterleaveLeft)               \
   V(RiscvS32x4PackEven)                     \
