@@ -12,7 +12,7 @@
 #include "src/compiler/backend/gap-resolver.h"
 #include "src/compiler/node-matchers.h"
 #include "src/compiler/osr.h"
-#include "src/heap/heap-inl.h"  // crbug.com/v8/8499
+#include "src/heap/memory-chunk.h"
 #include "src/wasm/wasm-code-manager.h"
 
 namespace v8 {
@@ -749,7 +749,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       // &start_call to after __CallCFunction()? This code seems quite brittle.
       // Better to use label and PC-relative addressing to generate the return
       // address
-      int offset = 52;
+      int offset = __ root_array_available() ? 64 : 72;
 #if V8_HOST_ARCH_RISCV64
       if (__ emit_debug_code()) {
         offset += 16;
@@ -800,9 +800,6 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kArchBinarySearchSwitch:
       AssembleArchBinarySearchSwitch(instr);
       break;
-    case kArchLookupSwitch:
-      AssembleArchLookupSwitch(instr);
-      break;
     case kArchTableSwitch:
       AssembleArchTableSwitch(instr);
       break;
@@ -819,7 +816,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ stop();
       break;
     case kArchDebugBreak:
-      __ stop();
+      __ DebugBreak();
       break;
     case kArchComment:
       __ RecordComment(reinterpret_cast<const char*>(i.InputInt64(0)));
@@ -866,9 +863,9 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       Register value = i.InputRegister(2);
       Register scratch0 = i.TempRegister(0);
       Register scratch1 = i.TempRegister(1);
-      auto ool = new (zone())
-          OutOfLineRecordWrite(this, object, index, value, scratch0, scratch1,
-                               mode, DetermineStubCallMode());
+      auto ool = zone()->New<OutOfLineRecordWrite>(this, object, index, value,
+                                                   scratch0, scratch1, mode,
+                                                   DetermineStubCallMode());
       __ Add64(kScratchReg, object, index);
       __ Sd(value, MemOperand(kScratchReg));
       __ CheckPageFlag(object, scratch0,
@@ -1944,7 +1941,7 @@ void AssembleBranchToLabels(CodeGenerator* gen, TurboAssembler* tasm,
         __ Branch(tlabel, eq, kScratchReg, Operand(zero_reg));
         break;
       default:
-        UNSUPPORTED_COND(kMipsMulOvf, condition);
+        UNSUPPORTED_COND(kRiscvMulOvf32, condition);
         break;
     }
   } else if (instr->arch_opcode() == kRiscvCmp) {
@@ -2120,7 +2117,7 @@ void CodeGenerator::AssembleArchTrap(Instruction* instr,
         __ PrepareCallCFunction(0, 0, cp);
         __ CallCFunction(
             ExternalReference::wasm_call_trap_callback_for_testing(), 0);
-        __ LeaveFrame(StackFrame::WASM_COMPILED);
+        __ LeaveFrame(StackFrame::WASM);
         auto call_descriptor = gen_->linkage()->GetIncomingDescriptor();
         int pop_count =
             static_cast<int>(call_descriptor->StackParameterCount());
@@ -2134,7 +2131,7 @@ void CodeGenerator::AssembleArchTrap(Instruction* instr,
         // is added to the native module and copied into wasm code space.
         __ Call(static_cast<Address>(trap_id), RelocInfo::WASM_STUB_CALL);
         ReferenceMap* reference_map =
-            new (gen_->zone()) ReferenceMap(gen_->zone());
+            gen_->zone()->New<ReferenceMap>(gen_->zone());
         gen_->RecordSafepoint(reference_map, Safepoint::kNoLazyDeopt);
         if (FLAG_debug_code) {
           __ stop();
@@ -2144,7 +2141,7 @@ void CodeGenerator::AssembleArchTrap(Instruction* instr,
     Instruction* instr_;
     CodeGenerator* gen_;
   };
-  auto ool = new (zone()) OutOfLineTrap(this, instr);
+  auto ool = zone()->New<OutOfLineTrap>(this, instr);
   Label* tlabel = ool->entry();
   AssembleBranchToLabels(this, tasm(), instr, condition, tlabel, nullptr, true);
 }
@@ -2315,16 +2312,6 @@ void CodeGenerator::AssembleArchBinarySearchSwitch(Instruction* instr) {
                                       cases.data() + cases.size());
 }
 
-void CodeGenerator::AssembleArchLookupSwitch(Instruction* instr) {
-  RiscvOperandConverter i(this, instr);
-  Register input = i.InputRegister(0);
-  for (size_t index = 2; index < instr->InputCount(); index += 2) {
-    __ li(kScratchReg, Operand(i.InputInt32(index + 0)));
-    __ Branch(GetLabel(i.InputRpo(index + 1)), eq, input, Operand(kScratchReg));
-  }
-  AssembleArchJump(i.InputRpo(1));
-}
-
 void CodeGenerator::AssembleArchTableSwitch(Instruction* instr) {
   RiscvOperandConverter i(this, instr);
   Register input = i.InputRegister(0);
@@ -2380,7 +2367,7 @@ void CodeGenerator::AssembleConstructFrame() {
         __ Push(kWasmInstanceRegister);
       } else if (call_descriptor->IsWasmImportWrapper() ||
                  call_descriptor->IsWasmCapiFunction()) {
-        // WASM import wrappers are passed a tuple in the place of the instance.
+        // Wasm import wrappers are passed a tuple in the place of the instance.
         // Unpack the tuple into the instance and the target callable.
         // This must be done here in the codegen because it cannot be expressed
         // properly in the graph.
@@ -2442,7 +2429,7 @@ void CodeGenerator::AssembleConstructFrame() {
 
       __ Call(wasm::WasmCode::kWasmStackOverflow, RelocInfo::WASM_STUB_CALL);
       // We come from WebAssembly, there are no references for the GC.
-      ReferenceMap* reference_map = new (zone()) ReferenceMap(zone());
+      ReferenceMap* reference_map = zone()->New<ReferenceMap>(zone());
       RecordSafepoint(reference_map, Safepoint::kNoLazyDeopt);
       if (FLAG_debug_code) {
         __ stop();
@@ -2609,10 +2596,10 @@ void CodeGenerator::AssembleMove(InstructionOperand* source,
       if (destination->IsFPStackSlot()) {
         MemOperand dst = g.ToMemOperand(destination);
         if (bit_cast<int32_t>(src.ToFloat32()) == 0) {
-          __ Sd(zero_reg, dst);
+          __ Sw(zero_reg, dst);
         } else {
           __ li(kScratchReg, Operand(bit_cast<int32_t>(src.ToFloat32())));
-          __ Sd(kScratchReg, dst);
+          __ Sw(kScratchReg, dst);
         }
       } else {
         DCHECK(destination->IsFPRegister());
@@ -2640,7 +2627,12 @@ void CodeGenerator::AssembleMove(InstructionOperand* source,
         __ Move(dst, src);
       } else {
         DCHECK(destination->IsFPStackSlot());
-        __ StoreDouble(src, g.ToMemOperand(destination));
+        if (rep == MachineRepresentation::kFloat32) {
+          __ StoreFloat(src, g.ToMemOperand(destination));
+        } else {
+          DCHECK_EQ(rep, MachineRepresentation::kFloat64);
+          __ StoreDouble(src, g.ToMemOperand(destination));
+        }
       }
     }
   } else if (source->IsFPStackSlot()) {
@@ -2651,12 +2643,23 @@ void CodeGenerator::AssembleMove(InstructionOperand* source,
       UNIMPLEMENTED();
     } else {
       if (destination->IsFPRegister()) {
-        __ LoadDouble(g.ToDoubleRegister(destination), src);
+        if (rep == MachineRepresentation::kFloat32) {
+          __ LoadFloat(g.ToDoubleRegister(destination), src);
+        } else {
+          DCHECK_EQ(rep, MachineRepresentation::kFloat64);
+          __ LoadDouble(g.ToDoubleRegister(destination), src);
+        }
       } else {
         DCHECK(destination->IsFPStackSlot());
         FPURegister temp = kScratchDoubleReg;
-        __ LoadDouble(temp, src);
-        __ StoreDouble(temp, g.ToMemOperand(destination));
+        if (rep == MachineRepresentation::kFloat32) {
+          __ LoadFloat(temp, src);
+          __ StoreFloat(temp, g.ToMemOperand(destination));
+        } else {
+          DCHECK_EQ(rep, MachineRepresentation::kFloat64);
+          __ LoadDouble(temp, src);
+          __ StoreDouble(temp, g.ToMemOperand(destination));
+        }
       }
     }
   } else {
