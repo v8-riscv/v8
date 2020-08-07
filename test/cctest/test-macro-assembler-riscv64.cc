@@ -631,8 +631,8 @@ TEST(OverflowInstructions) {
 
       __ Ld(t0, MemOperand(a0, offsetof(T, lhs)));
       __ Ld(t1, MemOperand(a0, offsetof(T, rhs)));
-      __ slliw(t0, t0, 0);
-      __ slliw(t1, t1, 0);
+      __ SignExtendWord(t0, t0);
+      __ SignExtendWord(t1, t1);
       __ MulOverflow32(t2, t0, Operand(t1), a1);
       __ Sd(t2, MemOperand(a0, offsetof(T, output_mul)));
       __ Sd(a1, MemOperand(a0, offsetof(T, overflow_mul)));
@@ -1724,7 +1724,7 @@ TEST(Move) {
   } t;
 
   {
-    auto fn = [](MacroAssembler* masm) { __ FmoveHigh(a0, fa0); };
+    auto fn = [](MacroAssembler* masm) { __ ExtractHighWordFromF64(a0, fa0); };
     t.ival[0] = 256;
     t.ival[1] = -123;
     CHECK_EQ(static_cast<int64_t>(t.ival[1]), run_Cvt<int64_t>(t.dval, fn));
@@ -1734,7 +1734,7 @@ TEST(Move) {
   }
 
   {
-    auto fn = [](MacroAssembler* masm) { __ FmoveLow(a0, fa0); };
+    auto fn = [](MacroAssembler* masm) { __ ExtractLowWordFromF64(a0, fa0); };
     t.ival[0] = 256;
     t.ival[1] = -123;
     CHECK_EQ(static_cast<int64_t>(t.ival[0]), run_Cvt<int64_t>(t.dval, fn));
