@@ -2029,8 +2029,7 @@ void TurboAssembler::BranchFalseF(Register rs, Label* target) {
   }
 }
 
-// move word (src_high) to high-half of dst
-void TurboAssembler::FmoveHigh(FPURegister dst, Register src_high) {
+void TurboAssembler::InsertHighWordF64(FPURegister dst, Register src_high) {
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
   BlockTrampolinePoolScope block_trampoline_pool(this);
@@ -2045,7 +2044,7 @@ void TurboAssembler::FmoveHigh(FPURegister dst, Register src_high) {
   fmv_d_x(dst, scratch);
 }
 
-void TurboAssembler::FmoveLow(FPURegister dst, Register src_low) {
+void TurboAssembler::InsertLowWordF64(FPURegister dst, Register src_low) {
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
   UseScratchRegisterScope block_trampoline_pool(this);
