@@ -226,9 +226,6 @@ Assembler::Assembler(const AssemblerOptions& options,
 void Assembler::GetCode(Isolate* isolate, CodeDesc* desc,
                         SafepointTableBuilder* safepoint_table_builder,
                         int handler_table_offset) {
-  // FIXME(RISCV): does riscv need this?
-  EmitForbiddenSlotInstruction();
-
   int code_comments_size = WriteCodeComments();
 
   DCHECK(pc_ <= reloc_info_writer.pos());  // No overlap.
@@ -259,7 +256,6 @@ void Assembler::GetCode(Isolate* isolate, CodeDesc* desc,
 
 void Assembler::Align(int m) {
   DCHECK(m >= 4 && base::bits::IsPowerOfTwo(m));
-  EmitForbiddenSlotInstruction();
   while ((pc_offset() & (m - 1)) != 0) {
     nop();
   }
@@ -1820,8 +1816,6 @@ void Assembler::break_(uint32_t code, bool break_as_stop) {
   // since ebreak does not allow additional immediate field, we use the
   // immediate field of lui instruction immediately following the ebreak to
   // encode the "code" info
-  //
-  // FIXME: need to check how native debugger gets the "code" information
   ebreak();
   DCHECK(is_uint20(code));
   lui(zero_reg, code);
@@ -1945,23 +1939,23 @@ void Assembler::GrowBuffer() {
 }
 
 void Assembler::db(uint8_t data) {
-  CheckForEmitInForbiddenSlot();
+  if (!is_buffer_growth_blocked()) CheckBuffer();
   EmitHelper(data);
 }
 
 void Assembler::dd(uint32_t data) {
-  CheckForEmitInForbiddenSlot();
+  if (!is_buffer_growth_blocked()) CheckBuffer();
   EmitHelper(data);
 }
 
 void Assembler::dq(uint64_t data) {
-  CheckForEmitInForbiddenSlot();
+  if (!is_buffer_growth_blocked()) CheckBuffer();
   EmitHelper(data);
 }
 
 void Assembler::dd(Label* label) {
   uint64_t data;
-  CheckForEmitInForbiddenSlot();
+  if (!is_buffer_growth_blocked()) CheckBuffer();
   if (label->is_bound()) {
     data = reinterpret_cast<uint64_t>(buffer_start_ + label->pos());
   } else {
@@ -2020,8 +2014,12 @@ void Assembler::CheckTrampolinePool() {
       for (int i = 0; i < unbound_labels_count_; i++) {
         j(&after_pool);
       }
-      bind(&after_pool);
+      // If unbound_labels_count_ is big enough, label after_pool will
+      // need a trampoline too, so we must create the trampoline before
+      // the bind operation to make sure function 'bind' can get this
+      // information.
       trampoline_ = Trampoline(pool_start, unbound_labels_count_);
+      bind(&after_pool);
 
       trampoline_emitted_ = true;
       // As we are only going to emit trampoline once, we need to prevent any
