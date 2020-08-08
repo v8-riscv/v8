@@ -831,7 +831,6 @@
 
 
 ['arch == riscv64 or arch == riscv', {
-  'regress/wasm/regress-1032753': [SKIP], # issue 57
   'es6/block-conflicts-sloppy': [SKIP], # issue 56
   'es6/promises': [SKIP], # issue 56
 
