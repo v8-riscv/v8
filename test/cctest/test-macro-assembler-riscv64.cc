@@ -120,7 +120,7 @@ TEST(LoadAddress) {
   MacroAssembler assembler(isolate, v8::internal::CodeObjectRequired::kYes);
   MacroAssembler* masm = &assembler;
   Label to_jump, skip;
-  __ mov(a4, a0);
+  __ mv(a4, a0);
 
   __ Branch(&skip);
   __ bind(&to_jump);
@@ -144,7 +144,8 @@ TEST(LoadAddress) {
 
   CodeDesc desc;
   masm->GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
 
   auto f = GeneratedCode<FV>::FromCode(*code);
   (void)f.Call(0, 0, 0, 0, 0);
@@ -198,7 +199,8 @@ TEST(jump_tables4) {
 
   CodeDesc desc;
   masm->GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
 #ifdef OBJECT_PRINT
   code->Print(std::cout);
 #endif
@@ -285,7 +287,8 @@ TEST(jump_tables6) {
 
   CodeDesc desc;
   masm->GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
 #ifdef OBJECT_PRINT
   code->Print(std::cout);
 #endif
@@ -309,7 +312,8 @@ static uint64_t run_CalcScaledAddress(uint64_t rt, uint64_t rs, int8_t sa) {
 
   CodeDesc desc;
   assembler.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
 
   auto f = GeneratedCode<FV>::FromCode(*code);
 
@@ -464,7 +468,8 @@ RET_TYPE run_Cvt(IN_TYPE x, Func GenerateConvertInstructionFunc) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
 
   // deal w/ passing floating-point parameters to f.Call
   using IIN_TYPE =
@@ -613,7 +618,7 @@ TEST(OverflowInstructions) {
       __ AddOverflow64(t2, t0, Operand(t1), a1);
       __ Sd(t2, MemOperand(a0, offsetof(T, output_add)));
       __ Sd(a1, MemOperand(a0, offsetof(T, overflow_add)));
-      __ mov(a1, zero_reg);
+      __ mv(a1, zero_reg);
       __ AddOverflow64(t0, t0, Operand(t1), a1);
       __ Sd(t0, MemOperand(a0, offsetof(T, output_add2)));
       __ Sd(a1, MemOperand(a0, offsetof(T, overflow_add2)));
@@ -624,7 +629,7 @@ TEST(OverflowInstructions) {
       __ SubOverflow64(t2, t0, Operand(t1), a1);
       __ Sd(t2, MemOperand(a0, offsetof(T, output_sub)));
       __ Sd(a1, MemOperand(a0, offsetof(T, overflow_sub)));
-      __ mov(a1, zero_reg);
+      __ mv(a1, zero_reg);
       __ SubOverflow64(t0, t0, Operand(t1), a1);
       __ Sd(t0, MemOperand(a0, offsetof(T, output_sub2)));
       __ Sd(a1, MemOperand(a0, offsetof(T, overflow_sub2)));
@@ -636,7 +641,7 @@ TEST(OverflowInstructions) {
       __ MulOverflow32(t2, t0, Operand(t1), a1);
       __ Sd(t2, MemOperand(a0, offsetof(T, output_mul)));
       __ Sd(a1, MemOperand(a0, offsetof(T, overflow_mul)));
-      __ mov(a1, zero_reg);
+      __ mv(a1, zero_reg);
       __ MulOverflow32(t0, t0, Operand(t1), a1);
       __ Sd(t0, MemOperand(a0, offsetof(T, output_mul2)));
       __ Sd(a1, MemOperand(a0, offsetof(T, overflow_mul2)));
@@ -746,7 +751,8 @@ TEST(min_max_nan) {
 
   CodeDesc desc;
   masm->GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
   auto f = GeneratedCode<F3>::FromCode(*code);
   for (int i = 0; i < kTableLength; i++) {
     test.a = inputsa[i];
@@ -777,7 +783,8 @@ bool run_Unaligned(char* memory_buffer, int32_t in_offset, int32_t out_offset,
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
   auto f = GeneratedCode<int32_t(char*)>::FromCode(*code);
 
   MemCopy(memory_buffer + in_offset, &value, sizeof(IN_TYPE));
@@ -832,7 +839,7 @@ TEST(Ulh) {
         // test when loaded value overwrites base-register of load address
         auto fn_2 = [](MacroAssembler* masm, int32_t in_offset,
                        int32_t out_offset) {
-          __ mov(t0, a0);
+          __ mv(t0, a0);
           __ Ulh(a0, MemOperand(a0, in_offset));
           __ Ush(a0, MemOperand(t0, out_offset));
         };
@@ -842,7 +849,7 @@ TEST(Ulh) {
         // test when loaded value overwrites base-register of load address
         auto fn_3 = [](MacroAssembler* masm, int32_t in_offset,
                        int32_t out_offset) {
-          __ mov(t0, a0);
+          __ mv(t0, a0);
           __ Ulhu(a0, MemOperand(a0, in_offset));
           __ Ush(a0, MemOperand(t0, out_offset));
         };
@@ -938,7 +945,7 @@ TEST(Ulw) {
         // test when loaded value overwrites base-register of load address
         auto fn_2 = [](MacroAssembler* masm, int32_t in_offset,
                        int32_t out_offset) {
-          __ mov(t0, a0);
+          __ mv(t0, a0);
           __ Ulw(a0, MemOperand(a0, in_offset));
           __ Usw(a0, MemOperand(t0, out_offset));
         };
@@ -957,7 +964,7 @@ TEST(Ulw) {
         // test when loaded value overwrites base-register of load address
         auto fn_4 = [](MacroAssembler* masm, int32_t in_offset,
                        int32_t out_offset) {
-          __ mov(t0, a0);
+          __ mv(t0, a0);
           __ Ulwu(a0, MemOperand(a0, in_offset));
           __ Usw(a0, MemOperand(t0, out_offset));
         };
@@ -1046,7 +1053,7 @@ TEST(Uld) {
         // test when loaded value overwrites base-register of load address
         auto fn_2 = [](MacroAssembler* masm, int32_t in_offset,
                        int32_t out_offset) {
-          __ mov(t0, a0);
+          __ mv(t0, a0);
           __ Uld(a0, MemOperand(a0, in_offset));
           __ Usd(a0, MemOperand(t0, out_offset));
         };
@@ -1144,7 +1151,8 @@ bool run_Sltu(uint64_t rs, uint64_t rd, Func GenerateSltuInstructionFunc) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
 
   auto f = GeneratedCode<F_CVT>::FromCode(*code);
   int64_t res = reinterpret_cast<int64_t>(f.Call(rs, rd));
@@ -1434,7 +1442,8 @@ int32_t run_CompareF(IN_TYPE x1, IN_TYPE x2, bool expected_res,
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
 
   // deal w/ passing floating-point parameters to f.Call
   using IIN_TYPE =
@@ -1648,7 +1657,8 @@ TEST(Dpopcnt) {
 
   CodeDesc desc;
   masm->GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
 
   auto f = GeneratedCode<FV>::FromCode(*code);
   (void)f.Call(reinterpret_cast<int64_t>(result), 0, 0, 0, 0);
@@ -1706,7 +1716,8 @@ TEST(Popcnt) {
 
   CodeDesc desc;
   masm->GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
 
   auto f = GeneratedCode<FV>::FromCode(*code);
   (void)f.Call(reinterpret_cast<int64_t>(result), 0, 0, 0, 0);
