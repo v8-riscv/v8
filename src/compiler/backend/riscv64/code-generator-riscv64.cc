@@ -1185,7 +1185,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
 
       if ((left == kDoubleRegZero || right == kDoubleRegZero) &&
           !__ IsSingleZeroRegSet()) {
-        __ Move(kDoubleRegZero, 0.0f);
+        __ LoadFPRImmediate(kDoubleRegZero, 0.0f);
       }
       // compare result set to kScratchReg
       __ CompareF32(kScratchReg, cc, left, right);
@@ -1247,7 +1247,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
           FlagsConditionToConditionCmpFPU(&predicate, instr->flags_condition());
       if ((left == kDoubleRegZero || right == kDoubleRegZero) &&
           !__ IsDoubleZeroRegSet()) {
-        __ Move(kDoubleRegZero, 0.0);
+        __ LoadFPRImmediate(kDoubleRegZero, 0.0);
       }
       // compare result set to kScratchReg
       __ CompareF64(kScratchReg, cc, left, right);
@@ -1614,7 +1614,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       MemOperand operand = i.MemoryOperand(&index);
       FPURegister ft = i.InputOrZeroSingleRegister(index);
       if (ft == kDoubleRegZero && !__ IsSingleZeroRegSet()) {
-        __ Move(kDoubleRegZero, 0.0f);
+        __ LoadFPRImmediate(kDoubleRegZero, 0.0f);
       }
       __ StoreFloat(ft, operand);
       break;
@@ -1624,7 +1624,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       MemOperand operand = i.MemoryOperand(&index);
       FPURegister ft = i.InputOrZeroSingleRegister(index);
       if (ft == kDoubleRegZero && !__ IsSingleZeroRegSet()) {
-        __ Move(kDoubleRegZero, 0.0f);
+        __ LoadFPRImmediate(kDoubleRegZero, 0.0f);
       }
       __ UStoreFloat(ft, operand, kScratchReg);
       break;
@@ -1638,7 +1638,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kRiscvStoreDouble: {
       FPURegister ft = i.InputOrZeroDoubleRegister(2);
       if (ft == kDoubleRegZero && !__ IsDoubleZeroRegSet()) {
-        __ Move(kDoubleRegZero, 0.0);
+        __ LoadFPRImmediate(kDoubleRegZero, 0.0);
       }
       __ StoreDouble(ft, i.MemoryOperand());
       break;
@@ -1646,7 +1646,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kRiscvUStoreDouble: {
       FPURegister ft = i.InputOrZeroDoubleRegister(2);
       if (ft == kDoubleRegZero && !__ IsDoubleZeroRegSet()) {
-        __ Move(kDoubleRegZero, 0.0);
+        __ LoadFPRImmediate(kDoubleRegZero, 0.0);
       }
       __ UStoreDouble(ft, i.MemoryOperand(), kScratchReg);
       break;
@@ -2256,11 +2256,11 @@ void CodeGenerator::AssembleArchBoolean(Instruction* instr,
     if ((instr->arch_opcode() == kRiscvCmpD) &&
         (left == kDoubleRegZero || right == kDoubleRegZero) &&
         !__ IsDoubleZeroRegSet()) {
-      __ Move(kDoubleRegZero, 0.0);
+      __ LoadFPRImmediate(kDoubleRegZero, 0.0);
     } else if ((instr->arch_opcode() == kRiscvCmpS) &&
                (left == kDoubleRegZero || right == kDoubleRegZero) &&
                !__ IsSingleZeroRegSet()) {
-      __ Move(kDoubleRegZero, 0.0f);
+      __ LoadFPRImmediate(kDoubleRegZero, 0.0f);
     }
     bool predicate;
     FlagsConditionToConditionCmpFPU(&predicate, condition);
@@ -2583,14 +2583,14 @@ void CodeGenerator::AssembleMove(InstructionOperand* source,
       } else {
         DCHECK(destination->IsFPRegister());
         FloatRegister dst = g.ToSingleRegister(destination);
-        __ Move(dst, src.ToFloat32());
+        __ LoadFPRImmediate(dst, src.ToFloat32());
       }
     } else {
       DCHECK_EQ(Constant::kFloat64, src.type());
       DoubleRegister dst = destination->IsFPRegister()
                                ? g.ToDoubleRegister(destination)
                                : kScratchDoubleReg;
-      __ Move(dst, src.ToFloat64().value());
+      __ LoadFPRImmediate(dst, src.ToFloat64().value());
       if (destination->IsFPStackSlot()) {
         __ StoreDouble(dst, g.ToMemOperand(destination));
       }
