@@ -645,7 +645,9 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
     }
   }
 
-  inline void Move(FPURegister dst, FPURegister src) { Move_d(dst, src); }
+  inline void Move(FPURegister dst, FPURegister src) {
+    if (dst != src) fmv_d(dst, src);
+  }
 
   inline void Move(Register dst, FPURegister src) { fmv_x_d(dst, src); }
 
@@ -667,14 +669,6 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
 
   // Insert low-word from GPR (src_high) to the low-half of FPR (dst)
   void InsertLowWordF64(FPURegister dst, Register src_low);
-
-  inline void Move_d(FPURegister dst, FPURegister src) {
-    if (dst != src) fmv_d(dst, src);
-  }
-
-  inline void Move_s(FPURegister dst, FPURegister src) {
-    if (dst != src) fmv_s(dst, src);
-  }
 
   void Move(FPURegister dst, float imm) { Move(dst, bit_cast<uint32_t>(imm)); }
   void Move(FPURegister dst, double imm) { Move(dst, bit_cast<uint64_t>(imm)); }

@@ -1824,10 +1824,12 @@ void TurboAssembler::RoundHelper(FPURegister dst, FPURegister src,
   // if src is NaN/+-Infinity/+-Zero or if the exponent is larger than # of bits
   // in mantissa, the result is the same as src, so move src to dest  (to avoid
   // generating another branch)
-  if (std::is_same<F, double>::value) {
-    Move_d(dst, src);
-  } else {
-    Move_s(dst, src);
+  if (dst != src) {
+    if (std::is_same<F, double>::value) {
+      fmv_d(dst, src);
+    } else {
+      fmv_s(dst, src);
+    }
   }
 
   // If real exponent (i.e., t6 - kFloatExponentBias) is greater than
@@ -2063,7 +2065,7 @@ void TurboAssembler::InsertLowWordF64(FPURegister dst, Register src_low) {
 void TurboAssembler::Move(FPURegister dst, uint32_t src) {
   // Handle special values first.
   if (src == bit_cast<uint32_t>(0.0f) && has_single_zero_reg_set_) {
-    Move_s(dst, kDoubleRegZero);
+    if (dst != kDoubleRegZero) fmv_s(dst, kDoubleRegZero);
   } else if (src == bit_cast<uint32_t>(-0.0f) && has_single_zero_reg_set_) {
     Neg_s(dst, kDoubleRegZero);
   } else {
@@ -2084,7 +2086,7 @@ void TurboAssembler::Move(FPURegister dst, uint32_t src) {
 void TurboAssembler::Move(FPURegister dst, uint64_t src) {
   // Handle special values first.
   if (src == bit_cast<uint64_t>(0.0) && has_double_zero_reg_set_) {
-    Move_d(dst, kDoubleRegZero);
+    if (dst != kDoubleRegZero) fmv_d(dst, kDoubleRegZero);
   } else if (src == bit_cast<uint64_t>(-0.0) && has_double_zero_reg_set_) {
     Neg_d(dst, kDoubleRegZero);
   } else {
@@ -4053,11 +4055,11 @@ void TurboAssembler::FloatMinMaxHelper(FPURegister dst, FPURegister src1,
   DCHECK((std::is_same<F_TYPE, float>::value) ||
          (std::is_same<F_TYPE, double>::value));
 
-  if (src1 == src2) {
+  if (src1 == src2 && dst != src1) {
     if (std::is_same<float, F_TYPE>::value) {
-      Move_s(dst, src1);
+      fmv_s(dst, src1);
     } else {
-      Move_d(dst, src1);
+      fmv_d(dst, src1);
     }
     return;
   }
