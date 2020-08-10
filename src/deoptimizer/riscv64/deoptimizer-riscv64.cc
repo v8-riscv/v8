@@ -59,12 +59,12 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
       (kNumberOfRegisters * kPointerSize) + kDoubleRegsSize;
 
   // Get the bailout is passed as kRootRegister by the caller.
-  __ mov(a2, kRootRegister);
+  __ mv(a2, kRootRegister);
 
   // Get the address of the location in the code object (a3) (return
   // address for lazy deoptimization) and compute the fp-to-sp delta in
   // register a4.
-  __ mov(a3, ra);
+  __ mv(a3, ra);
   __ Add64(a4, sp, Operand(kSavedRegistersAreaSize));
 
   __ Sub64(a4, fp, a4);
@@ -72,7 +72,7 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
   // Allocate a new deoptimizer object.
   __ PrepareCallCFunction(6, a5);
   // Pass six arguments, according to n64 ABI.
-  __ mov(a0, zero_reg);
+  __ mv(a0, zero_reg);
   Label context_check;
   __ Ld(a1, MemOperand(fp, CommonFrameConstants::kContextOrFrameTypeOffset));
   __ JumpIfSmi(a1, &context_check);
@@ -196,7 +196,7 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
   // but it's safer to check for this.
   DCHECK(!(t3.bit() & restored_regs));
   // Restore the registers from the last output frame.
-  __ mov(t3, a2);
+  __ mv(t3, a2);
   for (int i = kNumberOfRegisters - 1; i >= 0; i--) {
     int offset = (i * kPointerSize) + FrameDescription::registers_offset();
     if ((restored_regs & (1 << i)) != 0) {

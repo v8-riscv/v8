@@ -332,10 +332,12 @@ void LiftoffAssembler::LoadConstant(LiftoffRegister reg, WasmValue value,
       TurboAssembler::li(reg.gp(), Operand(value.to_i64(), rmode));
       break;
     case ValueType::kF32:
-      TurboAssembler::Move(reg.fp(), value.to_f32_boxed().get_bits());
+      TurboAssembler::LoadFPRImmediate(reg.fp(),
+                                       value.to_f32_boxed().get_bits());
       break;
     case ValueType::kF64:
-      TurboAssembler::Move(reg.fp(), value.to_f64_boxed().get_bits());
+      TurboAssembler::LoadFPRImmediate(reg.fp(),
+                                       value.to_f64_boxed().get_bits());
       break;
     default:
       UNREACHABLE();
@@ -2273,7 +2275,7 @@ void LiftoffAssembler::CallC(const wasm::FunctionSig* sig,
   // Pass a pointer to the buffer with the arguments to the C function.
   // On RISC-V, the first argument is passed in {a0}.
   constexpr Register kFirstArgReg = a0;
-  mov(kFirstArgReg, sp);
+  mv(kFirstArgReg, sp);
 
   // Now call the C function.
   constexpr int kNumCCallArgs = 1;

@@ -177,9 +177,7 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   inline void li(Register rd, int64_t j, LiFlags mode = OPTIMIZE_SIZE) {
     li(rd, Operand(j), mode);
   }
-  // inline void li(Register rd, int32_t j, LiFlags mode = OPTIMIZE_SIZE) {
-  //   li(rd, Operand(static_cast<int64_t>(j)), mode);
-  // }
+
   void li(Register dst, Handle<HeapObject> value, LiFlags mode = OPTIMIZE_SIZE);
   void li(Register dst, ExternalReference value, LiFlags mode = OPTIMIZE_SIZE);
   void li(Register dst, const StringConstantBase* string,
@@ -636,9 +634,6 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   bool IsDoubleZeroRegSet() { return has_double_zero_reg_set_; }
   bool IsSingleZeroRegSet() { return has_single_zero_reg_set_; }
 
-  void mov(Register rd, Register rt) { or_(rd, rt, zero_reg); }
-
-  inline void Move(Register dst, Handle<HeapObject> handle) { li(dst, handle); }
   inline void Move(Register dst, Smi smi) { li(dst, Operand(smi)); }
 
   inline void Move(Register dst, Register src) {
@@ -647,7 +642,9 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
     }
   }
 
-  inline void Move(FPURegister dst, FPURegister src) { Move_d(dst, src); }
+  inline void Move(FPURegister dst, FPURegister src) {
+    if (dst != src) fmv_d(dst, src);
+  }
 
   inline void Move(Register dst_low, Register dst_high, FPURegister src) {
     fmv_x_d(dst_high, src);
@@ -676,20 +673,14 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   // Insert low-word from GPR (src_high) to the low-half of FPR (dst)
   void InsertLowWordF64(FPURegister dst, Register src_low);
 
-  void Move(FPURegister dst, Register src_low, Register src_high);
-
-  inline void Move_d(FPURegister dst, FPURegister src) {
-    if (dst != src) fmv_d(dst, src);
+  void LoadFPRImmediate(FPURegister dst, float imm) {
+    LoadFPRImmediate(dst, bit_cast<uint32_t>(imm));
   }
-
-  inline void Move_s(FPURegister dst, FPURegister src) {
-    if (dst != src) fmv_s(dst, src);
+  void LoadFPRImmediate(FPURegister dst, double imm) {
+    LoadFPRImmediate(dst, bit_cast<uint64_t>(imm));
   }
-
-  void Move(FPURegister dst, float imm) { Move(dst, bit_cast<uint32_t>(imm)); }
-  void Move(FPURegister dst, double imm) { Move(dst, bit_cast<uint64_t>(imm)); }
-  void Move(FPURegister dst, uint32_t src);
-  void Move(FPURegister dst, uint64_t src);
+  void LoadFPRImmediate(FPURegister dst, uint32_t src);
+  void LoadFPRImmediate(FPURegister dst, uint64_t src);
 
   // AddOverflow64 sets overflow register to a negative value if
   // overflow occured, otherwise it is zero or positive
