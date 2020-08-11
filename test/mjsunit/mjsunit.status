@@ -831,12 +831,7 @@
 
 
 ['arch == riscv64 or arch == riscv', {
-  'es6/block-conflicts-sloppy': [SKIP], # issue 56
-  'es6/promises': [SKIP], # issue 56
-
   'wasm/float-constant-folding': [SKIP], # issue 53
-  'wasm/shared-memory-gc-stress': [SKIP], # issue 56
-
 
   # disable all asm/embenchen tests for now
   'asm/embenchen/box2d': [SKIP],
