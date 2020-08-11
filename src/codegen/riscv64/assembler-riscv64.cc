@@ -970,10 +970,16 @@ void Assembler::auipc(Register rd, int32_t imm20) {
 
 // Jumps
 
-void Assembler::jal(Register rd, int32_t imm21) { GenInstrJ(JAL, rd, imm21); }
+void Assembler::jal(Register rd, int32_t imm21) { 
+  BlockTrampolinePoolScope block_trampoline_pool(this);
+  GenInstrJ(JAL, rd, imm21);
+  BlockTrampolinePoolFor(1);
+}
 
 void Assembler::jalr(Register rd, Register rs1, int16_t imm12) {
+  BlockTrampolinePoolScope block_trampoline_pool(this); 
   GenInstrI(0b000, JALR, rd, rs1, imm12);
+  BlockTrampolinePoolFor(1);
 }
 
 // Branches
