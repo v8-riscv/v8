@@ -38,7 +38,8 @@ class WasmCompileLazyFrameConstants : public TypedFrameConstants {
 // registers (see liftoff-assembler-defs.h).
 class WasmDebugBreakFrameConstants : public TypedFrameConstants {
  public:
-  // FIXME(RISCV): How is it decided which registers should be pushed?
+  // constexpr RegList kLiftoffAssemblerGpCacheRegs =
+  //    Register::ListOf(a0, a1, a2, a3, a4, a5, a6, a7, t0, t1, t2, s7);
   static constexpr uint32_t kPushedGpRegs = 1 << 5 |   // t0
                                             1 << 6 |   // t1
                                             1 << 7 |   // t2
@@ -51,19 +52,30 @@ class WasmDebugBreakFrameConstants : public TypedFrameConstants {
                                             1 << 16 |  // a6
                                             1 << 17 |  // a7
                                             1 << 23;   // s7
-  // FIXME(RISCV): How is it decided which registers should be pushed?
-  static constexpr uint32_t kPushedFpRegs = 1 << 8 |   // fs0
-                                            1 << 9 |   // fs1
-                                            1 << 18 |  // fs2
-                                            1 << 19 |  // fs3
-                                            1 << 20 |  // fs4
-                                            1 << 21 |  // fs5
-                                            1 << 22 |  // fs6
-                                            1 << 23 |  // fs7
-                                            1 << 24 |  // fs8
-                                            1 << 25 |  // fs9
-                                            1 << 26 |  // fs10
-                                            1 << 27;   // fs11
+
+  //   constexpr RegList kLiftoffAssemblerFpCacheRegs = DoubleRegister::ListOf(
+  //       ft0, ft1, ft2, ft3, ft4, ft5, ft6, ft7, fa0, fa1, fa2, fa3, fa4, fa5,
+  //       fa6, fa7, ft8, ft9, ft10, ft11);
+  static constexpr uint32_t kPushedFpRegs = 1 << 0 |   // ft0
+                                            1 << 1 |   // ft1
+                                            1 << 2 |   // ft2
+                                            1 << 3 |   // ft3
+                                            1 << 4 |   // ft4
+                                            1 << 5 |   // ft5
+                                            1 << 6 |   // ft6
+                                            1 << 7 |   // ft7
+                                            1 << 10 |  // fa0
+                                            1 << 11 |  // fa1
+                                            1 << 12 |  // fa2
+                                            1 << 13 |  // fa3
+                                            1 << 14 |  // fa4
+                                            1 << 15 |  // fa5
+                                            1 << 16 |  // fa6
+                                            1 << 17 |  // fa7
+                                            1 << 28 |  // ft8
+                                            1 << 29 |  // ft9
+                                            1 << 30 |  // ft10
+                                            1 << 31;   // ft11
 
   static constexpr int kNumPushedGpRegisters =
       base::bits::CountPopulation(kPushedGpRegs);
