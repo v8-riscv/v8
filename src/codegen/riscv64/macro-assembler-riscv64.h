@@ -425,9 +425,6 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   DEFINE_INSTRUCTION(Seleqz)
   DEFINE_INSTRUCTION(Ror)
   DEFINE_INSTRUCTION(Dror)
-
-  DEFINE_INSTRUCTION2(SignExtendByte)
-  DEFINE_INSTRUCTION2(SignExtendShort)
 #undef DEFINE_INSTRUCTION
 #undef DEFINE_INSTRUCTION2
 #undef DEFINE_INSTRUCTION3
@@ -515,6 +512,22 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void LoadZeroOnCondition(Register rd, Register rs, const Operand& rt,
                            Condition cond);
 
+  void SignExtendByte(Register rd, Register rs) {
+    slli(rd, rs, 64 - 8);
+    srai(rd, rd, 64 - 8);
+  }
+
+  void SignExtendShort(Register rd, Register rs) {
+    slli(rd, rs, 64 - 16);
+    srai(rd, rd, 64 - 16);
+  }
+
+  void SignExtendWord(Register rd, Register rs) { sext_w(rd, rs); }
+  void ZeroExtendWord(Register rd, Register rs) {
+    slli(rd, rs, 32);
+    srli(rd, rd, 32);
+  }
+
   void Clz32(Register rd, Register rs);
   void Clz64(Register rd, Register rs);
   void Ctz32(Register rd, Register rs);
@@ -522,13 +535,19 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void Popcnt32(Register rd, Register rs);
   void Popcnt64(Register rd, Register rs);
 
-  void Ext32(Register rt, Register rs, uint16_t pos, uint16_t size);
-  void Ext64(Register rt, Register rs, uint16_t pos, uint16_t size);
-  void Ins32(Register rt, Register rs, uint16_t pos, uint16_t size);
-  void Ins64(Register rt, Register rs, uint16_t pos, uint16_t size);
-  void ExtractBits(Register dest, Register source, Register pos, int size,
+  // Bit field starts at bit pos and extending for size bits is extracted from
+  // rs and stored zero/sign-extended and right-justified in rt
+  void ExtractBits(Register rt, Register rs, uint16_t pos, uint16_t size,
                    bool sign_extend = false);
+  void ExtractBits(Register dest, Register source, Register pos, int size,
+                   bool sign_extend = false) {
+    sra(dest, source, pos);
+    ExtractBits(dest, dest, 0, size, sign_extend);
+  }
+
+  // Insert bits [0, size) of source to bits [pos, pos+size) of dest
   void InsertBits(Register dest, Register source, Register pos, int size);
+
   void Neg_s(FPURegister fd, FPURegister fs);
   void Neg_d(FPURegister fd, FPURegister fs);
 
@@ -638,18 +657,22 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
 
   inline void Move(FPURegister dst, Register src) { fmv_d_x(dst, src); }
 
-  inline void FmoveHigh(Register dst_high, FPURegister src) {
+  // Extract sign-extended word from high-half of FPR to GPR
+  inline void ExtractHighWordFromF64(Register dst_high, FPURegister src) {
     fmv_x_d(dst_high, src);
     srai(dst_high, dst_high, 32);
   }
 
-  void FmoveHigh(FPURegister dst, Register src_high);
+  // Insert low-word from GPR (src_high) to the high-half of FPR (dst)
+  void InsertHighWordF64(FPURegister dst, Register src_high);
 
-  inline void FmoveLow(Register dst_low, FPURegister src) {
+  // Extract sign-extended word from low-half of FPR to GPR
+  inline void ExtractLowWordFromF64(Register dst_low, FPURegister src) {
     fmv_x_w(dst_low, src);
   }
 
-  void FmoveLow(FPURegister dst, Register src_low);
+  // Insert low-word from GPR (src_high) to the low-half of FPR (dst)
+  void InsertLowWordF64(FPURegister dst, Register src_low);
 
   void Move(FPURegister dst, Register src_low, Register src_high);
 
@@ -788,14 +811,9 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   // Get the actual activation frame alignment for target environment.
   static int ActivationFrameAlignment();
 
-  // Load Scaled Address instructions. Parameter sa (shift argument) must be
-  // between [1, 31] (inclusive). On pre-r6 architectures the scratch register
-  // may be clobbered.
-  // FIXME: MIPS legacy, need to be removed
-  void Lsa32(Register rd, Register rs, Register rt, uint8_t sa,
-             Register scratch = t3);
-  void Lsa64(Register rd, Register rs, Register rt, uint8_t sa,
-             Register scratch = t3);
+  // Calculated scaled address (rd) as rt + rs << sa
+  void CalcScaledAddress(Register rd, Register rs, Register rt, uint8_t sa,
+                         Register scratch = t3);
 
   // Compute the start of the generated instruction stream from the current PC.
   // This is an alternative to embedding the {CodeObject} handle as a reference.
@@ -1104,7 +1122,7 @@ class V8_EXPORT_PRIVATE MacroAssembler : public TurboAssembler {
 
   template <typename Field>
   void DecodeField(Register dst, Register src) {
-    Ext32(dst, src, Field::kShift, Field::kSize);
+    ExtractBits(dst, src, Field::kShift, Field::kSize);
   }
 
   template <typename Field>

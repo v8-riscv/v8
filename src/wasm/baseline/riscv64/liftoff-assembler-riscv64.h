@@ -898,7 +898,10 @@ bool LiftoffAssembler::emit_type_conversion(WasmOpcode opcode,
                                             LiftoffRegister src, Label* trap) {
   switch (opcode) {
     case kExprI32ConvertI64:
-      TurboAssembler::Ext32(dst.gp(), src.gp(), 0, 32);
+      // According to WebAssembly spec, if I64 value does not fit the range of
+      // I32, the value is undefined. Therefore, We use sign extension to
+      // implement I64 to I32 truncation
+      TurboAssembler::SignExtendWord(dst.gp(), src.gp());
       return true;
     case kExprI32SConvertF32:
     case kExprI32UConvertF32:
@@ -951,13 +954,13 @@ bool LiftoffAssembler::emit_type_conversion(WasmOpcode opcode,
       return true;
     }
     case kExprI32ReinterpretF32:
-      TurboAssembler::FmoveLow(dst.gp(), src.fp());
+      TurboAssembler::ExtractLowWordFromF64(dst.gp(), src.fp());
       return true;
     case kExprI64SConvertI32:
-      slliw(dst.gp(), src.gp(), 0);
+      TurboAssembler::SignExtendWord(dst.gp(), src.gp());
       return true;
     case kExprI64UConvertI32:
-      TurboAssembler::Ext64(dst.gp(), src.gp(), 0, 32);
+      TurboAssembler::ZeroExtendWord(dst.gp(), src.gp());
       return true;
     case kExprI64ReinterpretF64:
       fmv_x_d(dst.gp(), src.fp());
@@ -970,7 +973,7 @@ bool LiftoffAssembler::emit_type_conversion(WasmOpcode opcode,
       TurboAssembler::Cvt_s_uw(dst.fp(), src.gp());
       return true;
     case kExprF32ReinterpretI32:
-      TurboAssembler::FmoveLow(dst.fp(), src.gp());
+      fmv_w_x(dst.fp(), src.gp());
       return true;
     case kExprF64SConvertI32: {
       TurboAssembler::Cvt_d_w(dst.fp(), src.gp());

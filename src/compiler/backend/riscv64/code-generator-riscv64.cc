@@ -1047,16 +1047,6 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kRiscvModU64:
       __ Modu64(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
       break;
-    case kRiscvLsa64:
-      DCHECK(instr->InputAt(2)->IsImmediate());
-      __ Lsa64(i.OutputRegister(), i.InputRegister(0), i.InputRegister(1),
-               i.InputInt8(2));
-      break;
-    case kRiscvLsa32:
-      DCHECK(instr->InputAt(2)->IsImmediate());
-      __ Lsa32(i.OutputRegister(), i.InputRegister(0), i.InputRegister(1),
-               i.InputInt8(2));
-      break;
     case kRiscvAnd:
       __ And(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
       break;
@@ -1149,31 +1139,14 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
                  static_cast<uint16_t>(imm));
       }
       break;
-    case kRiscvExt32:
-      __ Ext32(i.OutputRegister(), i.InputRegister(0), i.InputInt8(1),
-               i.InputInt8(2));
-      break;
-    case kRiscvIns32:
-      if (instr->InputAt(1)->IsImmediate() && i.InputInt8(1) == 0) {
-        __ Ins32(i.OutputRegister(), zero_reg, i.InputInt8(1), i.InputInt8(2));
-      } else {
-        __ Ins32(i.OutputRegister(), i.InputRegister(0), i.InputInt8(1),
-                 i.InputInt8(2));
-      }
-      break;
-    case kRiscvExt64: {
-      __ Ext64(i.OutputRegister(), i.InputRegister(0), i.InputInt8(1),
-               i.InputInt8(2));
+    case kRiscvZeroExtendWord: {
+      __ ZeroExtendWord(i.OutputRegister(), i.InputRegister(0));
       break;
     }
-    case kRiscvIns64:
-      if (instr->InputAt(1)->IsImmediate() && i.InputInt8(1) == 0) {
-        __ Ins64(i.OutputRegister(), zero_reg, i.InputInt8(1), i.InputInt8(2));
-      } else {
-        __ Ins64(i.OutputRegister(), i.InputRegister(0), i.InputInt8(1),
-                 i.InputInt8(2));
-      }
+    case kRiscvSignExtendWord: {
+      __ SignExtendWord(i.OutputRegister(), i.InputRegister(0));
       break;
+    }
     case kRiscvShl64:
       __ Sll64(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
       break;
@@ -1537,16 +1510,16 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ fmv_d_x(i.OutputDoubleRegister(), i.InputRegister(0));
       break;
     case kRiscvFloat64ExtractLowWord32:
-      __ FmoveLow(i.OutputRegister(), i.InputDoubleRegister(0));
+      __ ExtractLowWordFromF64(i.OutputRegister(), i.InputDoubleRegister(0));
       break;
     case kRiscvFloat64ExtractHighWord32:
-      __ FmoveHigh(i.OutputRegister(), i.InputDoubleRegister(0));
+      __ ExtractHighWordFromF64(i.OutputRegister(), i.InputDoubleRegister(0));
       break;
     case kRiscvFloat64InsertLowWord32:
-      __ FmoveLow(i.OutputDoubleRegister(), i.InputRegister(1));
+      __ InsertLowWordF64(i.OutputDoubleRegister(), i.InputRegister(1));
       break;
     case kRiscvFloat64InsertHighWord32:
-      __ FmoveHigh(i.OutputDoubleRegister(), i.InputRegister(1));
+      __ InsertHighWordF64(i.OutputDoubleRegister(), i.InputRegister(1));
       break;
       // ... more basic instructions ...
 

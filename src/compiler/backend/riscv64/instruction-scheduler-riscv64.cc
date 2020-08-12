@@ -51,13 +51,12 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvCtz64:
     case kRiscvDiv64:
     case kRiscvDivU64:
-    case kRiscvExt64:
-    case kRiscvIns64:
+    case kRiscvZeroExtendWord:
+    case kRiscvSignExtendWord:
     case kRiscvDiv32:
     case kRiscvDivD:
     case kRiscvDivS:
     case kRiscvDivU32:
-    case kRiscvLsa64:
     case kRiscvMod64:
     case kRiscvModU64:
     case kRiscvMul64:
@@ -68,7 +67,6 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvShr64:
     case kRiscvSub64:
     case kRiscvSubOvf64:
-    case kRiscvExt32:
     case kRiscvF64x2Abs:
     case kRiscvF64x2Neg:
     case kRiscvF64x2Sqrt:
@@ -220,8 +218,6 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvI8x16SubSaturateS:
     case kRiscvI8x16SubSaturateU:
     case kRiscvI8x16RoundingAverageU:
-    case kRiscvIns32:
-    case kRiscvLsa32:
     case kRiscvMaxD:
     case kRiscvMaxS:
     case kRiscvMinD:
@@ -667,11 +663,6 @@ int MovzLatency() { return 1; }
 
 int MovnLatency() { return 1; }
 
-int Lsa64Latency() {
-  // Estimated max.
-  return Add64Latency() + 1;
-}
-
 int CallLatency() {
   // Estimated.
   return Add64Latency(false) + Latency::BRANCH + 5;
@@ -686,7 +677,7 @@ int SmiUntagLatency() { return 1; }
 
 int PrepareForTailCallLatency() {
   // Estimated max.
-  return 2 * (Lsa64Latency() + Add64Latency(false)) + 2 + Latency::BRANCH +
+  return 2 * (Add64Latency() + 1 + Add64Latency(false)) + 2 + Latency::BRANCH +
          Latency::BRANCH + 2 * Sub64Latency(false) + 2 + Latency::BRANCH + 1;
 }
 
@@ -1220,9 +1211,6 @@ int InstructionScheduler::GetInstructionLatency(const Instruction* instr) {
       return Mod64Latency();
     case kRiscvModU64:
       return Modu64Latency();
-    case kRiscvLsa64:
-    case kRiscvLsa32:
-      return Lsa64Latency();
     case kRiscvAnd:
       return AndLatency(instr->InputAt(1)->IsRegister());
     case kRiscvAnd32: {
@@ -1282,11 +1270,9 @@ int InstructionScheduler::GetInstructionLatency(const Instruction* instr) {
       return 1;
     case kRiscvShr32:
     case kRiscvSar32:
+    case kRiscvZeroExtendWord:
       return 2;
-    case kRiscvExt32:
-    case kRiscvIns32:
-    case kRiscvExt64:
-    case kRiscvIns64:
+    case kRiscvSignExtendWord:
     case kRiscvShl64:
     case kRiscvShr64:
     case kRiscvSar64:

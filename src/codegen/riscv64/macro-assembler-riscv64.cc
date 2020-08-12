@@ -812,18 +812,6 @@ void TurboAssembler::Sll32(Register rd, Register rs, const Operand& rt) {
   }
 }
 
-void TurboAssembler::SignExtendByte(Register rd, const Operand& rt) {
-  DCHECK(rt.is_reg());
-  slli(rd, rt.rm(), 64 - 8);
-  srai(rd, rd, 64 - 8);
-}
-
-void TurboAssembler::SignExtendShort(Register rd, const Operand& rt) {
-  DCHECK(rt.is_reg());
-  slli(rd, rt.rm(), 64 - 16);
-  srai(rd, rd, 64 - 16);
-}
-
 void TurboAssembler::Sra32(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg())
     sraw(rd, rs, rt.rm());
@@ -935,17 +923,8 @@ void TurboAssembler::Seleqz(Register rd, Register rs, const Operand& rt) {
   mul(rd, rs, scratch);    // scratch * rs = rs or zero
 }
 
-void TurboAssembler::Lsa32(Register rd, Register rt, Register rs, uint8_t sa,
-                           Register scratch) {
-  DCHECK(sa >= 1 && sa <= 31);
-  Register tmp = rd == rt ? scratch : rd;
-  DCHECK(tmp != rt);
-  slliw(tmp, rs, sa);
-  Add32(rd, rt, tmp);
-}
-
-void TurboAssembler::Lsa64(Register rd, Register rt, Register rs, uint8_t sa,
-                           Register scratch) {
+void TurboAssembler::CalcScaledAddress(Register rd, Register rt, Register rs,
+                                       uint8_t sa, Register scratch) {
   DCHECK(sa >= 1 && sa <= 31);
   Register tmp = rd == rt ? scratch : rd;
   DCHECK(tmp != rt);
@@ -1607,82 +1586,15 @@ void TurboAssembler::MultiPopFPU(RegList regs) {
   addi(sp, sp, stack_offset);
 }
 
-void TurboAssembler::Ext32(Register rt, Register rs, uint16_t pos,
-                           uint16_t size) {
-  DCHECK_LT(pos, 32);
-  DCHECK_LT(pos + size, 33);
-  // RISC-V does not have an extract-type instruction, so we need to use shifts
-  slliw(rt, rs, 32 - (pos + size));
-  if (size != 32) {
-    srliw(rt, rt, 32 - size);
-  }
-}
-
-void TurboAssembler::Ext64(Register rt, Register rs, uint16_t pos,
-                           uint16_t size) {
+void TurboAssembler::ExtractBits(Register rt, Register rs, uint16_t pos,
+                                 uint16_t size, bool sign_extend) {
   DCHECK(pos < 64 && 0 < size && size <= 64 && 0 < pos + size &&
          pos + size <= 64);
-  // RISC-V does not have an extract-type instruction, so we need to use shifts
   slli(rt, rs, 64 - (pos + size));
-  srli(rt, rt, 64 - size);
-}
-
-void TurboAssembler::Ins32(Register rt, Register rs, uint16_t pos,
-                           uint16_t size) {
-  DCHECK_LT(pos, 32);
-  DCHECK_LE(pos + size, 32);
-  DCHECK_NE(size, 0);
-  DCHECK(rt != t5 && rt != t6 && rs != t5 && rs != t6);
-  BlockTrampolinePoolScope block_trampoline_pool(this);
-  Register scratch1 = t5;
-
-  uint32_t src_mask = (1 << size) - 1;
-  uint32_t dest_mask = ~(src_mask << pos);
-
-  And(scratch1, rs, Operand(src_mask));
-  slliw(scratch1, scratch1, pos);
-  And(rt, rt, Operand(dest_mask));
-  or_(rt, rt, scratch1);
-}
-
-void TurboAssembler::Ins64(Register rt, Register rs, uint16_t pos,
-                           uint16_t size) {
-  DCHECK(pos < 64 && 0 < size && size <= 64 && 0 < pos + size &&
-         pos + size <= 64);
-  DCHECK(rt != t5 && rt != t6 && rs != t5 && rs != t6);
-  BlockTrampolinePoolScope block_trampoline_pool(this);
-  Register scratch1 = t5;
-
-  uint64_t src_mask = (1 << size) - 1;
-  uint64_t dest_mask = ~(src_mask << pos);
-
-  And(scratch1, rs, Operand(src_mask));
-  slli(scratch1, scratch1, pos);
-  And(rt, rt, Operand(dest_mask));
-  or_(rt, rt, scratch1);
-}
-
-void TurboAssembler::ExtractBits(Register dest, Register source, Register pos,
-                                 int size, bool sign_extend) {
-  sra(dest, source, pos);
-  Ext64(dest, dest, 0, size);
   if (sign_extend) {
-    switch (size) {
-      case 8:
-        slli(dest, dest, 56);
-        srai(dest, dest, 56);
-        break;
-      case 16:
-        slli(dest, dest, 48);
-        srai(dest, dest, 48);
-        break;
-      case 32:
-        // sign-extend word
-        sext_w(dest, dest);
-        break;
-      default:
-        UNREACHABLE();
-    }
+    srai(rt, rt, 64 - size);
+  } else {
+    srli(rt, rt, 64 - size);
   }
 }
 
@@ -1904,11 +1816,10 @@ void TurboAssembler::RoundHelper(FPURegister dst, FPURegister src,
   // extract exponent value of the source floating-point to t6
   if (std::is_same<F, double>::value) {
     fmv_x_d(scratch, src);
-    Ext64(t6, scratch, kFloatMantissaBits, kFloatExponentBits);
   } else {
     fmv_x_w(scratch, src);
-    Ext32(t6, scratch, kFloatMantissaBits, kFloatExponentBits);
   }
+  ExtractBits(t6, scratch, kFloatMantissaBits, kFloatExponentBits);
 
   // if src is NaN/+-Infinity/+-Zero or if the exponent is larger than # of bits
   // in mantissa, the result is the same as src, so move src to dest  (to avoid
@@ -2119,8 +2030,7 @@ void TurboAssembler::BranchFalseF(Register rs, Label* target) {
   }
 }
 
-// move word (src_high) to high-half of dst
-void TurboAssembler::FmoveHigh(FPURegister dst, Register src_high) {
+void TurboAssembler::InsertHighWordF64(FPURegister dst, Register src_high) {
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
   BlockTrampolinePoolScope block_trampoline_pool(this);
@@ -2135,7 +2045,7 @@ void TurboAssembler::FmoveHigh(FPURegister dst, Register src_high) {
   fmv_d_x(dst, scratch);
 }
 
-void TurboAssembler::FmoveLow(FPURegister dst, Register src_low) {
+void TurboAssembler::InsertLowWordF64(FPURegister dst, Register src_low) {
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
   UseScratchRegisterScope block_trampoline_pool(this);
@@ -3128,7 +3038,8 @@ void TurboAssembler::LoadEntryFromBuiltinIndex(Register builtin_index) {
 
   // The builtin_index register contains the builtin index as a Smi.
   SmiUntag(builtin_index, builtin_index);
-  Lsa64(builtin_index, kRootRegister, builtin_index, kSystemPointerSizeLog2);
+  CalcScaledAddress(builtin_index, kRootRegister, builtin_index,
+                    kSystemPointerSizeLog2);
   Ld(builtin_index,
      MemOperand(builtin_index, IsolateData::builtin_entry_table_offset()));
 }
@@ -3385,13 +3296,13 @@ void TurboAssembler::PrepareForTailCall(Register callee_args_count,
   // after we drop current frame. We add kPointerSize to count the receiver
   // argument which is not included into formal parameters count.
   Register dst_reg = scratch0;
-  Lsa64(dst_reg, fp, caller_args_count, kPointerSizeLog2);
+  CalcScaledAddress(dst_reg, fp, caller_args_count, kPointerSizeLog2);
   Add64(dst_reg, dst_reg,
         Operand(StandardFrameConstants::kCallerSPOffset + kPointerSize));
 
   Register src_reg = caller_args_count;
   // Calculate the end of source area. +kPointerSize is for the receiver.
-  Lsa64(src_reg, sp, callee_args_count, kPointerSizeLog2);
+  CalcScaledAddress(src_reg, sp, callee_args_count, kPointerSizeLog2);
   Add64(src_reg, src_reg, Operand(kPointerSize));
 
   if (FLAG_debug_code) {
@@ -3467,7 +3378,7 @@ void MacroAssembler::CheckDebugHook(Register fun, Register new_target,
 
   {
     // Load receiver to pass it later to DebugOnFunctionCall hook.
-    Lsa64(t0, sp, actual_parameter_count, kPointerSizeLog2);
+    CalcScaledAddress(t0, sp, actual_parameter_count, kPointerSizeLog2);
     Ld(t0, MemOperand(t0));
     FrameScope frame(this,
                      has_frame() ? StackFrame::NONE : StackFrame::INTERNAL);
@@ -3977,7 +3888,7 @@ void MacroAssembler::LeaveExitFrame(bool save_doubles, Register argument_count,
     if (argument_count_is_length) {
       add(sp, sp, argument_count);
     } else {
-      Lsa64(sp, sp, argument_count, kPointerSizeLog2, t5);
+      CalcScaledAddress(sp, sp, argument_count, kPointerSizeLog2, t5);
     }
   }
 
