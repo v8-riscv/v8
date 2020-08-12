@@ -4,7 +4,7 @@ name: CI
 # events but only for the riscv-porting-dev branch
 on:
   pull_request:
-    branches: [ riscv-porting-dev ]
+    branches: [ riscv64 ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -30,10 +30,7 @@ jobs:
         echo "::add-path::$GITHUB_WORKSPACE/depot_tools"
 
     - name: Fetch upstream v8
-      run: |
-        fetch v8
-        (cd v8 && git checkout 8.1.268)
-        (cd v8/third_party/icu && git checkout dbd3825b31041d782c5b504c59dcfb5ac7dda08c)
+      run: fetch v8
 
     - name: Install build dependencies
       run: (cd v8 && ./build/install-build-deps.sh --no-prompt --no-arm)
