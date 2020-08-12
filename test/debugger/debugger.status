@@ -124,6 +124,11 @@
 }],  # 'arch == s390 or arch == s390x'
 
 ##############################################################################
+['arch == riscv64 or arch == riscv', {
+  'debug/side-effect/debug-evaluate-no-side-effect-builtins': [SKIP], # issue 152
+}],  # 'arch == riscv64 or arch == riscv'
+
+##############################################################################
 ['lite_mode or variant == jitless', {
   # TODO(v8:7777): Re-enable once wasm is supported in jitless mode.
   'debug/wasm/*': [SKIP],
