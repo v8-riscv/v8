@@ -839,6 +839,8 @@
   'wasm/float-constant-folding': [SKIP], # issue 53
   'wasm/shared-memory-gc-stress': [SKIP], # issue 56
 
+  'compiler/dataview-detached': [SKIP], # issue 149
+  'compiler/int64': [SKIP], # issue 150
 
   # disable all asm/embenchen tests for now
   'asm/embenchen/box2d': [SKIP],
