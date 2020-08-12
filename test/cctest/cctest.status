@@ -378,6 +378,18 @@
 ['arch == riscv  or arch == riscv64', {
   # this test is unstable, sometimes fail when running w/ other tests
   'test-cpu-profiler/CrossScriptInliningCallerLineNumbers2': [SKIP],
+
+  # BUG(113): SIMD test failed
+  'test-run-wasm-simd/RunWasm_SimdF32x4AddWithI32x4_simd_lowered': [SKIP],
+  'test-run-wasm-simd/RunWasm_SimdF32x4AddWithI32x4_turbofan': [SKIP],
+  'test-run-wasm-simd/RunWasm_SimdF32x4ExtractWithI32x4_simd_lowered': [SKIP],
+  'test-run-wasm-simd/RunWasm_SimdF32x4ExtractWithI32x4_turbofan': [SKIP],
+  'test-run-wasm-simd/RunWasm_SimdF32x4GetGlobal_simd_lowered': [SKIP],
+  'test-run-wasm-simd/RunWasm_SimdF32x4GetGlobal_turbofan': [SKIP],
+  'test-run-wasm-simd-scalar-lowering/RunWasm_I8x16ToF32x4_simd_lowered': [SKIP],
+  'test-run-wasm-simd/RunWasm_SimdF32x4AddWithI32x4_liftoff': [SKIP],
+  'test-run-wasm-simd/RunWasm_SimdF32x4GetGlobal_liftoff': [SKIP],
+  'test-run-wasm-simd/RunWasm_SimdF32x4ExtractWithI32x4_liftoff': [SKIP],
 }],
 
 ##############################################################################

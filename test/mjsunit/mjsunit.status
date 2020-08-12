@@ -856,6 +856,9 @@
   'wasm/float-constant-folding': [SKIP], # issue 53
   'regress/regress-1067270': [SKIP], # issue 142
   'wasm/stack': [SKIP], # issue 141
+  'compiler/dataview-detached': [SKIP], # issue 149
+  'compiler/int64': [SKIP], # issue 150
+  'tools/foozzie': [SKIP], # issue 163
 
   # disable all asm/embenchen tests for now
   'asm/embenchen/box2d': [SKIP],
