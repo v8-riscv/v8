@@ -1754,6 +1754,8 @@ TEST(jump_tables3) {
     obj = *values[i];
     imm64 = obj.ptr();
     __ RV_li(a0, imm64);
+    __ nop();  // For 8 byte alignment
+    __ nop();  // For 8 byte alignment
     __ j(&done);
   }
 
