@@ -865,6 +865,8 @@
 
 ['arch == riscv64 or arch == riscv', {
   'wasm/float-constant-folding': [SKIP], # issue 53
+  'regress/regress-1067270': [SKIP], # issue 142
+  'wasm/stack': [SKIP], # issue 141
 
   # disable all asm/embenchen tests for now
   'asm/embenchen/box2d': [SKIP],
