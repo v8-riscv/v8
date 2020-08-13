@@ -1294,7 +1294,7 @@ void InstructionSelector::VisitRoundUint64ToFloat64(Node* node) {
 }
 
 void InstructionSelector::VisitBitcastFloat32ToInt32(Node* node) {
-  VisitRR(this, kRiscvFloat64ExtractLowWord32, node);
+  VisitRR(this, kRiscvBitcastFloat32ToInt32, node);
 }
 
 void InstructionSelector::VisitBitcastFloat64ToInt64(Node* node) {
@@ -1302,10 +1302,7 @@ void InstructionSelector::VisitBitcastFloat64ToInt64(Node* node) {
 }
 
 void InstructionSelector::VisitBitcastInt32ToFloat32(Node* node) {
-  RiscvOperandGenerator g(this);
-  Emit(kRiscvFloat64InsertLowWord32, g.DefineAsRegister(node),
-       ImmediateOperand(ImmediateOperand::INLINE, 0),
-       g.UseRegister(node->InputAt(0)));
+  VisitRR(this, kRiscvBitcastInt32ToFloat32, node);
 }
 
 void InstructionSelector::VisitBitcastInt64ToFloat64(Node* node) {
@@ -2750,7 +2747,7 @@ SIMD_UNOP_LIST(SIMD_VISIT_UNOP)
 
 #define SIMD_VISIT_SHIFT_OP(Name)                     \
   void InstructionSelector::Visit##Name(Node* node) { \
-    VisitSimdShift(this, kRiscv##Name, node);        \
+    VisitSimdShift(this, kRiscv##Name, node);         \
   }
 SIMD_SHIFT_OP_LIST(SIMD_VISIT_SHIFT_OP)
 #undef SIMD_VISIT_SHIFT_OP
