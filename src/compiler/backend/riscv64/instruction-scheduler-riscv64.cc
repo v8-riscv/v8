@@ -24,6 +24,8 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvAssertEqual:
     case kRiscvBitcastDL:
     case kRiscvBitcastLD:
+    case kRiscvBitcastInt32ToFloat32:
+    case kRiscvBitcastFloat32ToInt32:
     case kRiscvByteSwap32:
     case kRiscvByteSwap64:
     case kRiscvCeilWD:
