@@ -142,6 +142,8 @@ namespace compiler {
   V(RiscvUStoreDouble)                      \
   V(RiscvBitcastDL)                         \
   V(RiscvBitcastLD)                         \
+  V(RiscvBitcastInt32ToFloat32)             \
+  V(RiscvBitcastFloat32ToInt32)             \
   V(RiscvFloat64ExtractLowWord32)           \
   V(RiscvFloat64ExtractHighWord32)          \
   V(RiscvFloat64InsertLowWord32)            \

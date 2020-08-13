@@ -1506,6 +1506,12 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kRiscvBitcastLD:
       __ fmv_d_x(i.OutputDoubleRegister(), i.InputRegister(0));
       break;
+    case kRiscvBitcastInt32ToFloat32:
+      __ fmv_w_x(i.OutputDoubleRegister(), i.InputRegister(0));
+      break;
+    case kRiscvBitcastFloat32ToInt32:
+      __ fmv_x_w(i.OutputRegister(), i.InputDoubleRegister(0));
+      break;
     case kRiscvFloat64ExtractLowWord32:
       __ ExtractLowWordFromF64(i.OutputRegister(), i.InputDoubleRegister(0));
       break;
