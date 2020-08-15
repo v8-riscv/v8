@@ -2031,7 +2031,7 @@ void VisitWord32Compare(InstructionSelector* selector, Node* node,
 #else
   if (IsNodeUnsigned(node->InputAt(0)) != IsNodeUnsigned(node->InputAt(1)) ||
       node->InputAt(0)->opcode() == IrOpcode::kCall ||
-      node->InputAt(1)->opcode() == IrOpcode::kCall ) {
+      node->InputAt(1)->opcode() == IrOpcode::kCall) {
 #endif
     VisitFullWord32Compare(selector, node, kMips64Cmp, cont);
   } else {
@@ -2941,8 +2941,6 @@ void InstructionSelector::VisitS128Zero(Node* node) {
   Emit(kMips64S128Zero, g.DefineAsRegister(node));
 }
 
-void InstructionSelector::VisitS128AndNot(Node* node) { UNIMPLEMENTED(); }
-
 #define SIMD_VISIT_SPLAT(Type)                               \
   void InstructionSelector::Visit##Type##Splat(Node* node) { \
     VisitRR(this, kMips64##Type##Splat, node);               \
@@ -3116,8 +3114,7 @@ void InstructionSelector::VisitS8x16Swizzle(Node* node) {
   // modify output before do the calculation.
   Emit(kMips64S8x16Swizzle, g.DefineAsRegister(node),
        g.UseUniqueRegister(node->InputAt(0)),
-       g.UseUniqueRegister(node->InputAt(1)),
-       arraysize(temps), temps);
+       g.UseUniqueRegister(node->InputAt(1)), arraysize(temps), temps);
 }
 
 void InstructionSelector::VisitSignExtendWord8ToInt32(Node* node) {
