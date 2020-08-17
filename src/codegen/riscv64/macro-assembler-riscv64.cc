@@ -2103,20 +2103,6 @@ void TurboAssembler::LoadFPRImmediate(FPURegister dst, uint64_t src) {
   }
 }
 
-void TurboAssembler::Movz(Register rd, Register rs, Register rt) {
-  Label done;
-  Branch(&done, ne, rt, Operand(zero_reg));
-  mv(rd, rs);
-  bind(&done);
-}
-
-void TurboAssembler::Movn(Register rd, Register rs, Register rt) {
-  Label done;
-  Branch(&done, eq, rt, Operand(zero_reg));
-  mv(rd, rs);
-  bind(&done);
-}
-
 void TurboAssembler::LoadZeroOnCondition(Register rd, Register rs,
                                          const Operand& rt, Condition cond) {
   BlockTrampolinePoolScope block_trampoline_pool(this);
