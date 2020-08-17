@@ -22,10 +22,10 @@ class TurboAssemblerTest : public TestWithIsolate {};
 
 TEST_F(TurboAssemblerTest, TestHardAbort) {
   auto buffer = AllocateAssemblerBuffer();
-  TurboAssembler tasm(nullptr, AssemblerOptions{}, CodeObjectRequired::kNo,
+  TurboAssembler tasm(isolate(), AssemblerOptions{}, CodeObjectRequired::kNo,
                       buffer->CreateView());
+  __ set_root_array_available(false);
   __ set_abort_hard(true);
-
   __ Abort(AbortReason::kNoReason);
 
   CodeDesc desc;
@@ -33,7 +33,6 @@ TEST_F(TurboAssemblerTest, TestHardAbort) {
   buffer->MakeExecutable();
   // We need an isolate here to execute in the simulator.
   auto f = GeneratedCode<void>::FromBuffer(isolate(), buffer->start());
-
   ASSERT_DEATH_IF_SUPPORTED({ f.Call(); }, "abort: no reason");
 }
 
