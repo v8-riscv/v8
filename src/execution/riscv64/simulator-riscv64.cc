@@ -2068,6 +2068,7 @@ void Simulator::DecodeRVRAType() {
     }
     case RO_SC_W: {
       int64_t addr = rs1();
+      base::MutexGuard lock_guard(&GlobalMonitor::Get()->mutex);
       if (local_monitor_.NotifyStoreConditional(addr, TransactionSize::Word) &&
           GlobalMonitor::Get()->NotifyStoreConditional_Locked(
               addr, &global_monitor_thread_)) {
