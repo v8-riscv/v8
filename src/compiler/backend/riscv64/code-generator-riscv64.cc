@@ -1013,14 +1013,18 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kRiscvMulHigh64:
       __ Mulh64(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
       break;
-    case kRiscvDiv32:
+    case kRiscvDiv32: {
       __ Div32(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
-      __ Movz(i.OutputRegister(), i.InputRegister(1), i.InputRegister(1));
+      // Set ouput to zero if divisor == 0
+      __ Selnez(i.OutputRegister(), i.OutputRegister(), i.InputRegister(1));
       break;
-    case kRiscvDivU32:
+    }
+    case kRiscvDivU32: {
       __ Divu32(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
-      __ Movz(i.OutputRegister(), i.InputRegister(1), i.InputRegister(1));
+      // Set ouput to zero if divisor == 0
+      __ Selnez(i.OutputRegister(), i.OutputRegister(), i.InputRegister(1));
       break;
+    }
     case kRiscvMod32:
       __ Mod32(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
       break;
@@ -1030,14 +1034,18 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kRiscvMul64:
       __ Mul64(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
       break;
-    case kRiscvDiv64:
+    case kRiscvDiv64: {
       __ Div64(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
-      __ Movz(i.OutputRegister(), i.InputRegister(1), i.InputRegister(1));
+      // Set ouput to zero if divisor == 0
+      __ Selnez(i.OutputRegister(), i.OutputRegister(), i.InputRegister(1));
       break;
-    case kRiscvDivU64:
+    }
+    case kRiscvDivU64: {
       __ Divu64(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
-      __ Movz(i.OutputRegister(), i.InputRegister(1), i.InputRegister(1));
+      // Set ouput to zero if divisor == 0
+      __ Selnez(i.OutputRegister(), i.OutputRegister(), i.InputRegister(1));
       break;
+    }
     case kRiscvMod64:
       __ Mod64(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
       break;
@@ -1437,6 +1445,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       break;
     }
     case kRiscvTruncWS: {
+      Label done;
       Register result = instr->OutputCount() > 1 ? i.OutputRegister(1) : no_reg;
       __ Trunc_w_s(i.OutputRegister(), i.InputDoubleRegister(0), result);
 
@@ -1451,9 +1460,14 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       // INT32_MAX is not a good value to indicate overflow. Instead, we will
       // use INT32_MIN as the converted result of an out-of-range FP value,
       // exploiting the fact that INT32_MAX+1 is INT32_MIN.
+      //
+      // If the result of conversion overflow, the result will be set to
+      // INT32_MIN. Here we detect overflow by testing whether output + 1 <
+      // output (i.e., kScratchReg  < output)
       __ Add32(kScratchReg, i.OutputRegister(), 1);
-      __ Slt(kScratchReg2, kScratchReg, i.OutputRegister());
-      __ Movn(i.OutputRegister(), kScratchReg, kScratchReg2);
+      __ Branch(&done, lt, i.OutputRegister(), Operand(kScratchReg));
+      __ Move(i.OutputRegister(), kScratchReg);
+      __ bind(&done);
       break;
     }
     case kRiscvTruncLS: {
@@ -1487,7 +1501,8 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       // will use 0 as the converted result of an out-of-range FP value,
       // exploiting the fact that UINT32_MAX+1 is 0.
       __ Add32(kScratchReg, i.OutputRegister(), 1);
-      __ Movz(i.OutputRegister(), zero_reg, kScratchReg);
+      // Set ouput to zero if result overflows (i.e., UINT32_MAX)
+      __ Selnez(i.OutputRegister(), i.OutputRegister(), kScratchReg);
       break;
     }
     case kRiscvTruncUlS: {

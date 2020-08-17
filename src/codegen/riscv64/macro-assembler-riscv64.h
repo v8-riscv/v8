@@ -503,10 +503,6 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void TruncateDoubleToI(Isolate* isolate, Zone* zone, Register result,
                          DoubleRegister double_input, StubCallMode stub_mode);
 
-  // Conditional move.
-  void Movz(Register rd, Register rs, Register rt);
-  void Movn(Register rd, Register rs, Register rt);
-
   void LoadZeroIfConditionNotZero(Register dest, Register condition);
   void LoadZeroIfConditionZero(Register dest, Register condition);
   void LoadZeroOnCondition(Register rd, Register rs, const Operand& rt,
