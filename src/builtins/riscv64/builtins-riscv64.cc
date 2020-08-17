@@ -1584,7 +1584,6 @@ void Builtins::Generate_FunctionPrototypeApply(MacroAssembler* masm) {
   Register receiver = a1;
   Register this_arg = a5;
   Register undefined_value = a3;
-  Register scratch = a4;
 
   __ LoadRoot(undefined_value, RootIndex::kUndefinedValue);
 
@@ -1597,12 +1596,18 @@ void Builtins::Generate_FunctionPrototypeApply(MacroAssembler* masm) {
 
     __ Sub64(sp, sp, Operand(2 * kPointerSize));
     __ CalcScaledAddress(sp, sp, argc, kPointerSizeLog2);
-    __ Move(scratch, argc);
-    __ Pop(this_arg, arg_array);                   // Overwrite argc
-    __ Movz(arg_array, undefined_value, scratch);  // if argc == 0
-    __ Movz(this_arg, undefined_value, scratch);   // if argc == 0
-    __ Sub64(scratch, scratch, Operand(1));
-    __ Movz(arg_array, undefined_value, scratch);  // if argc == 1
+    __ Pop(this_arg, arg_array);  // Overwrite argc
+
+    Label done0, done1;
+    __ Branch(&done0, ne, argc, Operand(zero_reg));
+    __ Move(arg_array, undefined_value);  // if argc == 0
+    __ Move(this_arg, undefined_value);   // if argc == 0
+    __ bind(&done0);                      // else (i.e., argc > 0)
+
+    __ Branch(&done1, ne, argc, Operand(1));
+    __ Move(arg_array, undefined_value);  // if argc == 1
+    __ bind(&done1);                      // else (i.e., argc > 1)
+
     __ Ld(receiver, MemOperand(sp));
     __ Sd(this_arg, MemOperand(sp));
   }
@@ -1693,7 +1698,6 @@ void Builtins::Generate_ReflectApply(MacroAssembler* masm) {
   Register target = a1;
   Register this_argument = a5;
   Register undefined_value = a3;
-  Register scratch = a4;
 
   __ LoadRoot(undefined_value, RootIndex::kUndefinedValue);
 
@@ -1706,16 +1710,23 @@ void Builtins::Generate_ReflectApply(MacroAssembler* masm) {
 
     __ Sub64(sp, sp, Operand(3 * kPointerSize));
     __ CalcScaledAddress(sp, sp, argc, kPointerSizeLog2);
-    __ Move(scratch, argc);
     __ Pop(target, this_argument, arguments_list);
-    __ Movz(arguments_list, undefined_value, scratch);  // if argc == 0
-    __ Movz(this_argument, undefined_value, scratch);   // if argc == 0
-    __ Movz(target, undefined_value, scratch);          // if argc == 0
-    __ Sub64(scratch, scratch, Operand(1));
-    __ Movz(arguments_list, undefined_value, scratch);  // if argc == 1
-    __ Movz(this_argument, undefined_value, scratch);   // if argc == 1
-    __ Sub64(scratch, scratch, Operand(1));
-    __ Movz(arguments_list, undefined_value, scratch);  // if argc == 2
+
+    Label done0, done1, done2;
+    __ Branch(&done0, ne, argc, Operand(zero_reg));
+    __ Move(arguments_list, undefined_value);  // if argc == 0
+    __ Move(this_argument, undefined_value);   // if argc == 0
+    __ Move(target, undefined_value);          // if argc == 0
+    __ bind(&done0);                           // argc != 0
+
+    __ Branch(&done1, ne, argc, Operand(1));
+    __ Move(arguments_list, undefined_value);  // if argc == 1
+    __ Move(this_argument, undefined_value);   // if argc == 1
+    __ bind(&done1);                           // argc > 1
+
+    __ Branch(&done2, ne, argc, Operand(2));
+    __ Move(arguments_list, undefined_value);  // if argc == 2
+    __ bind(&done2);                           // argc > 2
 
     __ Sd(this_argument, MemOperand(sp, 0));  // Overwrite receiver
   }
@@ -1749,7 +1760,6 @@ void Builtins::Generate_ReflectConstruct(MacroAssembler* masm) {
   Register target = a1;
   Register new_target = a3;
   Register undefined_value = a4;
-  Register scratch = a5;
 
   __ LoadRoot(undefined_value, RootIndex::kUndefinedValue);
 
@@ -1760,19 +1770,25 @@ void Builtins::Generate_ReflectConstruct(MacroAssembler* masm) {
   {
     // Claim (3 - argc) dummy arguments form the stack, to put the stack in a
     // consistent state for a simple pop operation.
-
     __ Sub64(sp, sp, Operand(3 * kPointerSize));
     __ CalcScaledAddress(sp, sp, argc, kPointerSizeLog2);
-    __ Move(scratch, argc);
     __ Pop(target, arguments_list, new_target);
-    __ Movz(arguments_list, undefined_value, scratch);  // if argc == 0
-    __ Movz(new_target, undefined_value, scratch);      // if argc == 0
-    __ Movz(target, undefined_value, scratch);          // if argc == 0
-    __ Sub64(scratch, scratch, Operand(1));
-    __ Movz(arguments_list, undefined_value, scratch);  // if argc == 1
-    __ Movz(new_target, target, scratch);               // if argc == 1
-    __ Sub64(scratch, scratch, Operand(1));
-    __ Movz(new_target, target, scratch);  // if argc == 2
+
+    Label done0, done1, done2;
+    __ Branch(&done0, ne, argc, Operand(zero_reg));
+    __ Move(arguments_list, undefined_value);  // if argc == 0
+    __ Move(new_target, undefined_value);      // if argc == 0
+    __ Move(target, undefined_value);          // if argc == 0
+    __ bind(&done0);
+
+    __ Branch(&done1, ne, argc, Operand(1));
+    __ Move(arguments_list, undefined_value);  // if argc == 1
+    __ Move(new_target, target);               // if argc == 1
+    __ bind(&done1);
+
+    __ Branch(&done2, ne, argc, Operand(2));
+    __ Move(new_target, target);  // if argc == 2
+    __ bind(&done2);
 
     __ Sd(undefined_value, MemOperand(sp, 0));  // Overwrite receiver
   }
@@ -2744,7 +2760,8 @@ void Builtins::Generate_DoubleToI(MacroAssembler* masm) {
 
   // Check for Infinity and NaNs, which should return 0.
   __ Sub32(scratch, result_reg, HeapNumber::kExponentMask);
-  __ Movz(result_reg, zero_reg, scratch);
+  __ Selnez(result_reg, result_reg,
+            scratch);  // result_reg = (scratch != 0) ? result_reg : 0
   __ Branch(&done, eq, scratch, Operand(zero_reg));
 
   // Express exponent as delta to (number of mantissa bits + 31).
@@ -2786,7 +2803,7 @@ void Builtins::Generate_DoubleToI(MacroAssembler* masm) {
   __ bind(&high_shift_done);
 
   // Replace the shifted bits with bits from the lower mantissa word.
-  Label pos_shift, shift_done;
+  Label pos_shift, shift_done, sign_negative;
   __ li(kScratchReg, 32);
   __ subw(scratch, kScratchReg, scratch);
   __ Branch(&pos_shift, ge, scratch, Operand(zero_reg));
@@ -2806,7 +2823,9 @@ void Builtins::Generate_DoubleToI(MacroAssembler* masm) {
   result_reg = sign;
   sign = no_reg;
   __ Sub32(result_reg, zero_reg, input_high);
-  __ Movz(result_reg, input_high, scratch);
+  __ Branch(&sign_negative, ne, scratch, Operand(zero_reg));
+  __ Move(result_reg, input_high);
+  __ bind(&sign_negative);
 
   __ bind(&done);
 
