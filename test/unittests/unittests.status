@@ -60,7 +60,6 @@
 
 ##############################################################################
 ['arch == riscv64 or arch == riscv', {
-  'TurboAssemblerTest.TestHardAbort': [SKIP], # issue 140
   'TurboAssemblerTest.TestCheck': [SKIP], # issue 146
 }],
 
