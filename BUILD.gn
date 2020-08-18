@@ -4303,6 +4303,8 @@ v8_source_set("v8_cppgc_shared") {
       sources += [ "src/heap/base/asm/mips/push_registers_asm.cc" ]
     } else if (current_cpu == "mips64el") {
       sources += [ "src/heap/base/asm/mips64/push_registers_asm.cc" ]
+    } else if (current_cpu == "riscv64") {
+      sources += [ "src/heap/base/asm/riscv64/push_registers_asm.cc" ]
     }
   } else if (is_win) {
     if (current_cpu == "x64") {
@@ -4939,6 +4941,10 @@ if (want_v8_shell) {
 v8_executable("cppgc_for_v8_embedders") {
   sources = [ "samples/cppgc/cppgc-for-v8-embedders.cc" ]
 
+  if (v8_current_cpu == "riscv64" || v8_current_cpu == "riscv") {
+    libs = [ "atomic" ]
+  }
+
   configs = [
     # Note: don't use :internal_config here because this target will get
     # the :external_config applied to it by virtue of depending on :cppgc, and
@@ -4955,6 +4961,10 @@ v8_executable("cppgc_for_v8_embedders") {
 
 v8_executable("cppgc_standalone") {
   sources = [ "samples/cppgc/cppgc-standalone.cc" ]
+
+  if (v8_current_cpu == "riscv64" || v8_current_cpu == "riscv") {
+    libs = [ "atomic" ]
+  }
 
   configs = [
     # Note: don't use :internal_config here because this target will get
