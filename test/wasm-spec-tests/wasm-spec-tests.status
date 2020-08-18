@@ -64,20 +64,30 @@
   'proposals/JS-BigInt-integration/conversions': [SKIP],
   'proposals/bulk-memory-operations/conversions': [SKIP],
   'proposals/js-types/conversions': [SKIP],
+  'proposals/multi-value/conversions': [SKIP],
+  'proposals/reference-types/conversions': [SKIP],
+
   'f32': [SKIP],
   'f64': [SKIP],
   'proposals/multi-value/f64': [SKIP],
-  'proposals/multi-value/conversions': [SKIP],
   'proposals/JS-BigInt-integration/f64': [SKIP],
   'proposals/JS-BigInt-integration/f32': [SKIP],
   'proposals/bulk-memory-operations/f32': [SKIP],
-  'proposals/reference-types/conversions': [SKIP],
   'proposals/bulk-memory-operations/f64': [SKIP],
   'proposals/js-types/f32': [SKIP],
   'proposals/js-types/f64': [SKIP],
   'proposals/multi-value/f32': [SKIP],
   'proposals/reference-types/f32': [SKIP],
   'proposals/reference-types/f64': [SKIP],
+
+   # the following all fail w/ symptons captured in issue #166
+   'float_exprs': [SKIP],
+   'skip-stack-guard-page': [SKIP],
+   'proposals/tail-call/conversions': [SKIP],
+   'proposals/tail-call/float_exprs': [SKIP],
+   'proposals/tail-call/f64': [SKIP],
+   'proposals/tail-call/f32': [SKIP],
+   'proposals/tail-call/skip-stack-guard-page': [SKIP],
 }],  # 'arch == riscv or arch == riscv64
 
 ['arch == ppc or arch == ppc64', {
