@@ -25,6 +25,10 @@ if (is_fuchsia) {
 # target for simplicity.
 v8_executable("cppgc_unittests") {
   testonly = true
+  
+  if (v8_current_cpu == "riscv64" || v8_current_cpu == "riscv") {
+    libs = [ "atomic" ]
+  }
 
   configs = [
     "../..:external_config",
