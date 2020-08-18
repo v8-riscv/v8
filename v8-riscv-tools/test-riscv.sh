@@ -8,3 +8,4 @@ $DIR/../tools/run-tests.py -p verbose --report --outdir=out/riscv64.sim unittest
 $DIR/../tools/run-tests.py -p verbose --report --outdir=out/riscv64.sim wasm-api-tests wasm-js
 $DIR/../tools/run-tests.py -p verbose --report --outdir=out/riscv64.sim mjsunit
 $DIR/../tools/run-tests.py -p verbose --report --outdir=out/riscv64.sim intl message debugger inspector mkgrokdump
+$DIR/../tools/run-tests.py -p verbose --report --outdir=out/riscv64.sim wasm-spec-tests
