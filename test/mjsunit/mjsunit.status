@@ -866,8 +866,6 @@
 ['arch == riscv64 or arch == riscv', {
   'wasm/float-constant-folding': [SKIP], # issue 53
   'regress/regress-1067270': [SKIP], # issue 142
-  'wasm/stack': [SKIP], # issue 141
-  'asm/poppler/poppler': [SKIP], # issue 141
 
   'wasm/memory_2gb_oob': [SKIP], # OOM: sorry, best effort max memory size test
   'wasm/memory_4gb_oob': [SKIP], # OOM: sorry, best effort max memory size test
