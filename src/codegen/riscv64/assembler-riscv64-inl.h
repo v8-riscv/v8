@@ -229,6 +229,7 @@ void Assembler::EmitHelper(T x) {
   disassembleInstr((int)x);
   *reinterpret_cast<T*>(pc_) = x;
   pc_ += sizeof(x);
+  CheckTrampolinePoolQuick();
 }
 
 void Assembler::emit(Instr x) {
