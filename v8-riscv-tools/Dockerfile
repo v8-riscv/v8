@@ -25,10 +25,6 @@ RUN git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
 ENV PATH="/depot_tools:${PATH}"
 
 RUN fetch v8
-# For now, checkout this older version to avoid compatibility issues
-RUN (cd /v8 && git checkout 8.1.268)
-RUN (cd /v8/third_party/icu && git checkout dbd3825b31041d782c5b504c59dcfb5ac7dda08c)
-
 RUN (cd /v8 && ./build/install-build-deps.sh --no-prompt --no-arm)
 
 

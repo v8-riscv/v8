@@ -1,0 +1,25 @@
+language: generic
+before_install:
+  - >
+    sudo apt-get -yqq install git
+    curl
+    python
+    lsb-release
+    pkg-config
+    tzdata
+  - git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /tmp/depot_tools
+  - export PATH="/tmp/depot_tools:${PATH}"
+  - mkdir ${TRAVIS_BUILD_DIR}/../upstream
+  - cd ${TRAVIS_BUILD_DIR}/../upstream
+  - fetch v8
+  - (cd v8 && ./build/install-build-deps.sh --no-prompt --no-arm)
+install:
+  - cp -r ${TRAVIS_BUILD_DIR}/* ${TRAVIS_BUILD_DIR}/../upstream/v8/
+  - cd ${TRAVIS_BUILD_DIR}/../upstream/v8
+  - cp patches/build.patch build/
+  - (cd build && git apply build.patch)
+  - gn gen out/riscv64.sim --args='is_component_build=false is_debug=true target_cpu="x64" v8_target_cpu="riscv64" use_goma=false goma_dir="None"'
+  - ninja -C out/riscv64.sim -j2 v8_base
+  - ninja -C out/riscv64.sim -j2
+script:
+  - v8-riscv-tools/test-riscv.sh
