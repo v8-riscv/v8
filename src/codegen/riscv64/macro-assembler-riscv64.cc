@@ -1942,14 +1942,24 @@ void MacroAssembler::Msub_d(FPURegister fd, FPURegister fr, FPURegister fs,
 void TurboAssembler::CompareF32(Register rd, FPUCondition cc, FPURegister cmp1,
                                 FPURegister cmp2) {
   switch (cc) {
-    case EQ:  // Equal.
+    case EQ:
       feq_s(rd, cmp1, cmp2);
       break;
-    case LT:  // Ordered and Less Than
+    case NE:
+      feq_s(rd, cmp1, cmp2);
+      NegateBool(rd, rd);
+      break;
+    case LT:
       flt_s(rd, cmp1, cmp2);
       break;
-    case LE:  // Ordered and Less Than or Equal
+    case GE:
+      fle_s(rd, cmp2, cmp1);
+      break;
+    case LE:
       fle_s(rd, cmp1, cmp2);
+      break;
+    case GT:
+      flt_s(rd, cmp2, cmp1);
       break;
     default:
       UNREACHABLE();
@@ -1959,14 +1969,24 @@ void TurboAssembler::CompareF32(Register rd, FPUCondition cc, FPURegister cmp1,
 void TurboAssembler::CompareF64(Register rd, FPUCondition cc, FPURegister cmp1,
                                 FPURegister cmp2) {
   switch (cc) {
-    case EQ:  // Equal.
+    case EQ:
       feq_d(rd, cmp1, cmp2);
       break;
-    case LT:  // Ordered or Less Than
+    case NE:
+      feq_d(rd, cmp1, cmp2);
+      NegateBool(rd, rd);
+      break;
+    case LT:
       flt_d(rd, cmp1, cmp2);
       break;
-    case LE:  // Ordered or Less Than or Equal
+    case GE:
+      fle_d(rd, cmp2, cmp1);
+      break;
+    case LE:
       fle_d(rd, cmp1, cmp2);
+      break;
+    case GT:
+      flt_d(rd, cmp2, cmp1);
       break;
     default:
       UNREACHABLE();
