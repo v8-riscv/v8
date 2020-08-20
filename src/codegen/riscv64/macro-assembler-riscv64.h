@@ -150,17 +150,18 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
 #undef COND_TYPED_ARGS
 #undef COND_ARGS
 
-  // Floating point branches
+  inline void NegateBool(Register rd, Register rs) { Xor(rd, rs, 1); }
+
+  // Compare float, if any operand is NaN, result is false except for NE
   void CompareF32(Register rd, FPUCondition cc, FPURegister cmp1,
                   FPURegister cmp2);
-
-  void CompareIsNanF32(Register rd, FPURegister cmp1, FPURegister cmp2);
-
+  // Compare double, if any operand is NaN, result is false except for NE
   void CompareF64(Register rd, FPUCondition cc, FPURegister cmp1,
                   FPURegister cmp2);
-
+  void CompareIsNanF32(Register rd, FPURegister cmp1, FPURegister cmp2);
   void CompareIsNanF64(Register rd, FPURegister cmp1, FPURegister cmp2);
 
+  // Floating point branches
   void BranchTrueShortF(Register rs, Label* target);
   void BranchFalseShortF(Register rs, Label* target);
 

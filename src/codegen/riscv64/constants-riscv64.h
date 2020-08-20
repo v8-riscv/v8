@@ -524,9 +524,12 @@ inline Condition NegateFpuCondition(Condition cc) {
 // ----- Coprocessor conditions.
 enum FPUCondition {
   kNoFPUCondition = -1,
-  EQ = 0x02,  // Equal.
+  EQ = 0x02,  // Ordered and Equal
+  NE = 0x03,  // Unordered or Not Equal
   LT = 0x04,  // Ordered and Less Than
+  GE = 0x05,  // Ordered and Greater Than or Equal
   LE = 0x06,  // Ordered and Less Than or Equal
+  GT = 0x07,  // Ordered and Greater Than
 };
 
 enum CheckForInexactConversion {
