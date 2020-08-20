@@ -352,6 +352,14 @@ int Assembler::target_at(int pos, bool is_internal) {
     } else {
       return pos + imm12;
     }
+  } else if (IsLui(instr)) {
+    Address pc = reinterpret_cast<Address>(buffer_start_ + pos);
+    int32_t imm = target_address_at(pc);
+    if(imm == kEndOfJumpChain) {
+      return kEndOfChain;
+    } else {
+      return imm;
+    }
   } else {
     // Emitted label constant, not part of a branch.
     if (instr == 0) {
@@ -367,7 +375,7 @@ static inline Instr SetBranchOffset(int32_t pos, int32_t target_pos,
                                     Instr instr) {
   int32_t imm = target_pos - pos;
   DCHECK_EQ(imm & 1, 0);
-  DCHECK_LE(imm, Assembler::kMaxBranchOffset);
+  DCHECK(is_intn(imm, Assembler::kBranchOffsetBits);
 
   instr &= ~kBImm12Mask;
   int32_t imm12 = ((imm & 0x800) >> 4) |   // bit  11
@@ -381,7 +389,7 @@ static inline Instr SetBranchOffset(int32_t pos, int32_t target_pos,
 static inline Instr SetJalOffset(int32_t pos, int32_t target_pos, Instr instr) {
   int32_t imm = target_pos - pos;
   DCHECK_EQ(imm & 1, 0);
-  DCHECK_LE(imm, Assembler::kMaxJumpOffset);
+  DCHECK(is_intn(imm, Assembler::kJumpOffsetBits);
 
   instr &= ~kImm20Mask;
   int32_t imm20 = (imm & 0xff000) |          // bits 19-12
@@ -410,6 +418,9 @@ void Assembler::target_at_put(int pos, int target_pos, bool is_internal) {
   } else if (IsJal(instr)) {
     instr = SetJalOffset(pos, target_pos, instr);
     instr_at_put(pos, instr);
+  } else if (IsLui(instr)) {
+    Address pc = reinterpret_cast<Address>(buffer_start_ + pos);
+    set_target_value_at(pc, reinterpret_cast<uint64_t>(buffer_start_ + target_pos));
   } else {
     // Emitted label constant, not part of a branch.
     // Make label relative to Code pointer of generated Code object.
@@ -2090,10 +2101,6 @@ void Assembler::CheckTrampolinePool() {
   // either trampoline_pool_blocked_nesting_ or no_trampoline_pool_before_,
   // which are both checked here. Also, recursive calls to CheckTrampolinePool
   // are blocked by trampoline_pool_blocked_nesting_.
-  DEBUG_PRINTF("\ttrampoline_pool_blocked_nesting:%d\n",
-               trampoline_pool_blocked_nesting_);
-  DEBUG_PRINTF("\tpc_offset:%d,no_trampoline_pool_before:%d\n", pc_offset(),
-               no_trampoline_pool_before_);
   if ((trampoline_pool_blocked_nesting_ > 0) ||
       (pc_offset() < no_trampoline_pool_before_)) {
     // Emission is currently blocked; make sure we try again as soon as
@@ -2111,9 +2118,9 @@ void Assembler::CheckTrampolinePool() {
   if (unbound_labels_count_ > 0) {
     // First we emit jump, then we emit trampoline pool.
     {
-      DEBUG_PRINTF("inserting trampoline pool at %p (%d),num:%d\n",
+      DEBUG_PRINTF("inserting trampoline pool at %p (%d)\n",
                    reinterpret_cast<Instr*>(buffer_start_ + pc_offset()),
-                   pc_offset(), unbound_labels_count_);
+                   pc_offset());
       BlockTrampolinePoolScope block_trampoline_pool(this);
       Label after_pool;
       j(&after_pool);
