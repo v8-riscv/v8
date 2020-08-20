@@ -829,10 +829,16 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
       no_trampoline_pool_before_ = pc_offset;
   }
 
-  void StartBlockTrampolinePool() { trampoline_pool_blocked_nesting_++; }
+  void StartBlockTrampolinePool() {
+    trampoline_pool_blocked_nesting_++;
+    DEBUG_PRINTF("\tStartBlockTrampolinePool:%d\n",
+                 trampoline_pool_blocked_nesting_);
+  }
 
   void EndBlockTrampolinePool() {
     trampoline_pool_blocked_nesting_--;
+    DEBUG_PRINTF("\tEndBlockTrampolinePool:%d\n",
+                 trampoline_pool_blocked_nesting_);
     if (trampoline_pool_blocked_nesting_ == 0) {
       CheckTrampolinePoolQuick(1);
     }
@@ -860,6 +866,9 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   bool is_buffer_growth_blocked() const { return block_buffer_growth_; }
 
   void CheckTrampolinePoolQuick(int extra_instructions = 0) {
+    DEBUG_PRINTF("\tpc_offset:%d,next_buffer_check_ %d\n", pc_offset(),
+                 next_buffer_check_ - extra_instructions * kInstrSize);
+    DEBUG_PRINTF("\tunbound_labels_count:%d\n", unbound_labels_count_);
     if (pc_offset() >= next_buffer_check_ - extra_instructions * kInstrSize) {
       CheckTrampolinePool();
     }
