@@ -1184,89 +1184,38 @@ void LiftoffAssembler::emit_i64_set_cond(Condition cond, Register dst,
   TurboAssembler::Move(dst, tmp);
 }
 
-namespace liftoff {
-
-inline FPUCondition ConditionToConditionCmpFPU(Condition condition,
-                                               bool* predicate) {
+static FPUCondition ConditionToConditionCmpFPU(Condition condition) {
   switch (condition) {
     case kEqual:
-      *predicate = true;
       return EQ;
     case kUnequal:
-      *predicate = false;
-      return EQ;
+      return NE;
     case kUnsignedLessThan:
-      *predicate = true;
       return LT;
     case kUnsignedGreaterEqual:
-      *predicate = false;
-      return LT;
+      return GE;
     case kUnsignedLessEqual:
-      *predicate = true;
       return LE;
     case kUnsignedGreaterThan:
-      *predicate = false;
-      return LE;
+      return GT;
     default:
-      *predicate = true;
       break;
   }
   UNREACHABLE();
 }
 
-}  // namespace liftoff
-
 void LiftoffAssembler::emit_f32_set_cond(Condition cond, Register dst,
                                          DoubleRegister lhs,
                                          DoubleRegister rhs) {
-  Label not_nan, cont;
-  TurboAssembler::CompareIsNanF32(kScratchReg, lhs, rhs);
-  TurboAssembler::BranchFalseF(kScratchReg, &not_nan);
-  // If one of the operands is NaN, return 1 for f32.ne, else 0.
-  if (cond == ne) {
-    TurboAssembler::li(dst, 1);
-  } else {
-    TurboAssembler::Move(dst, zero_reg);
-  }
-  TurboAssembler::Branch(&cont);
-
-  bind(&not_nan);
-
-  bool predicate;
-  FPUCondition fcond = liftoff::ConditionToConditionCmpFPU(cond, &predicate);
+  FPUCondition fcond = ConditionToConditionCmpFPU(cond);
   TurboAssembler::CompareF32(dst, fcond, lhs, rhs);
-  if (!predicate) TurboAssembler::Xor(dst, dst, 1);
-
-  bind(&cont);
 }
 
 void LiftoffAssembler::emit_f64_set_cond(Condition cond, Register dst,
                                          DoubleRegister lhs,
                                          DoubleRegister rhs) {
-  Label not_nan, cont;
-  TurboAssembler::CompareIsNanF64(kScratchReg, lhs, rhs);
-  TurboAssembler::BranchFalseF(kScratchReg, &not_nan);
-  // If one of the operands is NaN, return 1 for f64.ne, else 0.
-  if (cond == ne) {
-    TurboAssembler::li(dst, 1);
-  } else {
-    TurboAssembler::Move(dst, zero_reg);
-  }
-  TurboAssembler::Branch(&cont);
-
-  bind(&not_nan);
-
-  TurboAssembler::li(dst, 1);
-  bool predicate;
-  FPUCondition fcond = liftoff::ConditionToConditionCmpFPU(cond, &predicate);
-  TurboAssembler::CompareF64(kScratchReg, fcond, lhs, rhs);
-  if (predicate) {
-    TurboAssembler::LoadZeroIfConditionZero(dst, kScratchReg);
-  } else {
-    TurboAssembler::LoadZeroIfConditionNotZero(dst, kScratchReg);
-  }
-
-  bind(&cont);
+  FPUCondition fcond = ConditionToConditionCmpFPU(cond);
+  TurboAssembler::CompareF64(dst, fcond, lhs, rhs);
 }
 
 bool LiftoffAssembler::emit_select(LiftoffRegister dst, Register condition,
