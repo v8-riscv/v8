@@ -1478,15 +1478,19 @@ static const std::vector<double> compare_double_test_values() {
 
 template <typename T>
 static bool Compare(T input1, T input2, FPUCondition cond) {
-  if (std::isnan(input1) || std::isnan(input2)) return false;
-
   switch (cond) {
-    case EQ:  // Equal.
+    case EQ:
       return (input1 == input2);
-    case LT:  // Ordered or Less Than
+    case LT:
       return (input1 < input2);
-    case LE:  // Ordered or Less Than or Equal
+    case LE:
       return (input1 <= input2);
+    case NE:
+      return (input1 != input2);
+    case GT:
+      return (input1 > input2);
+    case GE:
+      return (input1 >= input2);
     default:
       UNREACHABLE();
   }
@@ -1526,6 +1530,9 @@ TEST(FCompare32_Branch) {
   FCompare32Helper(EQ);
   FCompare32Helper(LT);
   FCompare32Helper(LE);
+  FCompare32Helper(NE);
+  FCompare32Helper(GT);
+  FCompare32Helper(GE);
 
   // test CompareIsNanF32: return true if any operand isnan
   auto fn = [](MacroAssembler* masm) { __ CompareIsNanF32(a1, fa0, fa1); };
@@ -1540,6 +1547,9 @@ TEST(FCompare64_Branch) {
   FCompare64Helper(EQ);
   FCompare64Helper(LT);
   FCompare64Helper(LE);
+  FCompare64Helper(NE);
+  FCompare64Helper(GT);
+  FCompare64Helper(GE);
 
   // test CompareIsNanF64: return true if any operand isnan
   auto fn = [](MacroAssembler* masm) { __ CompareIsNanF64(a1, fa0, fa1); };
