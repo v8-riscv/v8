@@ -70,3 +70,6 @@ jobs:
 
     - name: misc tests
       run: (cd v8 && tools/run-tests.py -p verbose --report --outdir=out/riscv64.sim intl message debugger inspector mkgrokdump)
+
+    - name: fuzzer tests
+      run: (cd v8 && tools/run-tests.py -p verbose --report --outdir=out/riscv64.sim fuzzer)
