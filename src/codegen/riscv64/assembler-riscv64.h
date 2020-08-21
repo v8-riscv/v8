@@ -306,7 +306,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   // Max offset for jal instruction with 20-bit offset field (multiple of 2)
   static constexpr int kMaxJumpOffset = (1 << (21 - 1)) - 1;
 
-  static constexpr int kTrampolineSlotsSize = 1 * kInstrSize;
+  static constexpr int kTrampolineSlotsSize = 2 * kInstrSize;
 
   RegList* GetScratchRegisterList() { return &scratch_register_list_; }
 
