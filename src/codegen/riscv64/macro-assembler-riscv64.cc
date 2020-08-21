@@ -3075,35 +3075,27 @@ void TurboAssembler::Ret(Condition cond, Register rs, const Operand& rt) {
 }
 
 void TurboAssembler::BranchLong(Label* L) {
-  if (!L->is_bound() || is_near(L)) {
-    BranchShortHelper(0, L);
-  } else {
-    // Generate position independent long branch.
-    BlockTrampolinePoolScope block_trampoline_pool(this);
-    int64_t imm64;
-    imm64 = branch_long_offset(L);
-    DCHECK(is_int32(imm64));
-    int32_t Hi20 = (((int32_t)imm64 + 0x800) >> 12);
-    int32_t Lo12 = (int32_t)imm64 << 20 >> 20;
-    auipc(t5, Hi20);  // Read PC + Hi20 into t5.
-    jr(t5, Lo12);     // jump PC + Hi20 + Lo12
-  }
+  // Generate position independent long branch.
+  BlockTrampolinePoolScope block_trampoline_pool(this);
+  int64_t imm64;
+  imm64 = branch_long_offset(L);
+  DCHECK(is_int32(imm64));
+  int32_t Hi20 = (((int32_t)imm64 + 0x800) >> 12);
+  int32_t Lo12 = (int32_t)imm64 << 20 >> 20;
+  auipc(t5, Hi20);  // Read PC + Hi20 into t5.
+  jr(t5, Lo12);     // jump PC + Hi20 + Lo12
 }
 
 void TurboAssembler::BranchAndLinkLong(Label* L) {
-  if (!L->is_bound() || is_near(L)) {
-    BranchAndLinkShortHelper(0, L);
-  } else {
-    // Generate position independent long branch and link.
-    BlockTrampolinePoolScope block_trampoline_pool(this);
-    int64_t imm64;
-    imm64 = branch_long_offset(L);
-    DCHECK(is_int32(imm64));
-    int32_t Hi20 = (((int32_t)imm64 + 0x800) >> 12);
-    int32_t Lo12 = (int32_t)imm64 << 20 >> 20;
-    auipc(t5, Hi20);  // Read PC + Hi20 into t5.
-    jalr(t5, Lo12);   // jump PC + Hi20 + Lo12 and read PC + 4 to ra
-  }
+  // Generate position independent long branch and link.
+  BlockTrampolinePoolScope block_trampoline_pool(this);
+  int64_t imm64;
+  imm64 = branch_long_offset(L);
+  DCHECK(is_int32(imm64));
+  int32_t Hi20 = (((int32_t)imm64 + 0x800) >> 12);
+  int32_t Lo12 = (int32_t)imm64 << 20 >> 20;
+  auipc(t5, Hi20);  // Read PC + Hi20 into t5.
+  jalr(t5, Lo12);   // jump PC + Hi20 + Lo12 and read PC + 4 to ra
 }
 
 void TurboAssembler::DropAndRet(int drop) {
