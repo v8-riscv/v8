@@ -360,7 +360,7 @@ int Assembler::target_at(int pos, bool is_internal) {
     uint64_t imm = reinterpret_cast<uint64_t>(pc);
     if(imm == kEndOfJumpChain) {
       return kEndOfChain;
-  } else {
+    } else {
       DCHECK(instr_address - imm < INT_MAX);
       int32_t delta = static_cast<int32_t>(instr_address - imm);
       DCHECK(pos > delta);
@@ -2181,7 +2181,13 @@ void Assembler::CheckTrampolinePool() {
 
       int pool_start = pc_offset();
       for (int i = 0; i < unbound_labels_count_; i++) {
-        j(&after_pool);
+        int64_t imm64;
+        imm64 = branch_long_offset(&after_pool);
+        DCHECK(is_int32(imm64));
+        int32_t Hi20 = (((int32_t)imm64 + 0x800) >> 12);
+        int32_t Lo12 = (int32_t)imm64 << 20 >> 20;
+        auipc(t5, Hi20);  // Read PC + Hi20 into t5.
+        jr(t5, Lo12);     // jump PC + Hi20 + Lo12
       }
       // If unbound_labels_count_ is big enough, label after_pool will
       // need a trampoline too, so we must create the trampoline before
