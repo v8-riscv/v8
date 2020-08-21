@@ -197,8 +197,10 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   bool is_near(Label* L);
   bool is_near(Label* L, OffsetSize bits);
   bool is_near_branch(Label* L);
-
+  
+  //Get offset from instr.
   int BranchOffset(Instr instr);
+  int BrachlongOffset(Instr auipc, Instr jalr);
   int JumpOffset(Instr instr);
 
   // Returns the branch offset to the given label from the current code
@@ -779,6 +781,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   static bool IsJal(Instr instr);
   static bool IsJalr(Instr instr);
   static bool IsLui(Instr instr);
+  static bool IsAuipc(Instr instr);
   static bool IsAddiw(Instr instr);
   static bool IsAddi(Instr instr);
   static bool IsSlli(Instr instr);
@@ -1056,7 +1059,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   // instruction. We use this information to trigger different mode of
   // branch instruction generation, where we use jump instructions rather
   // than regular branch instructions.
-  bool trampoline_emitted_;
+  bool trampoline_emitted_ = false;
   static constexpr int kInvalidSlotPos = -1;
 
   // Internal reference positions, required for unbounded internal reference

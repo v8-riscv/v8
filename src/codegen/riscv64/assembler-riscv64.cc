@@ -301,6 +301,7 @@ bool Assembler::IsJalr(Instr instr) {
 }
 
 bool Assembler::IsLui(Instr instr) { return (instr & kBaseOpcodeMask) == LUI; }
+bool Assembler::IsAuipc(Instr instr) { return (instr & kBaseOpcodeMask) == AUIPC; }
 bool Assembler::IsAddiw(Instr instr) {
   return (instr & (kBaseOpcodeMask | kFunct3Mask)) == RO_ADDIW;
 }
@@ -352,6 +353,27 @@ int Assembler::target_at(int pos, bool is_internal) {
     } else {
       return pos + imm12;
     }
+  } else if (IsLui(instr)) {
+    Address pc = reinterpret_cast<Address>(buffer_start_ + pos);
+    pc = target_address_at(pc);
+    uint64_t instr_address = reinterpret_cast<uint64_t>(buffer_start_ + pos);
+    uint64_t imm = reinterpret_cast<uint64_t>(pc);
+    if(imm == kEndOfJumpChain) {
+      return kEndOfChain;
+  } else {
+      DCHECK(instr_address - imm < INT_MAX);
+      int32_t delta = static_cast<int32_t>(instr_address - imm);
+      DCHECK(pos > delta);
+      return pos - delta;
+    }
+  } else if (IsAuipc(instr)) {
+    Instr instr_auipc = instr;
+    Instr instr_jalr = instr_at(pos + 4);
+    DCHECK(IsJalr(instr_jalr));
+    int32_t offset = BrachlongOffset(instr_auipc, instr_jalr);
+    if(offset  == kEndOfJumpChain) 
+      return kEndOfChain;
+    return offset + pos;
   } else {
     // Emitted label constant, not part of a branch.
     if (instr == 0) {
@@ -367,6 +389,7 @@ static inline Instr SetBranchOffset(int32_t pos, int32_t target_pos,
                                     Instr instr) {
   int32_t imm = target_pos - pos;
   DCHECK_EQ(imm & 1, 0);
+  DCHECK(is_intn(imm, Assembler::kBranchOffsetBits));
 
   instr &= ~kBImm12Mask;
   int32_t imm12 = ((imm & 0x800) >> 4) |   // bit  11
@@ -380,6 +403,7 @@ static inline Instr SetBranchOffset(int32_t pos, int32_t target_pos,
 static inline Instr SetJalOffset(int32_t pos, int32_t target_pos, Instr instr) {
   int32_t imm = target_pos - pos;
   DCHECK_EQ(imm & 1, 0);
+  DCHECK(is_intn(imm, Assembler::kJumpOffsetBits));
 
   instr &= ~kImm20Mask;
   int32_t imm20 = (imm & 0xff000) |          // bits 19-12
@@ -408,6 +432,31 @@ void Assembler::target_at_put(int pos, int target_pos, bool is_internal) {
   } else if (IsJal(instr)) {
     instr = SetJalOffset(pos, target_pos, instr);
     instr_at_put(pos, instr);
+  } else if (IsLui(instr)) {
+    Address pc = reinterpret_cast<Address>(buffer_start_ + pos);
+    set_target_value_at(pc, reinterpret_cast<uint64_t>(buffer_start_ + target_pos));
+  } else if (IsAuipc(instr)) {
+    Instr instr_auipc = instr;
+    Instr instr_jalr = instr_at(pos + 4);
+    DCHECK(IsJalr(instr_jalr));
+
+    int64_t offset = target_pos - pos;
+    DCHECK(is_int32(offset));
+
+    int32_t Hi20 = (((int32_t)offset + 0x800) >> 12);
+    int32_t Lo12 = (int32_t)offset << 20 >> 20;
+
+    const int kImm31_12Mask = ((1 << 20) - 1) << 12;
+    const int kImm19_0Mask = ((1 << 20) - 1);
+    instr_auipc = (instr_auipc & ~kImm31_12Mask) |
+                  ((Hi20 & kImm19_0Mask) << 12);
+    instr_at_put(pos, instr_auipc);
+
+    const int kImm31_20Mask = ((1 << 12) - 1) << 20;
+    const int kImm11_0Mask = ((1 << 12) - 1);
+    instr_jalr = (instr_jalr & ~kImm31_20Mask) |
+                 ((Lo12 & kImm11_0Mask) << 20);
+    instr_at_put(pos + 4, instr_jalr);
   } else {
     // Emitted label constant, not part of a branch.
     // Make label relative to Code pointer of generated Code object.
@@ -475,6 +524,18 @@ void Assembler::bind_to(Label* L, int pos) {
           fixup_pos = trampoline_pos;
         }
         target_at_put(fixup_pos, pos, false);
+      } else if (IsJal(instr)) {
+        if (dist > kMaxJumpOffset) {
+          if (trampoline_pos == kInvalidSlotPos) {
+            trampoline_pos = get_trampoline_entry(fixup_pos);
+            CHECK_NE(trampoline_pos, kInvalidSlotPos);
+          }
+          CHECK((trampoline_pos - fixup_pos) <= kMaxJumpOffset);
+          DEBUG_PRINTF("\t\ttrampolining: %d\n", trampoline_pos);
+          target_at_put(fixup_pos, trampoline_pos, false);
+          fixup_pos = trampoline_pos;
+        }
+        target_at_put(fixup_pos, pos, false);
       } else {
         target_at_put(fixup_pos, pos, false);
       }
@@ -534,6 +595,14 @@ int Assembler::JumpOffset(Instr instr) {
                   (instr & 0xff000) | ((instr & 0x80000000) >> 11);
   imm21 = imm21 << 11 >> 11;
   return imm21;
+}
+
+int Assembler::BrachlongOffset(Instr auipc, Instr jalr) {
+  const int kImm19_0Mask = ((1 << 20) - 1);
+  int32_t imm_auipc = auipc & (kImm19_0Mask << 12);
+  int32_t imm_jalr = jalr >> 20;
+  int32_t offset = imm_jalr + imm_auipc;
+  return offset;
 }
 
 // We have to use a temporary register for things that can be relocated even
@@ -867,6 +936,11 @@ uint64_t Assembler::jump_address(Label* L) {
       L->link_to(pc_offset());
     } else {
       L->link_to(pc_offset());
+      if (!trampoline_emitted_) {
+        unbound_labels_count_++;
+        next_buffer_check_ -= kTrampolineSlotsSize;
+      }
+      DEBUG_PRINTF("\tstarted link\n");
       return kEndOfJumpChain;
     }
   }
@@ -890,6 +964,11 @@ uint64_t Assembler::branch_long_offset(Label* L) {
       L->link_to(pc_offset());
     } else {
       L->link_to(pc_offset());
+      if (!trampoline_emitted_) {
+        unbound_labels_count_++;
+        next_buffer_check_ -= kTrampolineSlotsSize;
+      }
+      DEBUG_PRINTF("\tstarted link\n");
       return kEndOfJumpChain;
     }
   }
