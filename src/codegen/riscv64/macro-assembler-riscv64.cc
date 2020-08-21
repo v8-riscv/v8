@@ -2478,7 +2478,7 @@ void TurboAssembler::Branch(int32_t offset, Condition cond, Register rs,
 
 void TurboAssembler::Branch(Label* L) {
   if (L->is_bound()) {
-    if (is_near_branch(L)) {
+    if (is_near(L)) {
       BranchShort(L);
     } else {
       BranchLong(L);
@@ -2760,7 +2760,7 @@ void TurboAssembler::BranchAndLink(int32_t offset, Condition cond, Register rs,
 
 void TurboAssembler::BranchAndLink(Label* L) {
   if (L->is_bound()) {
-    if (is_near_branch(L)) {
+    if (is_near(L)) {
       BranchAndLinkShort(L);
     } else {
       BranchAndLinkLong(L);
