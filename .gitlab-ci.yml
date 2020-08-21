@@ -42,3 +42,8 @@ misc_tests:
   stage: test
   script:
     - tools/run-tests.py --outdir=out.gn/riscv64_debug intl message debugger inspector mkgrokdump
+
+fuzzer_tests:
+  stage: test
+  script:
+    - tools/run-tests.py --outdir=out.gn/riscv64_debug fuzzer
