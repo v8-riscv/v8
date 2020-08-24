@@ -1016,13 +1016,13 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kRiscvDiv32: {
       __ Div32(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
       // Set ouput to zero if divisor == 0
-      __ Selnez(i.OutputRegister(), i.OutputRegister(), i.InputRegister(1));
+      __ LoadZeroIfConditionZero(i.OutputRegister(), i.InputRegister(1));
       break;
     }
     case kRiscvDivU32: {
       __ Divu32(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
       // Set ouput to zero if divisor == 0
-      __ Selnez(i.OutputRegister(), i.OutputRegister(), i.InputRegister(1));
+      __ LoadZeroIfConditionZero(i.OutputRegister(), i.InputRegister(1));
       break;
     }
     case kRiscvMod32:
@@ -1037,13 +1037,13 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kRiscvDiv64: {
       __ Div64(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
       // Set ouput to zero if divisor == 0
-      __ Selnez(i.OutputRegister(), i.OutputRegister(), i.InputRegister(1));
+      __ LoadZeroIfConditionZero(i.OutputRegister(), i.InputRegister(1));
       break;
     }
     case kRiscvDivU64: {
       __ Divu64(i.OutputRegister(), i.InputRegister(0), i.InputOperand(1));
       // Set ouput to zero if divisor == 0
-      __ Selnez(i.OutputRegister(), i.OutputRegister(), i.InputRegister(1));
+      __ LoadZeroIfConditionZero(i.OutputRegister(), i.InputRegister(1));
       break;
     }
     case kRiscvMod64:
@@ -1502,7 +1502,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       // exploiting the fact that UINT32_MAX+1 is 0.
       __ Add32(kScratchReg, i.OutputRegister(), 1);
       // Set ouput to zero if result overflows (i.e., UINT32_MAX)
-      __ Selnez(i.OutputRegister(), i.OutputRegister(), kScratchReg);
+      __ LoadZeroIfConditionZero(i.OutputRegister(), kScratchReg);
       break;
     }
     case kRiscvTruncUlS: {
@@ -1991,9 +1991,9 @@ void CodeGenerator::AssembleBranchPoisoning(FlagsCondition condition,
 
   switch (instr->arch_opcode()) {
     case kRiscvCmp: {
-      __ LoadZeroOnCondition(kSpeculationPoisonRegister, i.InputRegister(0),
-                             i.InputOperand(1),
-                             FlagsConditionToConditionCmp(condition));
+      __ CompareI(kScratchReg, i.InputRegister(0), i.InputOperand(1),
+                  FlagsConditionToConditionCmp(condition));
+      __ LoadZeroIfConditionNotZero(kSpeculationPoisonRegister, kScratchReg);
     }
       return;
     case kRiscvTst: {
