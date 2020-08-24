@@ -2129,7 +2129,6 @@ void Assembler::dd(Label* label) {
     data = reinterpret_cast<uint64_t>(buffer_start_ + label->pos());
   } else {
     data = jump_address(label);
-    unbound_labels_count_++;
     internal_reference_positions_.insert(label->pos());
   }
   RecordRelocInfo(RelocInfo::INTERNAL_REFERENCE);
