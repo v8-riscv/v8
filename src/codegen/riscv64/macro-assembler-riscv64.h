@@ -414,6 +414,8 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   DEFINE_INSTRUCTION(Sgtu)
   DEFINE_INSTRUCTION(Sge)
   DEFINE_INSTRUCTION(Sgeu)
+  DEFINE_INSTRUCTION(Seq)
+  DEFINE_INSTRUCTION(Sne)
 
   DEFINE_INSTRUCTION(Sll64)
   DEFINE_INSTRUCTION(Sra64)
@@ -424,6 +426,9 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
 
   DEFINE_INSTRUCTION(Selnez)
   DEFINE_INSTRUCTION(Seleqz)
+  DEFINE_INSTRUCTION2(Seqz)
+  DEFINE_INSTRUCTION2(Snez)
+
   DEFINE_INSTRUCTION(Ror)
   DEFINE_INSTRUCTION(Dror)
 #undef DEFINE_INSTRUCTION
@@ -503,6 +508,8 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   // Exits with 'result' holding the answer.
   void TruncateDoubleToI(Isolate* isolate, Zone* zone, Register result,
                          DoubleRegister double_input, StubCallMode stub_mode);
+
+  void CompareI(Register rd, Register rs, const Operand& rt, Condition cond);
 
   void LoadZeroIfConditionNotZero(Register dest, Register condition);
   void LoadZeroIfConditionZero(Register dest, Register condition);
