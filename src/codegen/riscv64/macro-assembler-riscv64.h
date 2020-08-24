@@ -424,8 +424,6 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   DEFINE_INSTRUCTION(Sra32)
   DEFINE_INSTRUCTION(Srl32)
 
-  DEFINE_INSTRUCTION(Selnez)
-  DEFINE_INSTRUCTION(Seleqz)
   DEFINE_INSTRUCTION2(Seqz)
   DEFINE_INSTRUCTION2(Snez)
 
@@ -513,8 +511,6 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
 
   void LoadZeroIfConditionNotZero(Register dest, Register condition);
   void LoadZeroIfConditionZero(Register dest, Register condition);
-  void LoadZeroOnCondition(Register rd, Register rs, const Operand& rt,
-                           Condition cond);
 
   void SignExtendByte(Register rd, Register rs) {
     slli(rd, rs, 64 - 8);
