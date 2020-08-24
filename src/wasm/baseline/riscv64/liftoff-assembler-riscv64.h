@@ -715,10 +715,8 @@ void LiftoffAssembler::emit_i32_divs(Register dst, Register lhs, Register rhs,
   TurboAssembler::Branch(trap_div_by_zero, eq, rhs, Operand(zero_reg));
 
   // Check if lhs == kMinInt and rhs == -1, since this case is unrepresentable.
-  TurboAssembler::li(kScratchReg, 1);
-  TurboAssembler::li(kScratchReg2, 1);
-  TurboAssembler::LoadZeroOnCondition(kScratchReg, lhs, Operand(kMinInt), eq);
-  TurboAssembler::LoadZeroOnCondition(kScratchReg2, rhs, Operand(-1), eq);
+  TurboAssembler::CompareI(kScratchReg, lhs, Operand(kMinInt), ne);
+  TurboAssembler::CompareI(kScratchReg2, rhs, Operand(-1), ne);
   add(kScratchReg, kScratchReg, kScratchReg2);
   TurboAssembler::Branch(trap_div_unrepresentable, eq, kScratchReg,
                          Operand(zero_reg));
@@ -822,11 +820,9 @@ bool LiftoffAssembler::emit_i64_divs(LiftoffRegister dst, LiftoffRegister lhs,
   TurboAssembler::Branch(trap_div_by_zero, eq, rhs.gp(), Operand(zero_reg));
 
   // Check if lhs == MinInt64 and rhs == -1, since this case is unrepresentable.
-  TurboAssembler::li(kScratchReg, 1);
-  TurboAssembler::li(kScratchReg2, 1);
-  TurboAssembler::LoadZeroOnCondition(
-      kScratchReg, lhs.gp(), Operand(std::numeric_limits<int64_t>::min()), eq);
-  TurboAssembler::LoadZeroOnCondition(kScratchReg2, rhs.gp(), Operand(-1), eq);
+  TurboAssembler::CompareI(kScratchReg, lhs.gp(),
+                           Operand(std::numeric_limits<int64_t>::min()), ne);
+  TurboAssembler::CompareI(kScratchReg2, rhs.gp(), Operand(-1), ne);
   add(kScratchReg, kScratchReg, kScratchReg2);
   TurboAssembler::Branch(trap_div_unrepresentable, eq, kScratchReg,
                          Operand(zero_reg));
@@ -1174,19 +1170,7 @@ void LiftoffAssembler::emit_i32_set_cond(LiftoffCondition liftoff_cond,
                                          Register dst, Register lhs,
                                          Register rhs) {
   Condition cond = liftoff::ToCondition(liftoff_cond);
-  Register tmp = dst;
-  if (dst == lhs || dst == rhs) {
-    tmp = GetUnusedRegister(kGpReg, LiftoffRegList::ForRegs(lhs, rhs)).gp();
-  }
-  // Write 1 as result.
-  TurboAssembler::li(tmp, 1);
-
-  // If negative condition is true, write 0 as result.
-  Condition neg_cond = NegateCondition(cond);
-  TurboAssembler::LoadZeroOnCondition(tmp, lhs, Operand(rhs), neg_cond);
-
-  // If tmp != dst, result will be moved.
-  TurboAssembler::Move(dst, tmp);
+  TurboAssembler::CompareI(dst, lhs, Operand(rhs), cond);
 }
 
 void LiftoffAssembler::emit_i64_eqz(Register dst, LiftoffRegister src) {
@@ -1197,20 +1181,7 @@ void LiftoffAssembler::emit_i64_set_cond(LiftoffCondition liftoff_cond,
                                          Register dst, LiftoffRegister lhs,
                                          LiftoffRegister rhs) {
   Condition cond = liftoff::ToCondition(liftoff_cond);
-  Register tmp = dst;
-  if (dst == lhs.gp() || dst == rhs.gp()) {
-    tmp = GetUnusedRegister(kGpReg, LiftoffRegList::ForRegs(lhs, rhs)).gp();
-  }
-  // Write 1 as result.
-  TurboAssembler::li(tmp, 1);
-
-  // If negative condition is true, write 0 as result.
-  Condition neg_cond = NegateCondition(cond);
-  TurboAssembler::LoadZeroOnCondition(tmp, lhs.gp(), Operand(rhs.gp()),
-                                      neg_cond);
-
-  // If tmp != dst, result will be moved.
-  TurboAssembler::Move(dst, tmp);
+  TurboAssembler::CompareI(dst, lhs.gp(), Operand(rhs.gp()), cond);
 }
 
 static FPUCondition ConditionToConditionCmpFPU(Condition condition) {
