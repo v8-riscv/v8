@@ -698,6 +698,44 @@ void TurboAssembler::Neg(Register rs, const Operand& rt) {
   neg(rs, rt.rm());
 }
 
+void TurboAssembler::Seqz(Register rd, const Operand& rt) {
+  if (rt.is_reg()) {
+    seqz(rd, rt.rm());
+  } else {
+    li(rd, rt.immediate() == 0);
+  }
+}
+
+void TurboAssembler::Snez(Register rd, const Operand& rt) {
+  if (rt.is_reg()) {
+    snez(rd, rt.rm());
+  } else {
+    li(rd, rt.immediate() != 0);
+  }
+}
+
+void TurboAssembler::Seq(Register rd, Register rs, const Operand& rt) {
+  if (rs == zero_reg) {
+    Seqz(rd, rt);
+  } else if (IsZero(rt)) {
+    seqz(rd, rs);
+  } else {
+    Sub64(rd, rs, rt);
+    seqz(rd, rd);
+  }
+}
+
+void TurboAssembler::Sne(Register rd, Register rs, const Operand& rt) {
+  if (rs == zero_reg) {
+    Snez(rd, rt);
+  } else if (IsZero(rt)) {
+    snez(rd, rs);
+  } else {
+    Sub64(rd, rs, rt);
+    snez(rd, rd);
+  }
+}
+
 void TurboAssembler::Slt(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     slt(rd, rs, rt.rm());
@@ -2123,6 +2161,51 @@ void TurboAssembler::LoadFPRImmediate(FPURegister dst, uint64_t src) {
   }
 }
 
+void TurboAssembler::CompareI(Register rd, Register rs, const Operand& rt,
+                              Condition cond) {
+  switch (cond) {
+    case eq:
+      Seq(rd, rs, rt);
+      break;
+    case ne:
+      Sne(rd, rs, rt);
+      break;
+
+    // Signed comparison.
+    case greater:
+      Sgt(rd, rs, rt);
+      break;
+    case greater_equal:
+      Sge(rd, rs, rt);  // rs >= rt
+      break;
+    case less:
+      Slt(rd, rs, rt);  // rs < rt
+      break;
+    case less_equal:
+      Sle(rd, rs, rt);  // rs <= rt
+      break;
+
+    // Unsigned comparison.
+    case Ugreater:
+      Sgtu(rd, rs, rt);  // rs > rt
+      break;
+    case Ugreater_equal:
+      Sgeu(rd, rs, rt);  // rs >= rt
+      break;
+    case Uless:
+      Sltu(rd, rs, rt);  // rs < rt
+      break;
+    case Uless_equal:
+      Sleu(rd, rs, rt);  // rs <= rt
+      break;
+    case cc_always:
+      UNREACHABLE();
+      break;
+    default:
+      UNREACHABLE();
+  }
+}
+
 void TurboAssembler::LoadZeroOnCondition(Register rd, Register rs,
                                          const Operand& rt, Condition cond) {
   BlockTrampolinePoolScope block_trampoline_pool(this);
@@ -2461,7 +2544,8 @@ void TurboAssembler::TruncateDoubleToI(Isolate* isolate, Zone* zone,
 
   TryInlineTruncateDoubleToI(result, double_input, &done);
 
-  // If we fell through then inline version didn't succeed - call stub instead.
+  // If we fell through then inline version didn't succeed - call stub
+  // instead.
   push(ra);
   Sub64(sp, sp, Operand(kDoubleSize));  // Put input on stack.
   fsd(double_input, sp, 0);
