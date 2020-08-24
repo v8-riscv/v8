@@ -2760,8 +2760,9 @@ void Builtins::Generate_DoubleToI(MacroAssembler* masm) {
 
   // Check for Infinity and NaNs, which should return 0.
   __ Sub32(scratch, result_reg, HeapNumber::kExponentMask);
-  __ Selnez(result_reg, result_reg,
-            scratch);  // result_reg = (scratch != 0) ? result_reg : 0
+  __ LoadZeroIfConditionZero(
+      result_reg,
+      scratch);  // result_reg = scratch == 0 ? 0 : result_reg
   __ Branch(&done, eq, scratch, Operand(zero_reg));
 
   // Express exponent as delta to (number of mantissa bits + 31).
