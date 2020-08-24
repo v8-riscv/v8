@@ -942,24 +942,6 @@ void TurboAssembler::Dror(Register rd, Register rs, const Operand& rt) {
   }
 }
 
-// rd <- rt != 0 ? rs : 0
-void TurboAssembler::Selnez(Register rd, Register rs, const Operand& rt) {
-  DCHECK(rt.is_reg());
-  UseScratchRegisterScope temps(this);
-  Register scratch = temps.Acquire();
-  snez(scratch, rt.rm());  // scratch = 0 if rt is zero, 1 otherwise.
-  mul(rd, rs, scratch);    // scratch * rs = rs or zero
-}
-
-// rd <- rt == 0 ? rs : 0
-void TurboAssembler::Seleqz(Register rd, Register rs, const Operand& rt) {
-  DCHECK(rt.is_reg());
-  UseScratchRegisterScope temps(this);
-  Register scratch = temps.Acquire();
-  seqz(scratch, rt.rm());  // scratch = 0 if rt is non-zero, 1 otherwise.
-  mul(rd, rs, scratch);    // scratch * rs = rs or zero
-}
-
 void TurboAssembler::CalcScaledAddress(Register rd, Register rt, Register rs,
                                        uint8_t sa, Register scratch) {
   DCHECK(sa >= 1 && sa <= 31);
@@ -2206,102 +2188,26 @@ void TurboAssembler::CompareI(Register rd, Register rs, const Operand& rt,
   }
 }
 
-void TurboAssembler::LoadZeroOnCondition(Register rd, Register rs,
-                                         const Operand& rt, Condition cond) {
-  BlockTrampolinePoolScope block_trampoline_pool(this);
-  switch (cond) {
-    case cc_always:
-      mv(rd, zero_reg);
-      break;
-    case eq:
-      if (rs == zero_reg) {
-        if (rt.is_reg()) {
-          LoadZeroIfConditionZero(rd, rt.rm());
-        } else if (rt.immediate() == 0) {
-          mv(rd, zero_reg);
-        }
-      } else if (IsZero(rt)) {
-        LoadZeroIfConditionZero(rd, rs);
-      } else {
-        Sub64(t6, rs, rt);
-        LoadZeroIfConditionZero(rd, t6);
-      }
-      break;
-    case ne:
-      if (rs == zero_reg) {
-        if (rt.is_reg()) {
-          LoadZeroIfConditionNotZero(rd, rt.rm());
-        } else if (rt.immediate() != 0) {
-          mv(rd, zero_reg);
-        }
-      } else if (IsZero(rt)) {
-        LoadZeroIfConditionNotZero(rd, rs);
-      } else {
-        Sub64(t6, rs, rt);
-        LoadZeroIfConditionNotZero(rd, t6);
-      }
-      break;
-
-    // Signed comparison.
-    case greater:
-      Sgt(t6, rs, rt);
-      LoadZeroIfConditionNotZero(rd, t6);
-      break;
-    case greater_equal:
-      Sge(t6, rs, rt);
-      LoadZeroIfConditionNotZero(rd, t6);
-      // rs >= rt
-      break;
-    case less:
-      Slt(t6, rs, rt);
-      LoadZeroIfConditionNotZero(rd, t6);
-      // rs < rt
-      break;
-    case less_equal:
-      Sle(t6, rs, rt);
-      LoadZeroIfConditionNotZero(rd, t6);
-      // rs <= rt
-      break;
-
-    // Unsigned comparison.
-    case Ugreater:
-      Sgtu(t6, rs, rt);
-      LoadZeroIfConditionNotZero(rd, t6);
-      // rs > rt
-      break;
-
-    case Ugreater_equal:
-      Sgeu(t6, rs, rt);
-      LoadZeroIfConditionNotZero(rd, t6);
-      // rs >= rt
-      break;
-    case Uless:
-      Sltu(t6, rs, rt);
-      LoadZeroIfConditionNotZero(rd, t6);
-      // rs < rt
-      break;
-    case Uless_equal:
-      Sleu(t6, rs, rt);
-      LoadZeroIfConditionNotZero(rd, t6);
-      // rs <= rt
-      break;
-    default:
-      UNREACHABLE();
-  }
-}
-
-// dest <- (condition != 0 ? zero : dest), which is eqvuivalent to dest <-
-// condition == 0 ? dest : zero
+// dest <- (condition != 0 ? zero : dest)
 void TurboAssembler::LoadZeroIfConditionNotZero(Register dest,
                                                 Register condition) {
-  Seleqz(dest, dest, condition);
+  UseScratchRegisterScope temps(this);
+  Register scratch = temps.Acquire();
+  seqz(scratch, condition);
+  // neg + and may be more efficient than mul(dest, dest, scratch)
+  neg(scratch, scratch);  // 0 is still 0, 1 becomes all 1s
+  and_(dest, dest, scratch);
 }
 
-// dest <- (condition == 0 ? 0 : dest), which is equivalent to dest <-
-// (condition != 0 ? dest, 0)
+// dest <- (condition == 0 ? 0 : dest)
 void TurboAssembler::LoadZeroIfConditionZero(Register dest,
                                              Register condition) {
-  Selnez(dest, dest, condition);
+  UseScratchRegisterScope temps(this);
+  Register scratch = temps.Acquire();
+  snez(scratch, condition);
+  //  neg + and may be more efficient than mul(dest, dest, scratch);
+  neg(scratch, scratch);  // 0 is still 0, 1 becomes all 1s
+  and_(dest, dest, scratch);
 }
 
 void TurboAssembler::Clz32(Register rd, Register xx) {
