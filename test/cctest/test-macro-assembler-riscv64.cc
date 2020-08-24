@@ -37,6 +37,7 @@
 #include "src/objects/objects-inl.h"
 #include "src/utils/ostreams.h"
 #include "test/cctest/cctest.h"
+#include "test/cctest/compiler/value-helper.h"
 
 namespace v8 {
 namespace internal {
@@ -414,8 +415,8 @@ static const std::vector<int64_t> cvt_trunc_int64_test_values() {
   return std::vector<int64_t>(&kValues[0], &kValues[arraysize(kValues)]);
 }
 
-// Helper macros that can be used in FOR_INT32_INPUTS(i) { ... *i ... }
-#define FOR_INPUTS(ctype, itype, var, test_vector)           \
+// Helper macros that can be used in FOR_INT32_INPUTS3(i) { ... *i ... }
+#define FOR_INPUTS3(ctype, itype, var, test_vector)          \
   std::vector<ctype> var##_vec = test_vector();              \
   for (std::vector<ctype>::iterator var = var##_vec.begin(); \
        var != var##_vec.end(); ++var)
@@ -427,24 +428,24 @@ static const std::vector<int64_t> cvt_trunc_int64_test_values() {
   for (var = var##_vec.begin(), var2 = var##_vec.rbegin(); \
        var != var##_vec.end(); ++var, ++var2)
 
-#define FOR_ENUM_INPUTS(var, type, test_vector) \
-  FOR_INPUTS(enum type, type, var, test_vector)
-#define FOR_STRUCT_INPUTS(var, type, test_vector) \
-  FOR_INPUTS(struct type, type, var, test_vector)
-#define FOR_INT32_INPUTS(var, test_vector) \
-  FOR_INPUTS(int32_t, int32, var, test_vector)
+// #define FOR_ENUM_INPUTS(var, type, test_vector) \
+//   FOR_INPUTS3(enum type, type, var, test_vector)
+// #define FOR_STRUCT_INPUTS(var, type, test_vector) \
+//   FOR_INPUTS3(struct type, type, var, test_vector)
+#define FOR_INT32_INPUTS3(var, test_vector) \
+  FOR_INPUTS3(int32_t, int32, var, test_vector)
 #define FOR_INT32_INPUTS2(var, var2, test_vector) \
   FOR_INPUTS2(int32_t, int32, var, var2, test_vector)
-#define FOR_INT64_INPUTS(var, test_vector) \
-  FOR_INPUTS(int64_t, int64, var, test_vector)
-#define FOR_UINT32_INPUTS(var, test_vector) \
-  FOR_INPUTS(uint32_t, uint32, var, test_vector)
-#define FOR_UINT64_INPUTS(var, test_vector) \
-  FOR_INPUTS(uint64_t, uint64, var, test_vector)
-#define FOR_FLOAT_INPUTS(var, test_vector) \
-  FOR_INPUTS(float, float, var, test_vector)
-#define FOR_DOUBLE_INPUTS(var, test_vector) \
-  FOR_INPUTS(double, double, var, test_vector)
+#define FOR_INT64_INPUTS3(var, test_vector) \
+  FOR_INPUTS3(int64_t, int64, var, test_vector)
+#define FOR_UINT32_INPUTS3(var, test_vector) \
+  FOR_INPUTS3(uint32_t, uint32, var, test_vector)
+#define FOR_UINT64_INPUTS3(var, test_vector) \
+  FOR_INPUTS3(uint64_t, uint64, var, test_vector)
+#define FOR_FLOAT_INPUTS3(var, test_vector) \
+  FOR_INPUTS3(float, float, var, test_vector)
+#define FOR_DOUBLE_INPUTS3(var, test_vector) \
+  FOR_INPUTS3(double, double, var, test_vector)
 
 template <typename RET_TYPE, typename IN_TYPE, typename Func>
 RET_TYPE run_Cvt(IN_TYPE x, Func GenerateConvertInstructionFunc) {
@@ -499,7 +500,7 @@ RET_TYPE run_Cvt(IN_TYPE x, Func GenerateConvertInstructionFunc) {
 
 TEST(Cvt_s_uw_Trunc_uw_s) {
   CcTest::InitializeVM();
-  FOR_UINT32_INPUTS(i, cvt_trunc_uint32_test_values) {
+  FOR_UINT32_INPUTS3(i, cvt_trunc_uint32_test_values) {
     uint32_t input = *i;
     auto fn = [](MacroAssembler* masm) {
       __ Cvt_s_uw(fa0, a0);
@@ -514,7 +515,7 @@ TEST(Cvt_s_uw_Trunc_uw_s) {
 
 TEST(Cvt_s_ul_Trunc_ul_s) {
   CcTest::InitializeVM();
-  FOR_UINT64_INPUTS(i, cvt_trunc_uint64_test_values) {
+  FOR_UINT64_INPUTS3(i, cvt_trunc_uint64_test_values) {
     uint64_t input = *i;
     auto fn = [](MacroAssembler* masm) {
       __ Cvt_s_ul(fa0, a0);
@@ -527,7 +528,7 @@ TEST(Cvt_s_ul_Trunc_ul_s) {
 
 TEST(Cvt_d_ul_Trunc_ul_d) {
   CcTest::InitializeVM();
-  FOR_UINT64_INPUTS(i, cvt_trunc_uint64_test_values) {
+  FOR_UINT64_INPUTS3(i, cvt_trunc_uint64_test_values) {
     uint64_t input = *i;
     auto fn = [](MacroAssembler* masm) {
       __ Cvt_d_ul(fa0, a0);
@@ -540,7 +541,7 @@ TEST(Cvt_d_ul_Trunc_ul_d) {
 
 TEST(cvt_d_l_Trunc_l_d) {
   CcTest::InitializeVM();
-  FOR_INT64_INPUTS(i, cvt_trunc_int64_test_values) {
+  FOR_INT64_INPUTS3(i, cvt_trunc_int64_test_values) {
     int64_t input = *i;
     auto fn = [](MacroAssembler* masm) {
       __ fcvt_d_l(fa0, a0);
@@ -553,7 +554,7 @@ TEST(cvt_d_l_Trunc_l_d) {
 
 TEST(cvt_d_w_Trunc_w_d) {
   CcTest::InitializeVM();
-  FOR_INT32_INPUTS(i, cvt_trunc_int32_test_values) {
+  FOR_INT32_INPUTS3(i, cvt_trunc_int32_test_values) {
     int32_t input = *i;
     auto fn = [](MacroAssembler* masm) {
       __ fcvt_d_w(fa0, a0);
@@ -600,8 +601,8 @@ TEST(OverflowInstructions) {
   };
   T t;
 
-  FOR_INT64_INPUTS(i, overflow_int64_test_values) {
-    FOR_INT64_INPUTS(j, overflow_int64_test_values) {
+  FOR_INT64_INPUTS3(i, overflow_int64_test_values) {
+    FOR_INT64_INPUTS3(j, overflow_int64_test_values) {
       int64_t ii = *i;
       int64_t jj = *j;
       int64_t expected_add, expected_sub;
@@ -821,7 +822,7 @@ TEST(Ulh) {
   char memory_buffer[kBufferSize];
   char* buffer_middle = memory_buffer + (kBufferSize / 2);
 
-  FOR_UINT64_INPUTS(i, unsigned_test_values) {
+  FOR_UINT64_INPUTS3(i, unsigned_test_values) {
     FOR_INT32_INPUTS2(j1, j2, unsigned_test_offset) {
       FOR_INT32_INPUTS2(k1, k2, unsigned_test_offset_increment) {
         uint16_t value = static_cast<uint64_t>(*i & 0xFFFF);
@@ -875,7 +876,7 @@ TEST(Ulh_bitextension) {
   char memory_buffer[kBufferSize];
   char* buffer_middle = memory_buffer + (kBufferSize / 2);
 
-  FOR_UINT64_INPUTS(i, unsigned_test_values) {
+  FOR_UINT64_INPUTS3(i, unsigned_test_values) {
     FOR_INT32_INPUTS2(j1, j2, unsigned_test_offset) {
       FOR_INT32_INPUTS2(k1, k2, unsigned_test_offset_increment) {
         uint16_t value = static_cast<uint64_t>(*i & 0xFFFF);
@@ -927,7 +928,7 @@ TEST(Ulw) {
   char memory_buffer[kBufferSize];
   char* buffer_middle = memory_buffer + (kBufferSize / 2);
 
-  FOR_UINT64_INPUTS(i, unsigned_test_values) {
+  FOR_UINT64_INPUTS3(i, unsigned_test_values) {
     FOR_INT32_INPUTS2(j1, j2, unsigned_test_offset) {
       FOR_INT32_INPUTS2(k1, k2, unsigned_test_offset_increment) {
         uint32_t value = static_cast<uint32_t>(*i & 0xFFFFFFFF);
@@ -983,7 +984,7 @@ TEST(Ulw_extension) {
   char memory_buffer[kBufferSize];
   char* buffer_middle = memory_buffer + (kBufferSize / 2);
 
-  FOR_UINT64_INPUTS(i, unsigned_test_values) {
+  FOR_UINT64_INPUTS3(i, unsigned_test_values) {
     FOR_INT32_INPUTS2(j1, j2, unsigned_test_offset) {
       FOR_INT32_INPUTS2(k1, k2, unsigned_test_offset_increment) {
         uint32_t value = static_cast<uint32_t>(*i & 0xFFFFFFFF);
@@ -1035,7 +1036,7 @@ TEST(Uld) {
   char memory_buffer[kBufferSize];
   char* buffer_middle = memory_buffer + (kBufferSize / 2);
 
-  FOR_UINT64_INPUTS(i, unsigned_test_values) {
+  FOR_UINT64_INPUTS3(i, unsigned_test_values) {
     FOR_INT32_INPUTS2(j1, j2, unsigned_test_offset) {
       FOR_INT32_INPUTS2(k1, k2, unsigned_test_offset_increment) {
         uint64_t value = *i;
@@ -1072,7 +1073,7 @@ TEST(ULoadFloat) {
   char memory_buffer[kBufferSize];
   char* buffer_middle = memory_buffer + (kBufferSize / 2);
 
-  FOR_UINT64_INPUTS(i, unsigned_test_values) {
+  FOR_UINT64_INPUTS3(i, unsigned_test_values) {
     FOR_INT32_INPUTS2(j1, j2, unsigned_test_offset) {
       FOR_INT32_INPUTS2(k1, k2, unsigned_test_offset_increment) {
         float value = static_cast<float>(*i & 0xFFFFFFFF);
@@ -1098,7 +1099,7 @@ TEST(ULoadDouble) {
   char memory_buffer[kBufferSize];
   char* buffer_middle = memory_buffer + (kBufferSize / 2);
 
-  FOR_UINT64_INPUTS(i, unsigned_test_values) {
+  FOR_UINT64_INPUTS3(i, unsigned_test_values) {
     FOR_INT32_INPUTS2(j1, j2, unsigned_test_offset) {
       FOR_INT32_INPUTS2(k1, k2, unsigned_test_offset_increment) {
         double value = static_cast<double>(*i);
@@ -1138,7 +1139,7 @@ static const std::vector<uint64_t> sltu_test_values() {
 }
 
 template <typename Func>
-bool run_Sltu(uint64_t rs, uint64_t rd, Func GenerateSltuInstructionFunc) {
+bool run_Compare(uint64_t rs, uint64_t rd, Func GenerateCompareFunc) {
   using F_CVT = int64_t(uint64_t x0, uint64_t x1);
 
   Isolate* isolate = CcTest::i_isolate();
@@ -1146,7 +1147,7 @@ bool run_Sltu(uint64_t rs, uint64_t rd, Func GenerateSltuInstructionFunc) {
   MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
   MacroAssembler* masm = &assm;
 
-  GenerateSltuInstructionFunc(masm, rd);
+  GenerateCompareFunc(masm, rd);
   __ jr(ra);
 
   CodeDesc desc;
@@ -1162,20 +1163,22 @@ bool run_Sltu(uint64_t rs, uint64_t rd, Func GenerateSltuInstructionFunc) {
 TEST(Sltu) {
   CcTest::InitializeVM();
 
-  FOR_UINT64_INPUTS(i, sltu_test_values) {
-    FOR_UINT64_INPUTS(j, sltu_test_values) {
+  FOR_UINT64_INPUTS3(i, sltu_test_values) {
+    FOR_UINT64_INPUTS3(j, sltu_test_values) {
       uint64_t rs = *i;
       uint64_t rd = *j;
 
+      // compare against immediate field
       auto fn_1 = [](MacroAssembler* masm, uint64_t imm) {
         __ Sltu(a0, a0, Operand(imm));
       };
-      CHECK_EQ(rs < rd, run_Sltu(rs, rd, fn_1));
+      CHECK_EQ(rs < rd, run_Compare(rs, rd, fn_1));
 
+      // compare against register
       auto fn_2 = [](MacroAssembler* masm, uint64_t imm) {
         __ Sltu(a0, a0, a1);
       };
-      CHECK_EQ(rs < rd, run_Sltu(rs, rd, fn_2));
+      CHECK_EQ(rs < rd, run_Compare(rs, rd, fn_2));
     }
   }
 }
@@ -1463,7 +1466,6 @@ int32_t run_CompareF(IN_TYPE x1, IN_TYPE x2, bool expected_res,
   }
 }
 
-// FIXME (RISCV): add tests for NaN, infinity, etc
 static const std::vector<float> compare_float_test_values() {
   static const float kValues[] = {0.0f,  -0.0f,  100.23f, -1034.78f, max_f,
                                   min_f, qnan_f, inf_f,   -inf_f};
@@ -1477,7 +1479,7 @@ static const std::vector<double> compare_double_test_values() {
 }
 
 template <typename T>
-static bool Compare(T input1, T input2, FPUCondition cond) {
+static bool CompareF(T input1, T input2, FPUCondition cond) {
   switch (cond) {
     case EQ:
       return (input1 == input2);
@@ -1496,12 +1498,42 @@ static bool Compare(T input1, T input2, FPUCondition cond) {
   }
 }
 
+static bool CompareU(uint64_t input1, uint64_t input2, Condition cond) {
+  switch (cond) {
+    case eq:
+      return (input1 == input2);
+    case ne:
+      return (input1 != input2);
+
+    case Uless:
+      return (input1 < input2);
+    case Uless_equal:
+      return (input1 <= input2);
+    case Ugreater:
+      return (input1 > input2);
+    case Ugreater_equal:
+      return (input1 >= input2);
+
+    case less:
+      return (static_cast<int64_t>(input1) < static_cast<int64_t>(input2));
+    case less_equal:
+      return (static_cast<int64_t>(input1) <= static_cast<int64_t>(input2));
+    case greater:
+      return (static_cast<int64_t>(input1) > static_cast<int64_t>(input2));
+    case greater_equal:
+      return (static_cast<int64_t>(input1) >= static_cast<int64_t>(input2));
+
+    default:
+      UNREACHABLE();
+  }
+}
+
 static void FCompare32Helper(FPUCondition cond) {
-  FOR_FLOAT_INPUTS(i, compare_float_test_values) {
-    FOR_FLOAT_INPUTS(j, compare_float_test_values) {
+  FOR_FLOAT_INPUTS3(i, compare_float_test_values) {
+    FOR_FLOAT_INPUTS3(j, compare_float_test_values) {
       auto input1 = *i;
       auto input2 = *j;
-      bool comp_res = Compare(input1, input2, cond);
+      bool comp_res = CompareF(input1, input2, cond);
       auto fn = [cond](MacroAssembler* masm) {
         __ CompareF32(a1, cond, fa0, fa1);
       };
@@ -1511,11 +1543,11 @@ static void FCompare32Helper(FPUCondition cond) {
 }
 
 static void FCompare64Helper(FPUCondition cond) {
-  FOR_DOUBLE_INPUTS(i, compare_double_test_values) {
-    FOR_DOUBLE_INPUTS(j, compare_double_test_values) {
+  FOR_DOUBLE_INPUTS3(i, compare_double_test_values) {
+    FOR_DOUBLE_INPUTS3(j, compare_double_test_values) {
       auto input1 = *i;
       auto input2 = *j;
-      bool comp_res = Compare(input1, input2, cond);
+      bool comp_res = CompareF(input1, input2, cond);
       auto fn = [cond](MacroAssembler* masm) {
         __ CompareF64(a1, cond, fa0, fa1);
       };
@@ -1559,6 +1591,40 @@ TEST(FCompare64_Branch) {
   CHECK_EQ(SUCCESS_CODE, run_CompareF(snan_d, qnan_d, true, fn));
 }
 
+static void CompareIHelper(Condition cond) {
+  auto fn1 = [cond](MacroAssembler* masm, int64_t imm) {
+    __ CompareI(a0, a0, Operand(imm), cond);
+  };
+  auto fn2 = [cond](MacroAssembler* masm, int64_t imm) {
+    __ CompareI(a0, a0, Operand(a1), cond);
+  };
+  FOR_UINT64_INPUTS(i) {
+    FOR_UINT64_INPUTS(j) {
+      auto input1 = i;
+      auto input2 = j;
+      bool comp_res = CompareU(input1, input2, cond);
+      CHECK_EQ(comp_res, run_Compare(input1, input2, fn1));
+      CHECK_EQ(comp_res, run_Compare(input1, input2, fn2));
+    }
+  }
+}
+
+TEST(CompareI) {
+  CcTest::InitializeVM();
+  CompareIHelper(eq);
+  CompareIHelper(ne);
+
+  CompareIHelper(greater);
+  CompareIHelper(greater_equal);
+  CompareIHelper(less);
+  CompareIHelper(less_equal);
+
+  CompareIHelper(Ugreater);
+  CompareIHelper(Ugreater_equal);
+  CompareIHelper(Uless);
+  CompareIHelper(Uless_equal);
+}
+
 static const std::vector<uint32_t> cltz_uint32_test_values() {
   static const uint32_t kValues[] = {0x00000001, 0x00FFFF00, 0x7FFBD100,
                                      0x00123400, 0x0000FF10, 0x20FFFF00,
@@ -1576,7 +1642,7 @@ static const std::vector<uint64_t> cltz_uint64_test_values() {
 
 TEST(Clz32) {
   CcTest::InitializeVM();
-  FOR_UINT32_INPUTS(i, cltz_uint32_test_values) {
+  FOR_UINT32_INPUTS3(i, cltz_uint32_test_values) {
     uint32_t input = *i;
     auto fn = [](MacroAssembler* masm) { __ Clz32(a0, a0); };
     CHECK_EQ(__builtin_clz(input), run_Cvt<int>(input, fn));
@@ -1585,7 +1651,7 @@ TEST(Clz32) {
 
 TEST(Ctz32) {
   CcTest::InitializeVM();
-  FOR_UINT32_INPUTS(i, cltz_uint32_test_values) {
+  FOR_UINT32_INPUTS3(i, cltz_uint32_test_values) {
     uint32_t input = *i;
     auto fn = [](MacroAssembler* masm) { __ Ctz32(a0, a0); };
     CHECK_EQ(__builtin_ctz(input), run_Cvt<int>(input, fn));
@@ -1594,7 +1660,7 @@ TEST(Ctz32) {
 
 TEST(Clz64) {
   CcTest::InitializeVM();
-  FOR_UINT64_INPUTS(i, cltz_uint64_test_values) {
+  FOR_UINT64_INPUTS3(i, cltz_uint64_test_values) {
     uint64_t input = *i;
     auto fn = [](MacroAssembler* masm) { __ Clz64(a0, a0); };
     CHECK_EQ(__builtin_clzll(input), run_Cvt<int>(input, fn));
@@ -1603,7 +1669,7 @@ TEST(Clz64) {
 
 TEST(Ctz64) {
   CcTest::InitializeVM();
-  FOR_UINT64_INPUTS(i, cltz_uint64_test_values) {
+  FOR_UINT64_INPUTS3(i, cltz_uint64_test_values) {
     uint64_t input = *i;
     auto fn = [](MacroAssembler* masm) { __ Ctz64(a0, a0); };
     CHECK_EQ(__builtin_ctzll(input), run_Cvt<int>(input, fn));
