@@ -38,6 +38,8 @@
 #include "src/init/v8.h"
 #include "src/utils/utils.h"
 #include "test/cctest/cctest.h"
+#include "test/cctest/compiler/value-helper.h"
+#include "test/cctest/test-helper-riscv.h"
 
 namespace v8 {
 namespace internal {
@@ -49,305 +51,20 @@ using F3 = void*(void* p, int p1, int p2, int p3, int p4);
 using F4 = void*(int64_t x, int64_t y, int64_t p2, int64_t p3, int64_t p4);
 using F5 = void*(void* p0, void* p1, int p2, int p3, int p4);
 
-#define __ assm.
-
 #define MIN_VAL_IMM12 -(1 << 11)
 #define LARGE_INT_EXCEED_32_BIT 0x01C9'1075'0321'FB01LL
 #define LARGE_INT_UNDER_32_BIT 0x1234'5678
 #define LARGE_UINT_EXCEED_32_BIT 0xFDCB'1234'A034'5691ULL
 
-#define PRINT_RES(res, expected_res, in_hex)                         \
-  if (in_hex) std::cout << "[hex-form]" << std::hex;                 \
-  std::cout << "res = " << (res) << " expected = " << (expected_res) \
-            << std::endl;
-
-typedef union {
-  uint32_t ui32val;
-  int32_t i32val;
-  int64_t i64val;
-  uint64_t ui64val;
-  float fval;
-  double dval;
-} Param_T;
-
-static void SetParam(Param_T* params, float val) { params->fval = val; }
-static void SetParam(Param_T* params, double val) { params->dval = val; }
-static void SetParam(Param_T* params, int32_t val) { params->i32val = val; }
-static void SetParam(Param_T* params, uint32_t val) { params->ui32val = val; }
-static void SetParam(Param_T* params, int64_t val) { params->i64val = val; }
-static void SetParam(Param_T* params, uint64_t val) { params->ui64val = val; }
-
-template <typename T, typename std::enable_if<
-                          std::is_same<float, T>::value>::type* = nullptr>
-static T GetParam(Param_T* params) {
-  return params->fval;
-}
-
-template <typename T, typename std::enable_if<
-                          std::is_same<double, T>::value>::type* = nullptr>
-static T GetParam(Param_T* params) {
-  return params->dval;
-}
-
-template <typename T, typename std::enable_if<
-                          std::is_same<int32_t, T>::value>::type* = nullptr>
-static T GetParam(Param_T* params) {
-  return params->i32val;
-}
-
-template <typename T, typename std::enable_if<
-                          std::is_same<uint32_t, T>::value>::type* = nullptr>
-static T GetParam(Param_T* params) {
-  return params->i32val;
-}
-
-template <typename T, typename std::enable_if<
-                          std::is_same<int64_t, T>::value>::type* = nullptr>
-static T GetParam(Param_T* params) {
-  return params->i64val;
-}
-
-template <typename T, typename std::enable_if<
-                          std::is_same<uint64_t, T>::value>::type* = nullptr>
-static T GetParam(Param_T* params) {
-  return params->i64val;
-}
-
-template <typename T, typename std::enable_if<sizeof(T) == 4>::type* = nullptr>
-static int32_t GetGPRParam(Param_T* params) {
-  return params->i32val;
-}
-
-template <typename T, typename std::enable_if<sizeof(T) == 8>::type* = nullptr>
-static int64_t GetGPRParam(Param_T* params) {
-  return params->i64val;
-}
-
-template <typename RETURN_T, typename OUTPUT_T>
-static void ValidateResult(RETURN_T generated_res, OUTPUT_T expected_res) {
-  DCHECK(sizeof(RETURN_T) == sizeof(OUTPUT_T));
-
-  Param_T t;
-  memset(&t, 0, sizeof(t));
-  SetParam(&t, generated_res);
-  OUTPUT_T converted_res = GetParam<OUTPUT_T>(&t);
-  CHECK_EQ(converted_res, expected_res);
-}
-
-// f.Call(...) interface is implemented as varargs in V8. For varargs,
-// floating-point arguments and return values are passed in GPRs, therefore
-// the special handling to reinterpret floating-point as integer values when
-// passed in and out of f.Call()
-template <typename INPUT_T, typename OUTPUT_T, typename Func>
-static void GenAndRunTest(INPUT_T input0, OUTPUT_T expected_res,
-                          Func test_generator) {
-  DCHECK((sizeof(INPUT_T) == 4 || sizeof(INPUT_T) == 8));
-
-  Isolate* isolate = CcTest::i_isolate();
-  HandleScope scope(isolate);
-
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
-
-  // handle floating-point parameters
-  if (std::is_same<float, INPUT_T>::value) {
-    __ fmv_w_x(fa0, a0);
-  } else if (std::is_same<double, INPUT_T>::value) {
-    __ fmv_d_x(fa0, a0);
-  }
-
-  test_generator(assm);
-
-  // handle floating-point result
-  if (std::is_same<float, OUTPUT_T>::value) {
-    __ fmv_x_w(a0, fa0);
-  } else if (std::is_same<double, OUTPUT_T>::value) {
-    __ fmv_x_d(a0, fa0);
-  }
-  __ jr(ra);
-
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-
-  Param_T t;
-  memset(&t, 0, sizeof(t));
-  SetParam(&t, input0);
-
-  using OINT_T =
-      typename std::conditional<sizeof(OUTPUT_T) == 4, int32_t, int64_t>::type;
-  using IINT_T =
-      typename std::conditional<sizeof(INPUT_T) == 4, int32_t, int64_t>::type;
-
-  auto f = GeneratedCode<OINT_T(IINT_T)>::FromCode(*code);
-  auto res = f.Call(GetGPRParam<INPUT_T>(&t));
-  ValidateResult(res, expected_res);
-}
-
-template <typename INPUT_T, typename OUTPUT_T, typename Func>
-static void GenAndRunTest(INPUT_T input0, INPUT_T input1, OUTPUT_T expected_res,
-                          Func test_generator) {
-  DCHECK((sizeof(INPUT_T) == 4 || sizeof(INPUT_T) == 8));
-
-  Isolate* isolate = CcTest::i_isolate();
-  HandleScope scope(isolate);
-
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
-
-  // handle floating-point parameters
-  if (std::is_same<float, INPUT_T>::value) {
-    __ fmv_w_x(fa0, a0);
-    __ fmv_w_x(fa1, a1);
-  } else if (std::is_same<double, INPUT_T>::value) {
-    __ fmv_d_x(fa0, a0);
-    __ fmv_d_x(fa1, a1);
-  }
-
-  test_generator(assm);
-
-  // handle floating-point result
-  if (std::is_same<float, OUTPUT_T>::value) {
-    __ fmv_x_w(a0, fa0);
-  } else if (std::is_same<double, OUTPUT_T>::value) {
-    __ fmv_x_d(a0, fa0);
-  }
-  __ jr(ra);
-
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-
-  // setup parameters (to pass floats as integers)
-  Param_T t[2];
-  memset(&t, 0, sizeof(t));
-  SetParam(&t[0], input0);
-  SetParam(&t[1], input1);
-
-  using IINT_T =
-      typename std::conditional<sizeof(INPUT_T) == 4, int32_t, int64_t>::type;
-  using OINT_T =
-      typename std::conditional<sizeof(OUTPUT_T) == 4, int32_t, int64_t>::type;
-
-  auto f = GeneratedCode<OINT_T(IINT_T, IINT_T)>::FromCode(*code);
-  auto res = f.Call(GetGPRParam<INPUT_T>(&t[0]), GetGPRParam<INPUT_T>(&t[1]));
-  ValidateResult(res, expected_res);
-}
-
-template <typename INPUT_T, typename OUTPUT_T, typename Func>
-static void GenAndRunTest(INPUT_T input0, INPUT_T input1, INPUT_T input2,
-                          OUTPUT_T expected_res, Func test_generator) {
-  DCHECK((sizeof(INPUT_T) == 4 || sizeof(INPUT_T) == 8));
-  DCHECK(sizeof(OUTPUT_T) == sizeof(INPUT_T));
-
-  Isolate* isolate = CcTest::i_isolate();
-  HandleScope scope(isolate);
-
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
-
-  // handle floating-point parameters
-  if (std::is_same<float, INPUT_T>::value) {
-    __ fmv_w_x(fa0, a0);
-    __ fmv_w_x(fa1, a1);
-    __ fmv_w_x(fa2, a2);
-  } else if (std::is_same<double, INPUT_T>::value) {
-    __ fmv_d_x(fa0, a0);
-    __ fmv_d_x(fa1, a1);
-    __ fmv_d_x(fa2, a2);
-  }
-
-  test_generator(assm);
-
-  // handle floating-point result
-  if (std::is_same<float, OUTPUT_T>::value) {
-    __ fmv_x_w(a0, fa0);
-  } else if (std::is_same<double, OUTPUT_T>::value) {
-    __ fmv_x_d(a0, fa0);
-  }
-  __ jr(ra);
-
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-
-  // setup parameters (in case INPUT_T is float)
-  Param_T t[3];
-  memset(&t, 0, sizeof(t));
-  SetParam(&t[0], input0);
-  SetParam(&t[1], input1);
-  SetParam(&t[2], input2);
-
-  using INT_T =
-      typename std::conditional<sizeof(OUTPUT_T) == 4, int32_t, int64_t>::type;
-  auto f = GeneratedCode<INT_T(INT_T, INT_T, INT_T)>::FromCode(*code);
-  auto res = f.Call(GetGPRParam<INPUT_T>(&t[0]), GetGPRParam<INPUT_T>(&t[1]),
-                    GetGPRParam<INPUT_T>(&t[2]));
-  ValidateResult(res, expected_res);
-}
-
-template <typename T, typename Func>
-static void GenAndRunTestForLoadStore(T value, Func test_generator) {
-  DCHECK(sizeof(T) == 4 || sizeof(T) == 8);
-
-  Isolate* isolate = CcTest::i_isolate();
-  HandleScope scope(isolate);
-
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
-
-  if (std::is_same<float, T>::value) {
-    __ fmv_w_x(fa0, a1);
-  } else if (std::is_same<double, T>::value) {
-    __ fmv_d_x(fa0, a1);
-  }
-
-  test_generator(assm);
-
-  if (std::is_same<float, T>::value) {
-    __ fmv_x_w(a0, fa0);
-  } else if (std::is_same<double, T>::value) {
-    __ fmv_x_d(a0, fa0);
-  }
-  __ jr(ra);
-
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-
-  using INT_T =
-      typename std::conditional<sizeof(T) == 4, int32_t, int64_t>::type;
-
-  // setup parameters (to pass floats as integers)
-  Param_T t;
-  memset(&t, 0, sizeof(t));
-  SetParam(&t, value);
-
-  int64_t tmp = 0;
-  auto f = GeneratedCode<INT_T(void* base, INT_T val)>::FromCode(*code);
-  auto res = f.Call(&tmp, GetGPRParam<T>(&t));
-  ValidateResult(res, value);
-}
-
-template <typename Func>
-static void GenAndRunTest(int64_t expected_res, Func test_generator) {
-  Isolate* isolate = CcTest::i_isolate();
-  HandleScope scope(isolate);
-
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
-  test_generator(assm);
-  __ jr(ra);
-
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-  auto f = GeneratedCode<int64_t()>::FromCode(*code);
-  auto res = f.Call();
-  CHECK_EQ(res, expected_res);
-}
+#define __ assm.
 
 #define UTEST_R2_FORM_WITH_RES(instr_name, type, rs1_val, rs2_val,     \
                                expected_res)                           \
   TEST(RISCV_UTEST_##instr_name) {                                     \
     CcTest::InitializeVM();                                            \
     auto fn = [](MacroAssembler& assm) { __ instr_name(a0, a0, a1); }; \
-    GenAndRunTest<type, type>(rs1_val, rs2_val, expected_res, fn);     \
+    auto res = GenAndRunTest<type, type>(rs1_val, rs2_val, fn);        \
+    CHECK_EQ(expected_res, res);                                       \
   }
 
 #define UTEST_R1_FORM_WITH_RES(instr_name, in_type, out_type, rs1_val, \
@@ -355,16 +72,17 @@ static void GenAndRunTest(int64_t expected_res, Func test_generator) {
   TEST(RISCV_UTEST_##instr_name) {                                     \
     CcTest::InitializeVM();                                            \
     auto fn = [](MacroAssembler& assm) { __ instr_name(a0, a0); };     \
-    GenAndRunTest<in_type, out_type>(rs1_val, expected_res, fn);       \
+    auto res = GenAndRunTest<out_type, in_type>(rs1_val, fn);          \
+    CHECK_EQ(expected_res, res);                                       \
   }
 
-#define UTEST_I_FORM_WITH_RES(instr_name, inout_type, rs1_val, imm12,     \
-                              expected_res)                               \
-  TEST(RISCV_UTEST_##instr_name) {                                        \
-    CcTest::InitializeVM();                                               \
-    CHECK_EQ(is_intn(imm12, 12), true);                                   \
-    auto fn = [](MacroAssembler& assm) { __ instr_name(a0, a0, imm12); }; \
-    GenAndRunTest<inout_type, inout_type>(rs1_val, expected_res, fn);     \
+#define UTEST_I_FORM_WITH_RES(instr_name, type, rs1_val, imm12, expected_res) \
+  TEST(RISCV_UTEST_##instr_name) {                                            \
+    CcTest::InitializeVM();                                                   \
+    CHECK_EQ(is_intn(imm12, 12), true);                                       \
+    auto fn = [](MacroAssembler& assm) { __ instr_name(a0, a0, imm12); };     \
+    auto res = GenAndRunTest<type, type>(rs1_val, fn);                        \
+    CHECK_EQ(expected_res, res);                                              \
   }
 
 #define UTEST_LOAD_STORE(ldname, stname, value_type, value) \
@@ -392,41 +110,42 @@ static void GenAndRunTest(int64_t expected_res, Func test_generator) {
     GenAndRunTestForLoadStore<value_type>(store_value, fn);         \
   }
 
-#define UTEST_R1_FORM_WITH_RES_F(instr_name, inout_type, rs1_fval,      \
-                                 expected_fres)                         \
-  TEST(RISCV_UTEST_##instr_name) {                                      \
-    DCHECK(std::is_floating_point<inout_type>::value);                  \
-    CcTest::InitializeVM();                                             \
-    auto fn = [](MacroAssembler& assm) { __ instr_name(fa0, fa0); };    \
-    GenAndRunTest<inout_type, inout_type>(rs1_fval, expected_fres, fn); \
+#define UTEST_R1_FORM_WITH_RES_F(instr_name, type, rs1_fval, expected_fres) \
+  TEST(RISCV_UTEST_##instr_name) {                                          \
+    DCHECK(std::is_floating_point<type>::value);                            \
+    CcTest::InitializeVM();                                                 \
+    auto fn = [](MacroAssembler& assm) { __ instr_name(fa0, fa0); };        \
+    auto res = GenAndRunTest<type, type>(rs1_fval, fn);                     \
+    CHECK_EQ(expected_fres, res);                                           \
   }
 
-#define UTEST_R2_FORM_WITH_RES_F(instr_name, inout_type, rs1_fval, rs2_fval, \
-                                 expected_fres)                              \
-  TEST(RISCV_UTEST_##instr_name) {                                           \
-    DCHECK(std::is_floating_point<inout_type>::value);                       \
-    CcTest::InitializeVM();                                                  \
-    auto fn = [](MacroAssembler& assm) { __ instr_name(fa0, fa0, fa1); };    \
-    GenAndRunTest<inout_type, inout_type>(rs1_fval, rs2_fval, expected_fres, \
-                                          fn);                               \
+#define UTEST_R2_FORM_WITH_RES_F(instr_name, type, rs1_fval, rs2_fval,    \
+                                 expected_fres)                           \
+  TEST(RISCV_UTEST_##instr_name) {                                        \
+    DCHECK(std::is_floating_point<type>::value);                          \
+    CcTest::InitializeVM();                                               \
+    auto fn = [](MacroAssembler& assm) { __ instr_name(fa0, fa0, fa1); }; \
+    auto res = GenAndRunTest<type, type>(rs1_fval, rs2_fval, fn);         \
+    CHECK_EQ(expected_fres, res);                                         \
   }
 
-#define UTEST_R3_FORM_WITH_RES_F(instr_name, inout_type, rs1_fval, rs2_fval,   \
+#define UTEST_R3_FORM_WITH_RES_F(instr_name, type, rs1_fval, rs2_fval,         \
                                  rs3_fval, expected_fres)                      \
   TEST(RISCV_UTEST_##instr_name) {                                             \
-    DCHECK(std::is_floating_point<inout_type>::value);                         \
+    DCHECK(std::is_floating_point<type>::value);                               \
     CcTest::InitializeVM();                                                    \
     auto fn = [](MacroAssembler& assm) { __ instr_name(fa0, fa0, fa1, fa2); }; \
-    GenAndRunTest<inout_type, inout_type>(rs1_fval, rs2_fval, rs3_fval,        \
-                                          expected_fres, fn);                  \
+    auto res = GenAndRunTest<type, type>(rs1_fval, rs2_fval, rs3_fval, fn);    \
+    CHECK_EQ(expected_fres, res);                                              \
   }
 
-#define UTEST_COMPARE_WITH_RES_F(instr_name, input_type, rs1_fval, rs2_fval,  \
-                                 expected_res)                                \
-  TEST(RISCV_UTEST_##instr_name) {                                            \
-    CcTest::InitializeVM();                                                   \
-    auto fn = [](MacroAssembler& assm) { __ instr_name(a0, fa0, fa1); };      \
-    GenAndRunTest<input_type, int32_t>(rs1_fval, rs2_fval, expected_res, fn); \
+#define UTEST_COMPARE_WITH_RES_F(instr_name, input_type, rs1_fval, rs2_fval, \
+                                 expected_res)                               \
+  TEST(RISCV_UTEST_##instr_name) {                                           \
+    CcTest::InitializeVM();                                                  \
+    auto fn = [](MacroAssembler& assm) { __ instr_name(a0, fa0, fa1); };     \
+    auto res = GenAndRunTest<int32_t, input_type>(rs1_fval, rs2_fval, fn);   \
+    CHECK_EQ(expected_res, res);                                             \
   }
 
 #define UTEST_CONV_F_FROM_I(instr_name, input_type, output_type, rs1_val, \
@@ -437,32 +156,35 @@ static void GenAndRunTest(int64_t expected_res, Func test_generator) {
                                                                           \
     CcTest::InitializeVM();                                               \
     auto fn = [](MacroAssembler& assm) { __ instr_name(fa0, a0); };       \
-    GenAndRunTest<input_type, output_type>(rs1_val, expected_fres, fn);   \
+    auto res = GenAndRunTest<output_type, input_type>(rs1_val, fn);       \
+    CHECK_EQ(expected_fres, res);                                         \
   }
 
-#define UTEST_CONV_I_FROM_F(instr_name, input_type, output_type,        \
-                            rounding_mode, rs1_fval, expected_res)      \
-  TEST(RISCV_UTEST_##instr_name) {                                      \
-    DCHECK(std::is_floating_point<input_type>::value&&                  \
-               std::is_integral<output_type>::value);                   \
-                                                                        \
-    CcTest::InitializeVM();                                             \
-    auto fn = [](MacroAssembler& assm) {                                \
-      __ instr_name(a0, fa0, rounding_mode);                            \
-    };                                                                  \
-    GenAndRunTest<input_type, output_type>(rs1_fval, expected_res, fn); \
-  }                                                                     \
-                                                                        \
-  TEST(RISCV_UTEST_dyn_##instr_name) {                                  \
-    DCHECK(std::is_floating_point<input_type>::value&&                  \
-               std::is_integral<output_type>::value);                   \
-                                                                        \
-    CcTest::InitializeVM();                                             \
-    auto fn = [](MacroAssembler& assm) {                                \
-      __ csrwi(csr_frm, rounding_mode);                                 \
-      __ instr_name(a0, fa0, DYN);                                      \
-    };                                                                  \
-    GenAndRunTest<input_type, output_type>(rs1_fval, expected_res, fn); \
+#define UTEST_CONV_I_FROM_F(instr_name, input_type, output_type,     \
+                            rounding_mode, rs1_fval, expected_res)   \
+  TEST(RISCV_UTEST_##instr_name) {                                   \
+    DCHECK(std::is_floating_point<input_type>::value&&               \
+               std::is_integral<output_type>::value);                \
+                                                                     \
+    CcTest::InitializeVM();                                          \
+    auto fn = [](MacroAssembler& assm) {                             \
+      __ instr_name(a0, fa0, rounding_mode);                         \
+    };                                                               \
+    auto res = GenAndRunTest<output_type, input_type>(rs1_fval, fn); \
+    CHECK_EQ(expected_res, res);                                     \
+  }                                                                  \
+                                                                     \
+  TEST(RISCV_UTEST_dyn_##instr_name) {                               \
+    DCHECK(std::is_floating_point<input_type>::value&&               \
+               std::is_integral<output_type>::value);                \
+                                                                     \
+    CcTest::InitializeVM();                                          \
+    auto fn = [](MacroAssembler& assm) {                             \
+      __ csrwi(csr_frm, rounding_mode);                              \
+      __ instr_name(a0, fa0, DYN);                                   \
+    };                                                               \
+    auto res = GenAndRunTest<output_type, input_type>(rs1_fval, fn); \
+    CHECK_EQ(expected_res, res);                                     \
   }
 
 #define UTEST_CONV_F_FROM_F(instr_name, input_type, output_type, rs1_val, \
@@ -470,7 +192,8 @@ static void GenAndRunTest(int64_t expected_res, Func test_generator) {
   TEST(RISCV_UTEST_##instr_name) {                                        \
     CcTest::InitializeVM();                                               \
     auto fn = [](MacroAssembler& assm) { __ instr_name(fa0, fa0); };      \
-    GenAndRunTest<input_type, output_type>(rs1_val, expected_fres, fn);   \
+    auto res = GenAndRunTest<output_type, input_type>(rs1_val, fn);       \
+    CHECK_EQ(expected_fres, res);                                         \
   }
 
 #define UTEST_CSRI(csr_reg, csr_write_val, csr_set_clear_val)               \
@@ -506,7 +229,8 @@ static void GenAndRunTest(int64_t expected_res, Func test_generator) {
                                                                             \
       __ bind(&exit);                                                       \
     };                                                                      \
-    GenAndRunTest(expected_res, fn);                                        \
+    auto res = GenAndRunTest(fn);                                           \
+    CHECK_EQ(expected_res, res);                                            \
   }
 
 #define UTEST_CSR(csr_reg, csr_write_val, csr_set_clear_val)        \
@@ -543,22 +267,21 @@ static void GenAndRunTest(int64_t expected_res, Func test_generator) {
       __ bind(&exit);                                               \
     };                                                              \
                                                                     \
-    GenAndRunTest(expected_res, fn);                                \
+    auto res = GenAndRunTest(fn);                                   \
+    CHECK_EQ(expected_res, res);                                    \
   }
 
-#define UTEST_R2_FORM_WITH_OP(instr_name, inout_type, rs1_val, rs2_val, \
-                              tested_op)                                \
-  UTEST_R2_FORM_WITH_RES(instr_name, inout_type, rs1_val, rs2_val,      \
+#define UTEST_R2_FORM_WITH_OP(instr_name, type, rs1_val, rs2_val, tested_op) \
+  UTEST_R2_FORM_WITH_RES(instr_name, type, rs1_val, rs2_val,                 \
                          ((rs1_val)tested_op(rs2_val)))
 
-#define UTEST_I_FORM_WITH_OP(instr_name, inout_type, rs1_val, imm12, \
-                             tested_op)                              \
-  UTEST_I_FORM_WITH_RES(instr_name, inout_type, rs1_val, imm12,      \
+#define UTEST_I_FORM_WITH_OP(instr_name, type, rs1_val, imm12, tested_op) \
+  UTEST_I_FORM_WITH_RES(instr_name, type, rs1_val, imm12,                 \
                         ((rs1_val)tested_op(imm12)))
 
-#define UTEST_R2_FORM_WITH_OP_F(instr_name, inout_type, rs1_fval, rs2_fval, \
-                                tested_op)                                  \
-  UTEST_R2_FORM_WITH_RES_F(instr_name, inout_type, rs1_fval, rs2_fval,      \
+#define UTEST_R2_FORM_WITH_OP_F(instr_name, type, rs1_fval, rs2_fval, \
+                                tested_op)                            \
+  UTEST_R2_FORM_WITH_RES_F(instr_name, type, rs1_fval, rs2_fval,      \
                            ((rs1_fval)tested_op(rs2_fval)))
 
 #define UTEST_COMPARE_WITH_OP_F(instr_name, input_type, rs1_fval, rs2_fval, \
@@ -655,7 +378,7 @@ UTEST_R2_FORM_WITH_RES(mulhu, int64_t, 0x1234'5678'0000'0000ULL,
                        0x1234'5678ULL * 0xF896'7021ULL)
 UTEST_R2_FORM_WITH_RES(mulhsu, int64_t, -0x1234'56780000'0000LL,
                        0xF234'5678'0000'0000ULL,
-                       -0x1234'5678LL * 0xF234'5678ULL)
+                       static_cast<int64_t>(-0x1234'5678LL * 0xF234'5678ULL))
 UTEST_R2_FORM_WITH_OP(div, int64_t, LARGE_INT_EXCEED_32_BIT, MIN_VAL_IMM12, /)
 UTEST_R2_FORM_WITH_OP(divu, uint64_t, LARGE_UINT_EXCEED_32_BIT, 100, /)
 UTEST_R2_FORM_WITH_OP(rem, int64_t, LARGE_INT_EXCEED_32_BIT, MIN_VAL_IMM12, %)
@@ -791,7 +514,7 @@ UTEST_R1_FORM_WITH_RES(neg, int64_t, int64_t, 0x0f5600ab123400LL,
                        -(0x0f5600ab123400LL))
 UTEST_R1_FORM_WITH_RES(negw, int32_t, int32_t, 0xab123400, -(0xab123400))
 UTEST_R1_FORM_WITH_RES(sext_w, int32_t, int64_t, 0xFA01'1234,
-                       0xFFFFFFFFFA011234LL)
+                       static_cast<int64_t>(0xFFFFFFFFFA011234LL))
 UTEST_R1_FORM_WITH_RES(seqz, int64_t, int64_t, 20, 20 == 0)
 UTEST_R1_FORM_WITH_RES(snez, int64_t, int64_t, 20, 20 != 0)
 UTEST_R1_FORM_WITH_RES(sltz, int64_t, int64_t, -20, -20 < 0)
@@ -804,36 +527,14 @@ UTEST_R1_FORM_WITH_RES_F(fmv_d, double, -23.5, -23.5)
 UTEST_R1_FORM_WITH_RES_F(fabs_d, double, -23.5, 23.5)
 UTEST_R1_FORM_WITH_RES_F(fneg_d, double, 23.5, -23.5)
 
-// Helper macros that can be used in FOR_INT32_INPUTS(i) { ... *i ... }
-#define FOR_INPUTS(ctype, var, test_vector)                  \
-  std::vector<ctype> var##_vec = test_vector();              \
-  for (std::vector<ctype>::iterator var = var##_vec.begin(); \
-       var != var##_vec.end(); ++var)
-
-#define FOR_INT64_INPUTS(var, test_vector) FOR_INPUTS(int64_t, var, test_vector)
-
-static const std::vector<int64_t> li_test_values() {
-  static const int64_t kValues[] = {static_cast<int64_t>(0x0000000000000000),
-                                    static_cast<int64_t>(0x0000000000000001),
-                                    static_cast<int64_t>(0x0000FFFFFFFF0000),
-                                    static_cast<int64_t>(0x7FFFFFFFFFFFFFFF),
-                                    static_cast<int64_t>(0x8000000000000000),
-                                    static_cast<int64_t>(0x8000000000000001),
-                                    static_cast<int64_t>(0x8000FFFFFFFF0000),
-                                    static_cast<int64_t>(0x8FFFFFFFFFFFFFFF),
-                                    static_cast<int64_t>(0x123456789ABCDEF1),
-                                    static_cast<int64_t>(0xFFFFFFFFFFFFFFFF)};
-  return std::vector<int64_t>(&kValues[0], &kValues[arraysize(kValues)]);
-}
-
 // Test LI
 TEST(RISCV0) {
   CcTest::InitializeVM();
 
-  FOR_INT64_INPUTS(i, li_test_values) {
-    int64_t input = *i;
-    auto fn = [input](MacroAssembler& assm) { __ RV_li(a0, input); };
-    GenAndRunTest(input, fn);
+  FOR_INT64_INPUTS(i) {
+    auto fn = [i](MacroAssembler& assm) { __ RV_li(a0, i); };
+    auto res = GenAndRunTest(fn);
+    CHECK_EQ(i, res);
   }
 }
 
@@ -857,15 +558,14 @@ TEST(RISCV1) {
 
   int64_t input = 50;
   int64_t expected_res = 1275L;
-  GenAndRunTest(input, expected_res, fn);
+  auto res = GenAndRunTest<int64_t>(input, fn);
+  CHECK_EQ(expected_res, res);
 }
 
 TEST(RISCV2) {
   CcTest::InitializeVM();
   Isolate* isolate = CcTest::i_isolate();
   HandleScope scope(isolate);
-
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
 
   Label exit, error;
   int64_t expected_res = 0x31415926L;
@@ -979,7 +679,8 @@ TEST(RISCV2) {
 
     __ bind(&exit);
   };
-  GenAndRunTest(expected_res, fn);
+  auto res = GenAndRunTest(fn);
+  CHECK_EQ(expected_res, res);
 }
 
 TEST(RISCV3) {
@@ -1005,73 +706,67 @@ TEST(RISCV3) {
     float fe;
     float ff;
     float fg;
-  };
-  T t;
+  } t;
 
-  // Create a function that accepts &t,
-  // and loads, manipulates, and stores
+  // Create a function that accepts &t and loads, manipulates, and stores
   // the doubles t.a ... t.f.
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
 
   // Double precision floating point instructions.
-  __ fld(ft0, a0, offsetof(T, a));
-  __ fld(ft1, a0, offsetof(T, b));
-  __ fadd_d(ft2, ft0, ft1);
-  __ fsd(ft2, a0, offsetof(T, c));  // c = a + b.
+  auto fn = [](MacroAssembler& assm) {
+    __ fld(ft0, a0, offsetof(T, a));
+    __ fld(ft1, a0, offsetof(T, b));
+    __ fadd_d(ft2, ft0, ft1);
+    __ fsd(ft2, a0, offsetof(T, c));  // c = a + b.
 
-  __ fmv_d(ft3, ft2);   // c
-  __ fneg_d(fa0, ft1);  // -b
-  __ fsub_d(ft3, ft3, fa0);
-  __ fsd(ft3, a0, offsetof(T, d));  // d = c - (-b).
+    __ fmv_d(ft3, ft2);   // c
+    __ fneg_d(fa0, ft1);  // -b
+    __ fsub_d(ft3, ft3, fa0);
+    __ fsd(ft3, a0, offsetof(T, d));  // d = c - (-b).
 
-  __ fsd(ft0, a0, offsetof(T, b));  // b = a.
+    __ fsd(ft0, a0, offsetof(T, b));  // b = a.
 
-  __ RV_li(a4, 120);
-  __ fcvt_d_w(ft5, a4);
-  __ fmul_d(ft3, ft3, ft5);
-  __ fsd(ft3, a0, offsetof(T, e));  // e = d * 120 = 1.8066e16.
+    __ RV_li(a4, 120);
+    __ fcvt_d_w(ft5, a4);
+    __ fmul_d(ft3, ft3, ft5);
+    __ fsd(ft3, a0, offsetof(T, e));  // e = d * 120 = 1.8066e16.
 
-  __ fdiv_d(ft4, ft3, ft0);
-  __ fsd(ft4, a0, offsetof(T, f));  // f = e / a = 120.44.
+    __ fdiv_d(ft4, ft3, ft0);
+    __ fsd(ft4, a0, offsetof(T, f));  // f = e / a = 120.44.
 
-  __ fsqrt_d(ft5, ft4);
-  __ fsd(ft5, a0, offsetof(T, g));
-  // g = sqrt(f) = 10.97451593465515908537
+    __ fsqrt_d(ft5, ft4);
+    __ fsd(ft5, a0, offsetof(T, g));
+    // g = sqrt(f) = 10.97451593465515908537
 
-  __ fld(ft0, a0, offsetof(T, h));
-  __ fld(ft1, a0, offsetof(T, i));
-  __ fmadd_d(ft5, ft1, ft0, ft1);
-  __ fsd(ft5, a0, offsetof(T, h));
+    __ fld(ft0, a0, offsetof(T, h));
+    __ fld(ft1, a0, offsetof(T, i));
+    __ fmadd_d(ft5, ft1, ft0, ft1);
+    __ fsd(ft5, a0, offsetof(T, h));
 
-  // // Single precision floating point instructions.
-  __ flw(ft0, a0, offsetof(T, fa));
-  __ flw(ft1, a0, offsetof(T, fb));
-  __ fadd_s(ft2, ft0, ft1);
-  __ fsw(ft2, a0, offsetof(T, fc));  // fc = fa + fb.
+    // // Single precision floating point instructions.
+    __ flw(ft0, a0, offsetof(T, fa));
+    __ flw(ft1, a0, offsetof(T, fb));
+    __ fadd_s(ft2, ft0, ft1);
+    __ fsw(ft2, a0, offsetof(T, fc));  // fc = fa + fb.
 
-  __ fneg_s(ft3, ft1);  // -fb
-  __ fsub_s(ft3, ft2, ft3);
-  __ fsw(ft3, a0, offsetof(T, fd));  // fd = fc - (-fb).
+    __ fneg_s(ft3, ft1);  // -fb
+    __ fsub_s(ft3, ft2, ft3);
+    __ fsw(ft3, a0, offsetof(T, fd));  // fd = fc - (-fb).
 
-  __ fsw(ft0, a0, offsetof(T, fb));  // fb = fa.
+    __ fsw(ft0, a0, offsetof(T, fb));  // fb = fa.
 
-  __ RV_li(t0, 120);
-  __ fcvt_s_w(ft5, t0);  // ft5 = 120.0.
-  __ fmul_s(ft3, ft3, ft5);
-  __ fsw(ft3, a0, offsetof(T, fe));  // fe = fd * 120
+    __ RV_li(t0, 120);
+    __ fcvt_s_w(ft5, t0);  // ft5 = 120.0.
+    __ fmul_s(ft3, ft3, ft5);
+    __ fsw(ft3, a0, offsetof(T, fe));  // fe = fd * 120
 
-  __ fdiv_s(ft4, ft3, ft0);
-  __ fsw(ft4, a0, offsetof(T, ff));  // ff = fe / fa
+    __ fdiv_s(ft4, ft3, ft0);
+    __ fsw(ft4, a0, offsetof(T, ff));  // ff = fe / fa
 
-  __ fsqrt_s(ft5, ft4);
-  __ fsw(ft5, a0, offsetof(T, fg));
+    __ fsqrt_s(ft5, ft4);
+    __ fsw(ft5, a0, offsetof(T, fg));
+  };
+  auto f = AssembleCode<F3>(fn);
 
-  __ jr(ra);
-
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-  auto f = GeneratedCode<F3>::FromCode(*code);
   // Double test values.
   t.a = 1.5e14;
   t.b = 2.75e11;
@@ -1120,38 +815,31 @@ TEST(RISCV4) {
     double c;
     float d;
     int64_t e;
+  } t;
+
+  auto fn = [](MacroAssembler& assm) {
+    __ fld(ft0, a0, offsetof(T, a));
+    __ fld(fa1, a0, offsetof(T, b));
+
+    // Swap ft0 and fa1, by using 2 integer registers, a4-a5,
+    __ fmv_x_d(a4, ft0);
+    __ fmv_x_d(a5, fa1);
+
+    __ fmv_d_x(fa1, a4);
+    __ fmv_d_x(ft0, a5);
+
+    // Store the swapped ft0 and fa1 back to memory.
+    __ fsd(ft0, a0, offsetof(T, a));
+    __ fsd(fa1, a0, offsetof(T, c));
+
+    // Test sign extension of move operations from coprocessor.
+    __ flw(ft0, a0, offsetof(T, d));
+    __ fmv_x_w(a4, ft0);
+
+    __ sd(a4, a0, offsetof(T, e));
   };
-  T t;
+  auto f = AssembleCode<F3>(fn);
 
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
-
-  __ fld(ft0, a0, offsetof(T, a));
-  __ fld(fa1, a0, offsetof(T, b));
-
-  // Swap ft0 and fa1, by using 2 integer registers, a4-a5,
-
-  __ fmv_x_d(a4, ft0);
-  __ fmv_x_d(a5, fa1);
-
-  __ fmv_d_x(fa1, a4);
-  __ fmv_d_x(ft0, a5);
-
-  // Store the swapped ft0 and fa1 back to memory.
-  __ fsd(ft0, a0, offsetof(T, a));
-  __ fsd(fa1, a0, offsetof(T, c));
-
-  // Test sign extension of move operations from coprocessor.
-  __ flw(ft0, a0, offsetof(T, d));
-  __ fmv_x_w(a4, ft0);
-
-  __ sd(a4, a0, offsetof(T, e));
-
-  __ jr(ra);
-
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-  auto f = GeneratedCode<F3>::FromCode(*code);
   t.a = 1.5e22;
   t.b = 2.75e11;
   t.c = 17.17;
@@ -1176,39 +864,33 @@ TEST(RISCV5) {
     double b;
     int i;
     int j;
+  } t;
+
+  auto fn = [](MacroAssembler& assm) {
+    // Load all structure elements to registers.
+    __ fld(ft0, a0, offsetof(T, a));
+    __ fld(ft1, a0, offsetof(T, b));
+    __ lw(a4, a0, offsetof(T, i));
+    __ lw(a5, a0, offsetof(T, j));
+
+    // Convert double in ft0 to int in element i.
+    __ fcvt_l_d(a6, ft0);
+    __ sw(a6, a0, offsetof(T, i));
+
+    // Convert double in ft1 to int in element j.
+    __ fcvt_l_d(a7, ft1);
+    __ sw(a7, a0, offsetof(T, j));
+
+    // Convert int in original i (a4) to double in a.
+    __ fcvt_d_l(fa0, a4);
+    __ fsd(fa0, a0, offsetof(T, a));
+
+    // Convert int in original j (a5) to double in b.
+    __ fcvt_d_l(fa1, a5);
+    __ fsd(fa1, a0, offsetof(T, b));
   };
-  T t;
+  auto f = AssembleCode<F3>(fn);
 
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
-
-  // Load all structure elements to registers.
-  __ fld(ft0, a0, offsetof(T, a));
-  __ fld(ft1, a0, offsetof(T, b));
-  __ lw(a4, a0, offsetof(T, i));
-  __ lw(a5, a0, offsetof(T, j));
-
-  // Convert double in ft0 to int in element i.
-  __ fcvt_l_d(a6, ft0);
-  __ sw(a6, a0, offsetof(T, i));
-
-  // Convert double in ft1 to int in element j.
-  __ fcvt_l_d(a7, ft1);
-  __ sw(a7, a0, offsetof(T, j));
-
-  // Convert int in original i (a4) to double in a.
-  __ fcvt_d_l(fa0, a4);
-  __ fsd(fa0, a0, offsetof(T, a));
-
-  // Convert int in original j (a5) to double in b.
-  __ fcvt_d_l(fa1, a5);
-  __ fsd(fa1, a0, offsetof(T, b));
-
-  __ jr(ra);
-
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-  auto f = GeneratedCode<F3>::FromCode(*code);
   t.a = 1.5e4;
   t.b = 2.75e8;
   t.i = 12345678;
@@ -1236,43 +918,37 @@ TEST(RISCV6) {
     int32_t r4;
     int32_t r5;
     int32_t r6;
+  } t;
+
+  auto fn = [](MacroAssembler& assm) {
+    // Basic word load/store.
+    __ lw(a4, a0, offsetof(T, ui));
+    __ sw(a4, a0, offsetof(T, r1));
+
+    // lh with positive data.
+    __ lh(a5, a0, offsetof(T, ui));
+    __ sw(a5, a0, offsetof(T, r2));
+
+    // lh with negative data.
+    __ lh(a6, a0, offsetof(T, si));
+    __ sw(a6, a0, offsetof(T, r3));
+
+    // lhu with negative data.
+    __ lhu(a7, a0, offsetof(T, si));
+    __ sw(a7, a0, offsetof(T, r4));
+
+    // Lb with negative data.
+    __ lb(t0, a0, offsetof(T, si));
+    __ sw(t0, a0, offsetof(T, r5));
+
+    // sh writes only 1/2 of word.
+    __ RV_li(t1, 0x33333333);
+    __ sw(t1, a0, offsetof(T, r6));
+    __ lhu(t1, a0, offsetof(T, si));
+    __ sh(t1, a0, offsetof(T, r6));
   };
-  T t;
+  auto f = AssembleCode<F3>(fn);
 
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
-
-  // Basic word load/store.
-  __ lw(a4, a0, offsetof(T, ui));
-  __ sw(a4, a0, offsetof(T, r1));
-
-  // lh with positive data.
-  __ lh(a5, a0, offsetof(T, ui));
-  __ sw(a5, a0, offsetof(T, r2));
-
-  // lh with negative data.
-  __ lh(a6, a0, offsetof(T, si));
-  __ sw(a6, a0, offsetof(T, r3));
-
-  // lhu with negative data.
-  __ lhu(a7, a0, offsetof(T, si));
-  __ sw(a7, a0, offsetof(T, r4));
-
-  // Lb with negative data.
-  __ lb(t0, a0, offsetof(T, si));
-  __ sw(t0, a0, offsetof(T, r5));
-
-  // sh writes only 1/2 of word.
-  __ RV_li(t1, 0x33333333);
-  __ sw(t1, a0, offsetof(T, r6));
-  __ lhu(t1, a0, offsetof(T, si));
-  __ sh(t1, a0, offsetof(T, r6));
-
-  __ jr(ra);
-
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-  auto f = GeneratedCode<F3>::FromCode(*code);
   t.ui = 0x11223344;
   t.si = 0x99AABBCC;
   f.Call(&t, 0, 0, 0, 0);
@@ -1320,7 +996,8 @@ TEST(FCLASS) {
     for (auto i = i_vec.begin(); i != i_vec.end(); ++i) {
       auto input = *i;
       auto fn = [](MacroAssembler& assm) { __ fclass_s(a0, fa0); };
-      GenAndRunTest(input.first, input.second, fn);
+      auto res = GenAndRunTest<uint32_t>(input.first, fn);
+      CHECK_EQ(input.second, res);
     }
   }
 
@@ -1329,7 +1006,8 @@ TEST(FCLASS) {
     for (auto i = i_vec.begin(); i != i_vec.end(); ++i) {
       auto input = *i;
       auto fn = [](MacroAssembler& assm) { __ fclass_d(a0, fa0); };
-      GenAndRunTest(input.first, input.second, fn);
+      auto res = GenAndRunTest<uint32_t>(input.first, fn);
+      CHECK_EQ(input.second, res);
     }
   }
 }
@@ -1349,49 +1027,44 @@ TEST(RISCV7) {
     double e;
     double f;
     int32_t result;
-  };
-  T t;
+  } t;
 
   // Create a function that accepts &t,
   // and loads, manipulates, and stores
   // the doubles t.a ... t.f.
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
   Label neither_is_nan, less_than, outa_here;
+  auto fn = [&neither_is_nan, &less_than, &outa_here](MacroAssembler& assm) {
+    __ fld(ft0, a0, offsetof(T, a));
+    __ fld(ft1, a0, offsetof(T, b));
 
-  __ fld(ft0, a0, offsetof(T, a));
-  __ fld(ft1, a0, offsetof(T, b));
+    __ fclass_d(t5, ft0);
+    __ fclass_d(t6, ft1);
+    __ or_(t5, t5, t6);
+    __ andi(t5, t5, kSignalingNaN | kQuietNaN);
+    __ beq(t5, zero_reg, &neither_is_nan);
+    __ sw(zero_reg, a0, offsetof(T, result));
+    __ j(&outa_here);
 
-  __ fclass_d(t5, ft0);
-  __ fclass_d(t6, ft1);
-  __ or_(t5, t5, t6);
-  __ andi(t5, t5, kSignalingNaN | kQuietNaN);
-  __ beq(t5, zero_reg, &neither_is_nan);
-  __ sw(zero_reg, a0, offsetof(T, result));
-  __ j(&outa_here);
+    __ bind(&neither_is_nan);
 
-  __ bind(&neither_is_nan);
+    __ flt_d(t5, ft1, ft0);
+    __ bne(t5, zero_reg, &less_than);
 
-  __ flt_d(t5, ft1, ft0);
-  __ bne(t5, zero_reg, &less_than);
+    __ sw(zero_reg, a0, offsetof(T, result));
+    __ j(&outa_here);
 
-  __ sw(zero_reg, a0, offsetof(T, result));
-  __ j(&outa_here);
+    __ bind(&less_than);
+    __ RV_li(a4, 1);
+    __ sw(a4, a0, offsetof(T, result));  // Set true.
 
-  __ bind(&less_than);
-  __ RV_li(a4, 1);
-  __ sw(a4, a0, offsetof(T, result));  // Set true.
+    // This test-case should have additional
+    // tests.
 
-  // This test-case should have additional
-  // tests.
+    __ bind(&outa_here);
+  };
 
-  __ bind(&outa_here);
+  auto f = AssembleCode<F3>(fn);
 
-  __ jr(ra);
-
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-  auto f = GeneratedCode<F3>::FromCode(*code);
   t.a = 1.5e14;
   t.b = 2.75e11;
   t.c = 2.0;
@@ -1425,7 +1098,8 @@ TEST(RISCV9) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
   USE(code);
 }
 
@@ -1433,19 +1107,17 @@ TEST(NAN_BOX) {
   // Test float NaN-boxing.
   CcTest::InitializeVM();
 
-  // Test NaN boxing in FMV.W.X
+  // Test NaN boxing in FMV.X.D
   {
     auto fn = [](MacroAssembler& assm) { __ fmv_x_d(a0, fa0); };
-    GenAndRunTest(1234.56f,
-        0xFFFFFFFF00000000 | bit_cast<int32_t>(1234.56f),
-        fn);
+    auto res = GenAndRunTest<uint64_t>(1234.56f, fn);
+    CHECK_EQ(0xFFFFFFFF00000000 | bit_cast<uint32_t>(1234.56f), res);
   }
   // Test NaN boxing in FMV.X.W
   {
-    auto fn = [](MacroAssembler& assm) {
-      __ fmv_x_w(a0, fa0);
-    };
-    GenAndRunTest(1234.56f, (int64_t)bit_cast<int32_t>(1234.56f), fn);
+    auto fn = [](MacroAssembler& assm) { __ fmv_x_w(a0, fa0); };
+    auto res = GenAndRunTest<uint64_t>(1234.56f, fn);
+    CHECK_EQ((uint64_t)bit_cast<uint32_t>(1234.56f), res);
   }
 
   // Test FLW and FSW
@@ -1456,24 +1128,18 @@ TEST(NAN_BOX) {
     float a;
     uint64_t box;
     uint64_t res;
+  } t;
+
+  auto fn = [](MacroAssembler& assm) {
+    // Load all structure elements to registers.
+    __ flw(fa0, a0, offsetof(T, a));
+    // Check boxing when flw
+    __ fsd(fa0, a0, offsetof(T, box));
+    // Check only transfer low 32bits when fsw
+    __ fsw(fa0, a0, offsetof(T, res));
   };
-  T t;
+  auto f = AssembleCode<F3>(fn);
 
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
-
-  // Load all structure elements to registers.
-  __ flw(fa0, a0, offsetof(T, a));
-  // Check boxing when flw
-  __ fsd(fa0, a0, offsetof(T, box));
-  // Check only transfer low 32bits when fsw
-  __ fsw(fa0, a0, offsetof(T, res));
-
-  __ jr(ra);
-
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-  auto f = GeneratedCode<F3>::FromCode(*code);
   t.a = -123.45;
   t.box = 0;
   t.res = 0;
@@ -1519,7 +1185,8 @@ TEST(SET_TARGET_ADDR) {
   CHECK_EQ(0xfedcba9876543210, res);
 }
 
-// pair.first is the F_TYPE input to test, pair.second is I_TYPE expected result
+// pair.first is the F_TYPE input to test, pair.second is I_TYPE expected
+// result
 template <typename F_TYPE, typename I_TYPE>
 static const std::vector<std::pair<F_TYPE, I_TYPE>> out_of_range_test_values() {
   static const std::pair<F_TYPE, I_TYPE> kValues[] = {
@@ -1552,7 +1219,8 @@ TEST(OUT_OF_RANGE_CVT) {
     for (auto i = i_vec.begin(); i != i_vec.end(); ++i) {
       auto input = *i;
       auto fn = [](MacroAssembler& assm) { __ fcvt_w_d(a0, fa0); };
-      GenAndRunTest(input.first, input.second, fn);
+      auto res = GenAndRunTest<int32_t>(input.first, fn);
+      CHECK_EQ(input.second, res);
     }
   }
 
@@ -1561,7 +1229,8 @@ TEST(OUT_OF_RANGE_CVT) {
     for (auto i = i_vec.begin(); i != i_vec.end(); ++i) {
       auto input = *i;
       auto fn = [](MacroAssembler& assm) { __ fcvt_w_s(a0, fa0); };
-      GenAndRunTest(input.first, input.second, fn);
+      auto res = GenAndRunTest<int32_t>(input.first, fn);
+      CHECK_EQ(input.second, res);
     }
   }
 
@@ -1570,7 +1239,8 @@ TEST(OUT_OF_RANGE_CVT) {
     for (auto i = i_vec.begin(); i != i_vec.end(); ++i) {
       auto input = *i;
       auto fn = [](MacroAssembler& assm) { __ fcvt_wu_d(a0, fa0); };
-      GenAndRunTest(input.first, input.second, fn);
+      auto res = GenAndRunTest<uint32_t>(input.first, fn);
+      CHECK_EQ(input.second, res);
     }
   }
 
@@ -1579,7 +1249,8 @@ TEST(OUT_OF_RANGE_CVT) {
     for (auto i = i_vec.begin(); i != i_vec.end(); ++i) {
       auto input = *i;
       auto fn = [](MacroAssembler& assm) { __ fcvt_wu_s(a0, fa0); };
-      GenAndRunTest(input.first, input.second, fn);
+      auto res = GenAndRunTest<uint32_t>(input.first, fn);
+      CHECK_EQ(input.second, res);
     }
   }
 
@@ -1588,7 +1259,8 @@ TEST(OUT_OF_RANGE_CVT) {
     for (auto i = i_vec.begin(); i != i_vec.end(); ++i) {
       auto input = *i;
       auto fn = [](MacroAssembler& assm) { __ fcvt_l_d(a0, fa0); };
-      GenAndRunTest(input.first, input.second, fn);
+      auto res = GenAndRunTest<int64_t>(input.first, fn);
+      CHECK_EQ(input.second, res);
     }
   }
 
@@ -1597,7 +1269,8 @@ TEST(OUT_OF_RANGE_CVT) {
     for (auto i = i_vec.begin(); i != i_vec.end(); ++i) {
       auto input = *i;
       auto fn = [](MacroAssembler& assm) { __ fcvt_l_s(a0, fa0); };
-      GenAndRunTest(input.first, input.second, fn);
+      auto res = GenAndRunTest<int64_t>(input.first, fn);
+      CHECK_EQ(input.second, res);
     }
   }
 
@@ -1606,7 +1279,8 @@ TEST(OUT_OF_RANGE_CVT) {
     for (auto i = i_vec.begin(); i != i_vec.end(); ++i) {
       auto input = *i;
       auto fn = [](MacroAssembler& assm) { __ fcvt_lu_d(a0, fa0); };
-      GenAndRunTest(input.first, input.second, fn);
+      auto res = GenAndRunTest<uint64_t>(input.first, fn);
+      CHECK_EQ(input.second, res);
     }
   }
 
@@ -1615,30 +1289,42 @@ TEST(OUT_OF_RANGE_CVT) {
     for (auto i = i_vec.begin(); i != i_vec.end(); ++i) {
       auto input = *i;
       auto fn = [](MacroAssembler& assm) { __ fcvt_lu_s(a0, fa0); };
-      GenAndRunTest(input.first, input.second, fn);
+      auto res = GenAndRunTest<uint64_t>(input.first, fn);
+      CHECK_EQ(input.second, res);
     }
   }
 }
 
-#define FCMP_TEST_HELPER(F, fn, op)                                          \
-  GenAndRunTest<F, int32_t>(std::numeric_limits<F>::quiet_NaN(),             \
-                            static_cast<F>(1.0), false, fn);                 \
-  GenAndRunTest<F, int32_t>(std::numeric_limits<F>::quiet_NaN(),             \
-                            std::numeric_limits<F>::quiet_NaN(), false, fn); \
-  GenAndRunTest<F, int32_t>(std::numeric_limits<F>::signaling_NaN(),         \
-                            std::numeric_limits<F>::quiet_NaN(), false, fn); \
-  GenAndRunTest<F, int32_t>(std::numeric_limits<F>::quiet_NaN(),             \
-                            std::numeric_limits<F>::infinity(), false, fn);  \
-  GenAndRunTest<F, int32_t>(std::numeric_limits<F>::infinity(),              \
-                            std::numeric_limits<F>::infinity(),              \
-                            (std::numeric_limits<F>::infinity()              \
-                                 op std::numeric_limits<F>::infinity()),     \
-                            fn);                                             \
-  GenAndRunTest<F, int32_t>(-std::numeric_limits<F>::infinity(),             \
-                            std::numeric_limits<F>::infinity(),              \
-                            (-std::numeric_limits<F>::infinity()             \
-                                 op std::numeric_limits<F>::infinity()),     \
-                            fn);
+#define FCMP_TEST_HELPER(F, fn, op)                                         \
+  {                                                                         \
+    auto res1 = GenAndRunTest<int32_t>(std::numeric_limits<F>::quiet_NaN(), \
+                                       static_cast<F>(1.0), fn);            \
+    CHECK_EQ(false, res1);                                                  \
+    auto res2 =                                                             \
+        GenAndRunTest<int32_t>(std::numeric_limits<F>::quiet_NaN(),         \
+                               std::numeric_limits<F>::quiet_NaN(), fn);    \
+    CHECK_EQ(false, res2);                                                  \
+    auto res3 =                                                             \
+        GenAndRunTest<int32_t>(std::numeric_limits<F>::signaling_NaN(),     \
+                               std::numeric_limits<F>::quiet_NaN(), fn);    \
+    CHECK_EQ(false, res3);                                                  \
+    auto res4 =                                                             \
+        GenAndRunTest<int32_t>(std::numeric_limits<F>::quiet_NaN(),         \
+                               std::numeric_limits<F>::infinity(), fn);     \
+    CHECK_EQ(false, res4);                                                  \
+    auto res5 =                                                             \
+        GenAndRunTest<int32_t>(std::numeric_limits<F>::infinity(),          \
+                               std::numeric_limits<F>::infinity(), fn);     \
+    CHECK_EQ((std::numeric_limits<F>::infinity()                            \
+                  op std::numeric_limits<F>::infinity()),                   \
+             res5);                                                         \
+    auto res6 =                                                             \
+        GenAndRunTest<int32_t>(-std::numeric_limits<F>::infinity(),         \
+                               std::numeric_limits<F>::infinity(), fn);     \
+    CHECK_EQ((-std::numeric_limits<F>::infinity()                           \
+                  op std::numeric_limits<F>::infinity()),                   \
+             res6);                                                         \
+  }
 
 TEST(F_NAN) {
   // test floating-point compare w/ NaN, +/-Inf
@@ -1666,56 +1352,47 @@ TEST(jump_tables1) {
   CcTest::InitializeVM();
   Isolate* isolate = CcTest::i_isolate();
   HandleScope scope(isolate);
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
 
   const int kNumCases = 128;
   int values[kNumCases];
   isolate->random_number_generator()->NextBytes(values, sizeof(values));
-  Label labels[kNumCases];
+  Label labels[kNumCases], done;
 
-  __ addi(sp, sp, -8);
-  __ Sd(ra, MemOperand(sp));
-  __ Align(8);
+  auto fn = [&labels, &done, values](MacroAssembler& assm) {
+    __ addi(sp, sp, -8);
+    __ Sd(ra, MemOperand(sp));
+    __ Align(8);
+    {
+      __ BlockTrampolinePoolFor(kNumCases * 2 + 6);
 
-  Label done;
-  {
-    __ BlockTrampolinePoolFor(kNumCases * 2 + 6);
-
-    __ auipc(ra, 0);
-    __ slli(t3, a0, 3);
-    __ add(t3, t3, ra);
-    __ Ld(t3, MemOperand(t3, 6 * kInstrSize));
-    __ jr(t3);
-    __ nop();  // For 16-byte alignment
-    for (int i = 0; i < kNumCases; ++i) {
-      __ dd(&labels[i]);
+      __ auipc(ra, 0);
+      __ slli(t3, a0, 3);
+      __ add(t3, t3, ra);
+      __ Ld(t3, MemOperand(t3, 6 * kInstrSize));
+      __ jr(t3);
+      __ nop();  // For 16-byte alignment
+      for (int i = 0; i < kNumCases; ++i) {
+        __ dd(&labels[i]);
+      }
     }
-  }
 
-  for (int i = 0; i < kNumCases; ++i) {
-    __ bind(&labels[i]);
-    __ lui(a0, (values[i] + 0x800) >> 12);
-    __ addi(a0, a0, (values[i] << 20 >> 20));
-    __ j(&done);
-  }
+    for (int i = 0; i < kNumCases; ++i) {
+      __ bind(&labels[i]);
+      __ lui(a0, (values[i] + 0x800) >> 12);
+      __ addi(a0, a0, (values[i] << 20 >> 20));
+      __ j(&done);
+    }
 
-  __ bind(&done);
-  __ Ld(ra, MemOperand(sp));
-  __ addi(sp, sp, 8);
-  __ jr(ra);
+    __ bind(&done);
+    __ Ld(ra, MemOperand(sp));
+    __ addi(sp, sp, 8);
 
-  CHECK_EQ(0, assm.UnboundLabelsCount());
+    CHECK_EQ(0, assm.UnboundLabelsCount());
+  };
+  auto f = AssembleCode<F1>(fn);
 
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-#ifdef OBJECT_PRINT
-  code->Print(std::cout);
-#endif
-  auto f = GeneratedCode<F1>::FromCode(*code);
   for (int i = 0; i < kNumCases; ++i) {
     int64_t res = reinterpret_cast<int64_t>(f.Call(i, 0, 0, 0, 0));
-    ::printf("f(%d) = %" PRId64 "\n", i, res);
     CHECK_EQ(values[i], static_cast<int>(res));
   }
 }
@@ -1725,57 +1402,48 @@ TEST(jump_tables2) {
   CcTest::InitializeVM();
   Isolate* isolate = CcTest::i_isolate();
   HandleScope scope(isolate);
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
 
   const int kNumCases = 128;
   int values[kNumCases];
   isolate->random_number_generator()->NextBytes(values, sizeof(values));
-  Label labels[kNumCases];
+  Label labels[kNumCases], done, dispatch;
 
-  __ addi(sp, sp, -8);
-  __ Sd(ra, MemOperand(sp));
+  auto fn = [&labels, &done, &dispatch, values](MacroAssembler& assm) {
+    __ addi(sp, sp, -8);
+    __ Sd(ra, MemOperand(sp));
+    __ j(&dispatch);
 
-  Label done, dispatch;
-  __ j(&dispatch);
-
-  for (int i = 0; i < kNumCases; ++i) {
-    __ bind(&labels[i]);
-    __ lui(a0, (values[i] + 0x800) >> 12);
-    __ addi(a0, a0, (values[i] << 20 >> 20));
-    __ j(&done);
-  }
-
-  __ Align(8);
-  __ bind(&dispatch);
-  {
-    __ BlockTrampolinePoolFor(kNumCases * 2 + 6);
-
-    __ auipc(ra, 0);
-    __ slli(t3, a0, 3);
-    __ add(t3, t3, ra);
-    __ Ld(t3, MemOperand(t3, 6 * kInstrSize));
-    __ jr(t3);
-    __ nop();  // For 16-byte alignment
     for (int i = 0; i < kNumCases; ++i) {
-      __ dd(&labels[i]);
+      __ bind(&labels[i]);
+      __ lui(a0, (values[i] + 0x800) >> 12);
+      __ addi(a0, a0, (values[i] << 20 >> 20));
+      __ j(&done);
     }
-  }
 
-  __ bind(&done);
-  __ Ld(ra, MemOperand(sp));
-  __ addi(sp, sp, 8);
-  __ jr(ra);
+    __ Align(8);
+    __ bind(&dispatch);
 
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-#ifdef OBJECT_PRINT
-  code->Print(std::cout);
-#endif
-  auto f = GeneratedCode<F1>::FromCode(*code);
+    {
+      __ BlockTrampolinePoolFor(kNumCases * 2 + 6);
+
+      __ auipc(ra, 0);
+      __ slli(t3, a0, 3);
+      __ add(t3, t3, ra);
+      __ Ld(t3, MemOperand(t3, 6 * kInstrSize));
+      __ jr(t3);
+      __ nop();  // For 16-byte alignment
+      for (int i = 0; i < kNumCases; ++i) {
+        __ dd(&labels[i]);
+      }
+    }
+    __ bind(&done);
+    __ Ld(ra, MemOperand(sp));
+    __ addi(sp, sp, 8);
+  };
+  auto f = AssembleCode<F1>(fn);
+
   for (int i = 0; i < kNumCases; ++i) {
     int64_t res = reinterpret_cast<int64_t>(f.Call(i, 0, 0, 0, 0));
-    ::printf("f(%d) = %" PRId64 "\n", i, res);
     CHECK_EQ(values[i], res);
   }
 }
@@ -1785,7 +1453,6 @@ TEST(jump_tables3) {
   CcTest::InitializeVM();
   Isolate* isolate = CcTest::i_isolate();
   HandleScope scope(isolate);
-  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
 
   const int kNumCases = 128;
   Handle<Object> values[kNumCases];
@@ -1793,54 +1460,49 @@ TEST(jump_tables3) {
     double value = isolate->random_number_generator()->NextDouble();
     values[i] = isolate->factory()->NewHeapNumber<AllocationType::kOld>(value);
   }
-  Label labels[kNumCases];
+  Label labels[kNumCases], done, dispatch;
   Object obj;
   int64_t imm64;
 
-  __ addi(sp, sp, -8);
-  __ Sd(ra, MemOperand(sp));
+  auto fn = [&labels, &done, &dispatch, values, &obj,
+             &imm64](MacroAssembler& assm) {
+    __ addi(sp, sp, -8);
+    __ Sd(ra, MemOperand(sp));
 
-  Label done, dispatch;
-  __ j(&dispatch);
+    __ j(&dispatch);
 
-  for (int i = 0; i < kNumCases; ++i) {
-    __ bind(&labels[i]);
-    obj = *values[i];
-    imm64 = obj.ptr();
-    __ nop();  // For 8 byte alignment
-    __ RV_li(a0, imm64);
-    __ nop();  // For 8 byte alignment
-    __ j(&done);
-  }
-
-  __ Align(8);
-  __ bind(&dispatch);
-  {
-    __ BlockTrampolinePoolFor(kNumCases * 2 + 6);
-
-    __ auipc(ra, 0);
-    __ slli(t3, a0, 3);
-    __ add(t3, t3, ra);
-    __ Ld(t3, MemOperand(t3, 6 * kInstrSize));
-    __ jr(t3);
-    __ nop();  // For 16-byte alignment
     for (int i = 0; i < kNumCases; ++i) {
-      __ dd(&labels[i]);
+      __ bind(&labels[i]);
+      obj = *values[i];
+      imm64 = obj.ptr();
+      __ nop();  // For 8 byte alignment
+      __ RV_li(a0, imm64);
+      __ nop();  // For 8 byte alignment
+      __ j(&done);
     }
-  }
 
-  __ bind(&done);
-  __ Ld(ra, MemOperand(sp));
-  __ addi(sp, sp, 8);
-  __ jr(ra);
+    __ Align(8);
+    __ bind(&dispatch);
+    {
+      __ BlockTrampolinePoolFor(kNumCases * 2 + 6);
 
-  CodeDesc desc;
-  assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
-#ifdef OBJECT_PRINT
-  code->Print(std::cout);
-#endif
-  auto f = GeneratedCode<F1>::FromCode(*code);
+      __ auipc(ra, 0);
+      __ slli(t3, a0, 3);
+      __ add(t3, t3, ra);
+      __ Ld(t3, MemOperand(t3, 6 * kInstrSize));
+      __ jr(t3);
+      __ nop();  // For 16-byte alignment
+      for (int i = 0; i < kNumCases; ++i) {
+        __ dd(&labels[i]);
+      }
+    }
+
+    __ bind(&done);
+    __ Ld(ra, MemOperand(sp));
+    __ addi(sp, sp, 8);
+  };
+  auto f = AssembleCode<F1>(fn);
+
   for (int i = 0; i < kNumCases; ++i) {
     Handle<Object> result(
         Object(reinterpret_cast<Address>(f.Call(i, 0, 0, 0, 0))), isolate);
