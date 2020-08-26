@@ -1149,15 +1149,17 @@ void TurboAssembler::GenerateSwitchTable(Register index, size_t case_count,
                          kSwitchTablePrologueSize);
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
+  Register scratch2 = temps.Acquire();
+  DCHECK(scratch2 != scratch);
 
   Align(8);
   // Load the address from the jump table at index and jump to it
   auipc(scratch, 0);                  // Load the current PC into scratch
-  slli(t5, index, kPointerSizeLog2);  // t5 = offset of indexth entry
-  add(t5, t5, scratch);        // t5 = (saved PC) + (offset of indexth entry)
-  ld(t5, t5, 6 * kInstrSize);  // Add the size of these 6 instructions to the
+  slli(scratch2, index, kPointerSizeLog2);  // scratch2 = offset of indexth entry
+  add(scratch2, scratch2, scratch);        // scratch2 = (saved PC) + (offset of indexth entry)
+  ld(scratch2, scratch2, 6 * kInstrSize);  // Add the size of these 6 instructions to the
                                // offset, then load
-  jr(t5);                      // Jump to the address loaded from the table
+  jr(scratch2);                      // Jump to the address loaded from the table
   nop();                       // For 16-byte alignment
   for (size_t index = 0; index < case_count; ++index) {
     dd(GetLabelFunction(index));
