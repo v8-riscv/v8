@@ -204,7 +204,7 @@ void Assembler::AllocateAndInstallRequestedHeapObjects(Isolate* isolate) {
 Assembler::Assembler(const AssemblerOptions& options,
                      std::unique_ptr<AssemblerBuffer> buffer)
     : AssemblerBase(options, std::move(buffer)),
-      scratch_register_list_(t3.bit()),
+      scratch_register_list_(t3.bit() | t5.bit() | t6.bit()),
       constpool_(this){
   reloc_info_writer.Reposition(buffer_start_ + buffer_->size(), pc_);
 
@@ -2206,7 +2206,9 @@ void Assembler::CheckTrampolinePool() {
       DEBUG_PRINTF("inserting trampoline pool at %p (%d)\n",
                    reinterpret_cast<Instr*>(buffer_start_ + pc_offset()),
                    pc_offset());
+      UseScratchRegisterScope temps(this);
       BlockTrampolinePoolScope block_trampoline_pool(this);
+      Register scratch = temps.Acquire();
       Label after_pool;
       j(&after_pool);
 
@@ -2217,8 +2219,8 @@ void Assembler::CheckTrampolinePool() {
         DCHECK(is_int32(imm64));
         int32_t Hi20 = (((int32_t)imm64 + 0x800) >> 12);
         int32_t Lo12 = (int32_t)imm64 << 20 >> 20;
-        auipc(t5, Hi20);  // Read PC + Hi20 into t5.
-        jr(t5, Lo12);     // jump PC + Hi20 + Lo12
+        auipc(scratch, Hi20);  // Read PC + Hi20 into t5.
+        jr(scratch, Lo12);     // jump PC + Hi20 + Lo12
       }
       // If unbound_labels_count_ is big enough, label after_pool will
       // need a trampoline too, so we must create the trampoline before
