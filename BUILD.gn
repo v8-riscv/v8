@@ -4268,6 +4268,10 @@ v8_component("v8_libbase") {
     sources += [ "src/base/ubsan.cc" ]
   }
 
+  if(v8_current_cpu == "riscv" || v8_current_cpu == "riscv64"){
+    libs += [ "atomic" ]
+  }
+
   if (is_tsan && !build_with_chromium) {
     data += [ "tools/sanitizers/tsan_suppressions.txt" ]
   }
