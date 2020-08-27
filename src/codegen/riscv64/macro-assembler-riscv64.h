@@ -216,19 +216,10 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void CallBuiltinByIndex(Register builtin_index) override;
 
   void LoadCodeObjectEntry(Register destination,
-                           Register code_object) override {
-    // TODO(RISCV): Implement.
-    UNIMPLEMENTED();
-  }
-  void CallCodeObject(Register code_object) override {
-    // TODO(RISCV): Implement.
-    UNIMPLEMENTED();
-  }
-  void JumpCodeObject(Register code_object) override {
-    // TODO(RISCV): Implement.
-    UNIMPLEMENTED();
-  }
-
+                           Register code_object) override;
+  void CallCodeObject(Register code_object) override;
+  void JumpCodeObject(Register code_object) override;
+  
   // Generates an instruction sequence s.t. the return address points to the
   // instruction following the call.
   // The return address on the stack is used by frame iteration.
