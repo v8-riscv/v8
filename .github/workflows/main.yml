@@ -35,6 +35,11 @@ jobs:
     - name: Install build dependencies
       run: (cd v8 && ./build/install-build-deps.sh --no-prompt --no-arm)
 
+    - name: Checkout the matching tag
+      run: |
+        (cd v8 && git checkout 8.6.337)
+        (cd v8 && gclient sync --with_branch_heads --with_tags)
+
     - name: Checkout this branch
       uses: actions/checkout@v2
       with:
