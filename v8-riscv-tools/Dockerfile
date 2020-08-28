@@ -6,7 +6,7 @@ FROM ubuntu:bionic as v8-base
 
 ARG repo=v8-riscv/v8
 ENV GITHUB_REPOSITORY=$repo
-ARG sha_or_branch=riscv-porting-dev
+ARG sha_or_branch=riscv64
 ENV GITHUB_SHA=$sha_or_branch
 
 RUN apt-get update && apt-get upgrade -yqq
@@ -25,9 +25,6 @@ RUN git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
 ENV PATH="/depot_tools:${PATH}"
 
 RUN fetch v8
-# For now, checkout this older version to avoid compatibility issues
-RUN (cd /v8 && git checkout 8.1.268)
-RUN (cd /v8/third_party/icu && git checkout dbd3825b31041d782c5b504c59dcfb5ac7dda08c)
 
 RUN (cd /v8 && ./build/install-build-deps.sh --no-prompt --no-arm)
 
@@ -39,6 +36,7 @@ RUN (cd /v8 && \
     git fetch riscv && \
     git checkout ${GITHUB_SHA})
 
+RUN (cd /v8 && gclient sync --with_branch_heads --with_tags)
 RUN cp /v8/patches/build.patch /v8/build/
 RUN (cd /v8/build && git apply build.patch)
 RUN (cd /v8 && \
