@@ -1930,12 +1930,6 @@ I_TYPE Simulator::RoundF2IHelper(F_TYPE original, int rmode) {
     }
   }
 
-  // FIXME (RISCV): comparison of rounded (float) and max_i (integer) may not
-  // be precise because max_i is promoted to floating point during comparison.
-  // Rounding up may happen when converting max_i to floating-point, e.g.,
-  // max<uint64> is 9223372036854775807 vs. (double)max<uint64> is
-  // 9223372036854775808.00000000000000
-
   // Since integer max values are either all 1s (for unsigned) or all 1s
   // except for sign-bit (for signed), they cannot be represented precisely in
   // floating point, in order to precisely tell whether the rounded floating
