@@ -216,7 +216,7 @@ void RegExpMacroAssemblerRISCV::CheckGreedyLoop(Label* on_equal) {
 }
 
 void RegExpMacroAssemblerRISCV::CheckNotBackReferenceIgnoreCase(
-    int start_reg, bool read_backward, bool unicode, Label* on_no_match) {
+    int start_reg, bool read_backward, Label* on_no_match) {
   Label fallthrough;
   __ Ld(a0, register_location(start_reg));      // Index of start of capture.
   __ Ld(a1, register_location(start_reg + 1));  // Index of end of capture.
@@ -331,10 +331,7 @@ void RegExpMacroAssemblerRISCV::CheckNotBackReferenceIgnoreCase(
     {
       AllowExternalCallThatCantCauseGC scope(masm_);
       ExternalReference function =
-          unicode ? ExternalReference::re_case_insensitive_compare_unicode(
-                        isolate())
-                  : ExternalReference::re_case_insensitive_compare_non_unicode(
-                        isolate());
+          ExternalReference::re_case_insensitive_compare_uc16(masm_->isolate());
       __ CallCFunction(function, argument_count);
     }
 
@@ -912,7 +909,7 @@ Handle<HeapObject> RegExpMacroAssemblerRISCV::GetCode(Handle<String> source) {
   CodeDesc code_desc;
   masm_->GetCode(isolate(), &code_desc);
   Handle<Code> code =
-      Factory::CodeBuilder(isolate(), code_desc, CodeKind::REGEXP)
+      Factory::CodeBuilder(isolate(), code_desc, Code::REGEXP)
           .set_self_reference(masm_->CodeObject())
           .Build();
   LOG(masm_->isolate(),

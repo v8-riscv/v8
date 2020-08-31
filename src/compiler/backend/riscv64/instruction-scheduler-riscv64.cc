@@ -280,12 +280,12 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvS16x8PackOdd:
     case kRiscvS16x2Reverse:
     case kRiscvS16x4Reverse:
-    case kRiscvV8x16AllTrue:
-    case kRiscvV8x16AnyTrue:
-    case kRiscvV32x4AllTrue:
-    case kRiscvV32x4AnyTrue:
-    case kRiscvV16x8AllTrue:
-    case kRiscvV16x8AnyTrue:
+    case kRiscvS1x16AllTrue:
+    case kRiscvS1x16AnyTrue:
+    case kRiscvS1x4AllTrue:
+    case kRiscvS1x4AnyTrue:
+    case kRiscvS1x8AllTrue:
+    case kRiscvS1x8AnyTrue:
     case kRiscvS32x4InterleaveEven:
     case kRiscvS32x4InterleaveOdd:
     case kRiscvS32x4InterleaveLeft:
