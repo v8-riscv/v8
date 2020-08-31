@@ -193,42 +193,42 @@ const int kPredOrderShift = 24;
 const int kSuccOrderShift = 20;
 
 // RISCV Instruction bit masks
-const int kBaseOpcodeMask = ((1 << kBaseOpcodeBits) - 1) << kBaseOpcodeShift;
-const int kFunct3Mask = ((1 << kFunct3Bits) - 1) << kFunct3Shift;
-const int kFunct5Mask = ((1 << kFunct5Bits) - 1) << kFunct5Shift;
-const int kFunct7Mask = ((1 << kFunct7Bits) - 1) << kFunct7Shift;
-const int kFunct2Mask = 0b11 << kFunct7Shift;
-const int kRTypeMask = kBaseOpcodeMask | kFunct3Mask | kFunct7Mask;
-const int kRATypeMask = kBaseOpcodeMask | kFunct3Mask | kFunct5Mask;
-const int kRFPTypeMask = kBaseOpcodeMask | kFunct7Mask;
-const int kR4TypeMask = kBaseOpcodeMask | kFunct3Mask | kFunct2Mask;
-const int kITypeMask = kBaseOpcodeMask | kFunct3Mask;
-const int kSTypeMask = kBaseOpcodeMask | kFunct3Mask;
-const int kBTypeMask = kBaseOpcodeMask | kFunct3Mask;
-const int kUTypeMask = kBaseOpcodeMask;
-const int kJTypeMask = kBaseOpcodeMask;
-const int kRs1FieldMask = ((1 << kRs1Bits) - 1) << kRs1Shift;
-const int kRs2FieldMask = ((1 << kRs2Bits) - 1) << kRs2Shift;
-const int kRs3FieldMask = ((1 << kRs3Bits) - 1) << kRs3Shift;
-const int kRdFieldMask = ((1 << kRdBits) - 1) << kRdShift;
-const int kBImm12Mask = kFunct7Mask | kRdFieldMask;
-const int kImm20Mask = ((1 << kImm20Bits) - 1) << kImm20Shift;
-const int kImm12Mask = ((1 << kImm12Bits) - 1) << kImm12Shift;
+const uint32_t kBaseOpcodeMask = ((1 << kBaseOpcodeBits) - 1) << kBaseOpcodeShift;
+const uint32_t kFunct3Mask = ((1 << kFunct3Bits) - 1) << kFunct3Shift;
+const uint32_t kFunct5Mask = ((1 << kFunct5Bits) - 1) << kFunct5Shift;
+const uint32_t kFunct7Mask = ((1 << kFunct7Bits) - 1) << kFunct7Shift;
+const uint32_t kFunct2Mask = 0b11 << kFunct7Shift;
+const uint32_t kRTypeMask = kBaseOpcodeMask | kFunct3Mask | kFunct7Mask;
+const uint32_t kRATypeMask = kBaseOpcodeMask | kFunct3Mask | kFunct5Mask;
+const uint32_t kRFPTypeMask = kBaseOpcodeMask | kFunct7Mask;
+const uint32_t kR4TypeMask = kBaseOpcodeMask | kFunct3Mask | kFunct2Mask;
+const uint32_t kITypeMask = kBaseOpcodeMask | kFunct3Mask;
+const uint32_t kSTypeMask = kBaseOpcodeMask | kFunct3Mask;
+const uint32_t kBTypeMask = kBaseOpcodeMask | kFunct3Mask;
+const uint32_t kUTypeMask = kBaseOpcodeMask;
+const uint32_t kJTypeMask = kBaseOpcodeMask;
+const uint32_t kRs1FieldMask = ((1 << kRs1Bits) - 1) << kRs1Shift;
+const uint32_t kRs2FieldMask = ((1 << kRs2Bits) - 1) << kRs2Shift;
+const uint32_t kRs3FieldMask = ((1 << kRs3Bits) - 1) << kRs3Shift;
+const uint32_t kRdFieldMask = ((1 << kRdBits) - 1) << kRdShift;
+const uint32_t kBImm12Mask = kFunct7Mask | kRdFieldMask;
+const uint32_t kImm20Mask = ((1 << kImm20Bits) - 1) << kImm20Shift;
+const uint32_t kImm12Mask = ((1 << kImm12Bits) - 1) << kImm12Shift;
 
 // RISCV CSR related bit mask and shift
-const int kFcsrFlagsBits = 5;
-const int kFcsrFlagsMask = (1 << kFcsrFlagsBits) - 1;
-const int kFcsrFrmBits = 3;
-const int kFcsrFrmShift = kFcsrFlagsBits;
-const int kFcsrFrmMask = ((1 << kFcsrFrmBits) - 1) << kFcsrFrmShift;
-const int kFcsrBits = kFcsrFlagsBits + kFcsrFrmBits;
-const int kFcsrMask = kFcsrFlagsMask | kFcsrFrmMask;
+const uint32_t kFcsrFlagsBits = 5;
+const uint32_t kFcsrFlagsMask = (1 << kFcsrFlagsBits) - 1;
+const uint32_t kFcsrFrmBits = 3;
+const uint32_t kFcsrFrmShift = kFcsrFlagsBits;
+const uint32_t kFcsrFrmMask = ((1 << kFcsrFrmBits) - 1) << kFcsrFrmShift;
+const uint32_t kFcsrBits = kFcsrFlagsBits + kFcsrFrmBits;
+const uint32_t kFcsrMask = kFcsrFlagsMask | kFcsrFrmMask;
 
 // Original MIPS constants
 // FIXME (RISCV): to be cleaned up
-const int kImm16Shift = 0;
-const int kImm16Bits = 16;
-const int kImm16Mask = ((1 << kImm16Bits) - 1) << kImm16Shift;
+const uint32_t kImm16Shift = 0;
+const uint32_t kImm16Bits = 16;
+const uint32_t kImm16Mask = ((1 << kImm16Bits) - 1) << kImm16Shift;
 // end of FIXME (RISCV): to be cleaned up
 
 // ----- RISCV Base Opcodes

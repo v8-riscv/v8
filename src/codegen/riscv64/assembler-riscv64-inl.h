@@ -239,11 +239,6 @@ void Assembler::emit(Instr x) {
   EmitHelper(x);
 }
 
-void Assembler::emit(uint64_t data) {
-  if (!is_buffer_growth_blocked()) CheckBuffer();
-  EmitHelper(data);
-}
-
 EnsureSpace::EnsureSpace(Assembler* assembler) { assembler->CheckBuffer(); }
 
 }  // namespace internal

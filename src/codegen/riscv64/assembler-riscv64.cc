@@ -2096,7 +2096,7 @@ void Assembler::GrowBuffer() {
                                reloc_info_writer.last_pc() + pc_delta);
 
   // Relocate runtime entries.
-  Vector<byte> instructions{buffer_start_, pc_offset()};
+  Vector<byte> instructions{buffer_start_, (size_t)pc_offset()};
   Vector<const byte> reloc_info{reloc_info_writer.pos(), reloc_size};
   for (RelocIterator it(instructions, reloc_info, 0); !it.done(); it.next()) {
     RelocInfo::Mode rmode = it.rinfo()->rmode();
