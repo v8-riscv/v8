@@ -34,7 +34,7 @@ class WasmCompileLazyFrameConstants : public TypedFrameConstants {
   // pushing SavedGPParamRegs and SavedFpParamRegs onto the stack, therefore
   // kWasmInstanceOffset is setup as such
   static constexpr int kWasmInstanceOffset = TYPED_FRAME_PUSHED_VALUE_OFFSET(
-      kNumberOfSavedGpParamRegs + kNumberOfSavedGpParamRegs);
+      kNumberOfSavedGpParamRegs + kNumberOfSavedFpParamRegs);
   static constexpr int kFixedFrameSizeFromFp =
       TypedFrameConstants::kFixedFrameSizeFromFp +
       kNumberOfSavedGpParamRegs * kPointerSize +
