@@ -36,7 +36,6 @@
 .torquelint-cache
 .vscode
 /_*
-/base
 /build
 /buildtools
 /check-header-includes
@@ -67,7 +66,6 @@
 !/third_party/colorama
 /third_party/colorama/src
 !/third_party/googletest
-/third_party/googletest/src
 !/third_party/v8
 !/third_party/wasm-api
 /tools/clang
