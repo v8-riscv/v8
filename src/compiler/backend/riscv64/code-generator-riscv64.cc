@@ -741,25 +741,12 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       break;
     case kArchCallCFunction: {
       int const num_parameters = MiscField::decode(instr->opcode());
-      Label start_call;
+      Label after_call;
       bool isWasmCapiFunction =
           linkage()->GetIncomingDescriptor()->IsWasmCapiFunction();
-      // from start_call to return address.
-      // FIXME (RISC_V): is the same number of instructions generated from
-      // &start_call to after __CallCFunction()? This code seems quite brittle.
-      // Better to use label and PC-relative addressing to generate the return
-      // address
-      int offset = __ root_array_available() ? 64 : 72;
-#if V8_HOST_ARCH_RISCV64
-      if (__ emit_debug_code()) {
-        offset += 16;
-      }
-#endif
       if (isWasmCapiFunction) {
         // Put the return address in a stack slot.
-        __ bind(&start_call);
-        __ auipc(kScratchReg, 0);
-        __ Add64(kScratchReg, kScratchReg, offset);
+        __ LoadAddress(kScratchReg, &after_call);
         __ Sd(kScratchReg,
               MemOperand(fp, WasmExitFrameConstants::kCallingPCOffset));
       }
@@ -770,8 +757,8 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
         Register func = i.InputRegister(0);
         __ CallCFunction(func, num_parameters);
       }
+      __ bind(&after_call);
       if (isWasmCapiFunction) {
-        CHECK_EQ(offset, __ SizeOfCodeGeneratedSince(&start_call));
         RecordSafepoint(instr->reference_map(), Safepoint::kNoLazyDeopt);
       }
 
