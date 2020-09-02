@@ -204,7 +204,8 @@ void Assembler::AllocateAndInstallRequestedHeapObjects(Isolate* isolate) {
 Assembler::Assembler(const AssemblerOptions& options,
                      std::unique_ptr<AssemblerBuffer> buffer)
     : AssemblerBase(options, std::move(buffer)),
-      scratch_register_list_(t3.bit()) {
+      scratch_register_list_(t3.bit()),
+      constpool_(this){
   reloc_info_writer.Reposition(buffer_start_ + buffer_->size(), pc_);
 
   last_trampoline_pool_end_ = 0;
@@ -226,6 +227,8 @@ Assembler::Assembler(const AssemblerOptions& options,
 void Assembler::GetCode(Isolate* isolate, CodeDesc* desc,
                         SafepointTableBuilder* safepoint_table_builder,
                         int handler_table_offset) {
+  ForceConstantPoolEmissionWithoutJump();
+
   int code_comments_size = WriteCodeComments();
 
   DCHECK(pc_ <= reloc_info_writer.pos());  // No overlap.
@@ -311,6 +314,11 @@ bool Assembler::IsAddi(Instr instr) {
 bool Assembler::IsSlli(Instr instr) {
   return (instr & (kBaseOpcodeMask | kFunct3Mask)) == RO_SLLI;
 }
+
+bool Assembler::IsLd(Instr instr) {
+  return (instr & (kBaseOpcodeMask | kFunct3Mask)) == RO_LD;
+}
+
 int Assembler::target_at(int pos, bool is_internal) {
   if (is_internal) {
     int64_t* p = reinterpret_cast<int64_t*>(buffer_start_ + pos);
@@ -398,6 +406,13 @@ static inline Instr SetBranchOffset(int32_t pos, int32_t target_pos,
                   ((imm & 0x1000) << 19);  // bit 12
 
   return instr | (imm12 & kBImm12Mask);
+}
+
+static inline Instr SetLdOffset(int32_t offset, Instr instr) {
+  DCHECK(is_int12(offset));
+  instr &= ~kImm12Mask;
+  int32_t imm12 = offset << kImm12Shift;
+  return instr | (imm12 & kImm12Mask);
 }
 
 static inline Instr SetJalOffset(int32_t pos, int32_t target_pos, Instr instr) {
@@ -603,6 +618,12 @@ int Assembler::BrachlongOffset(Instr auipc, Instr jalr) {
   int32_t imm_jalr = jalr >> 20;
   int32_t offset = imm_jalr + imm_auipc;
   return offset;
+}
+
+int Assembler::LdOffset(Instr instr) {
+  int32_t imm12 = (instr & kImm12Mask) >> 20;
+  imm12 = imm12 << 12 >> 12;
+  return imm12;
 }
 
 // We have to use a temporary register for things that can be relocated even
@@ -2209,6 +2230,29 @@ void Assembler::CheckTrampolinePool() {
   return;
 }
 
+  void Assembler::set_target_address_at(
+      Address pc, Address constant_pool, Address target,
+      ICacheFlushMode icache_flush_mode) {
+    Instr* instr = reinterpret_cast<Instr*>(pc);
+    if (IsLd(*instr)) {
+      Memory<Address>(LdOffset(*instr) + pc - kInstrSize) = target;
+      if (icache_flush_mode != SKIP_ICACHE_FLUSH) {
+        FlushInstructionCache(LdOffset(*instr) + pc, 2 * kInstrSize);
+      }
+    } else {
+      set_target_address_at(pc, target, icache_flush_mode);
+    }
+  }
+
+Address Assembler::target_address_at(Address pc, Address constant_pool) {
+  Instr* instr = reinterpret_cast<Instr*>(pc);
+  if (IsLd(*instr)) {
+    return Memory<Address>(LdOffset(*instr) + pc - kInstrSize);
+  } else {
+    return target_address_at(pc);
+  }
+}
+
 Address Assembler::target_address_at(Address pc) {
   DEBUG_PRINTF("target_address_at: pc: %lx\t", pc);
   Instruction* instr0 = Instruction::At((unsigned char*)pc);
@@ -2335,6 +2379,129 @@ Register UseScratchRegisterScope::Acquire() {
 }
 
 bool UseScratchRegisterScope::hasAvailable() const { return *available_ != 0; }
+
+bool Assembler::IsConstantPoolAt(Instruction* instr) {
+  // The constant pool marker is made of two instructions. These instructions
+  // will never be emitted by the JIT, so checking for the first one is enough:
+  // 0: ld x0, t3, #offset
+  Instr instr_value = *reinterpret_cast<Instr*>(instr);
+
+  bool result = IsLd(instr_value) && (instr->RdValue() == kRegCode_zero_reg);
+  // It is still worth asserting the marker is complete.
+  // 4: j 0
+  Instruction* instr_fllowing = instr + kInstrSize;
+  DCHECK(!result || (IsJal(*reinterpret_cast<Instr*>(instr_fllowing)) &&
+                     instr_fllowing->Imm20JValue() == 0 &&
+                     instr_fllowing->RdValue() == kRegCode_zero_reg));
+
+  return result;
+}
+
+int Assembler::ConstantPoolSizeAt(Instruction* instr) {
+  if (IsConstantPoolAt(instr)) {
+    return instr->Imm12Value();
+  } else {
+    return -1;
+  }
+}
+
+void Assembler::RecordConstPool(int size) {
+  // We only need this for debugger support, to correctly compute offsets in the
+  // code.
+  Assembler::BlockPoolsScope block_pools(this);
+  RecordRelocInfo(RelocInfo::CONST_POOL, static_cast<intptr_t>(size));
+}
+
+void Assembler::EmitPoolGuard() {
+  // We must generate only one instruction as this is used in scopes that
+  // control the size of the code generated.
+  j(0);
+}
+
+// Constant Pool
+
+void ConstantPool::EmitPrologue(Alignment require_alignment) {
+  // Recorded constant pool size is expressed in number of 32-bits words,
+  // and includes prologue and alignment, but not the jump around the pool
+  // and the size of the marker itself.
+  const int marker_size = 1;
+  int word_count =
+      ComputeSize(Jump::kOmitted, require_alignment) / kInt32Size - marker_size;
+  assm_->ld(zero_reg, zero_reg, word_count);
+  assm_->EmitPoolGuard();
+}
+
+int ConstantPool::PrologueSize(Jump require_jump) const {
+  // Prologue is:
+  //   j   over  ;; if require_jump
+  //   ld x0, t3, #pool_size
+  //   j xzr
+  int prologue_size = require_jump == Jump::kRequired ? kInstrSize : 0;
+  prologue_size += 2 * kInstrSize;
+  return prologue_size;
+}
+
+void ConstantPool::SetLoadOffsetToConstPoolEntry(int load_offset,
+                                                 Instruction* entry_offset,
+                                                 const ConstantPoolKey& key) {
+  Instr instr = assm_->instr_at(load_offset);
+  // Instruction to patch must be 'ld t3, t3, offset' with offset == kInstrSize.
+  DCHECK(assm_->IsLd(instr));
+  int32_t offset = assm_->LdOffset(instr);
+  DCHECK_EQ(offset, kInstrSize);
+  int32_t distance = static_cast<int32_t>(reinterpret_cast<Address>(entry_offset) -
+                     reinterpret_cast<Address>(assm_->toAddress(load_offset) - kInstrSize));
+  CHECK(is_int12(distance));
+  assm_->instr_at_put(load_offset, SetLdOffset(distance, instr));
+}
+
+void ConstantPool::Check(Emission force_emit, Jump require_jump,
+                         size_t margin) {
+  // Some short sequence of instruction must not be broken up by constant pool
+  // emission, such sequences are protected by a ConstPool::BlockScope.
+  if (IsBlocked()) {
+    // Something is wrong if emission is forced and blocked at the same time.
+    DCHECK_EQ(force_emit, Emission::kIfNeeded);
+    return;
+  }
+
+  // We emit a constant pool only if :
+  //  * it is not empty
+  //  * emission is forced by parameter force_emit (e.g. at function end).
+  //  * emission is mandatory or opportune according to {ShouldEmitNow}.
+  if (!IsEmpty() && (force_emit == Emission::kForced ||
+                     ShouldEmitNow(require_jump, margin))) {
+    // Emit veneers for branches that would go out of range during emission of
+    // the constant pool.
+    int worst_case_size = ComputeSize(Jump::kRequired, Alignment::kRequired);
+
+    // Check that the code buffer is large enough before emitting the constant
+    // pool (this includes the gap to the relocation information).
+    int needed_space = worst_case_size + assm_->kGap;
+    int64_t space = assm_->buffer_space();
+    while (space <= needed_space) {
+      assm_->GrowBuffer();
+    }
+
+    EmitAndClear(require_jump);
+  }
+  // Since a constant pool is (now) empty, move the check offset forward by
+  // the standard interval.
+  SetNextCheckIn(ConstantPool::kCheckInterval);
+}
+
+// Pool entries are accessed with pc relative load therefore this cannot be more
+// than 4 * KB. Since constant pool emission checks are interval based, and we
+// want to keep entries close to the code, we try to emit every 1KB.
+const size_t ConstantPool::kMaxDistToPool32 = 4 * KB;
+const size_t ConstantPool::kMaxDistToPool64 = 4 * KB;
+const size_t ConstantPool::kCheckInterval = 128 * kInstrSize;
+const size_t ConstantPool::kApproxDistToPool32 = 1 * KB;
+const size_t ConstantPool::kApproxDistToPool64 = kApproxDistToPool32;
+
+const size_t ConstantPool::kOpportunityDistToPool32 = 1 * KB;
+const size_t ConstantPool::kOpportunityDistToPool64 = 1 * KB;
+const size_t ConstantPool::kApproxMaxEntryCount = 64;
 
 }  // namespace internal
 }  // namespace v8
