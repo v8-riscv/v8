@@ -2514,6 +2514,7 @@ void TurboAssembler::Branch(Label* L, Condition cond, Register rs,
         bind(&skip);
       } else {
         BranchLong(L);
+        EmitConstPoolWithJumpIfNeeded();
       }
     }
   } else {
@@ -2526,6 +2527,7 @@ void TurboAssembler::Branch(Label* L, Condition cond, Register rs,
         bind(&skip);
       } else {
         BranchLong(L);
+        EmitConstPoolWithJumpIfNeeded();
       }
     } else {
       BranchShort(L, cond, rs, rt);
@@ -2604,6 +2606,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
       case cc_always:
         if (!CalculateOffset(L, &offset, OffsetSize::kOffset21)) return false;
         j(offset);
+        EmitConstPoolWithJumpIfNeeded();
         break;
       case eq:
         // rs == rt
@@ -2906,6 +2909,7 @@ void TurboAssembler::Jump(intptr_t target, RelocInfo::Mode rmode,
     BlockTrampolinePoolScope block_trampoline_pool(this);
     li(t6, Operand(target, rmode));
     Jump(t6, al, zero_reg, Operand(zero_reg));
+    EmitConstPoolWithJumpIfNeeded();
     bind(&skip);
   }
 }
@@ -3592,14 +3596,18 @@ void MacroAssembler::JumpToExternalReference(const ExternalReference& builtin,
 }
 
 void MacroAssembler::JumpToInstructionStream(Address entry) {
-  li(kOffHeapTrampolineRegister, Operand(entry, RelocInfo::OFF_HEAP_TARGET));
+  //Ld a Address from a constant pool.
+  auipc(kOffHeapTrampolineRegister, 0);
+  //Record a value into constant pool.
+  RecordEntry(entry, RelocInfo::OFF_HEAP_TARGET);
+  RecordRelocInfo(RelocInfo::OFF_HEAP_TARGET, entry);
+  ld(kOffHeapTrampolineRegister, kOffHeapTrampolineRegister, kInstrSize);
   Jump(kOffHeapTrampolineRegister);
 }
 
 void MacroAssembler::LoadWeakValue(Register out, Register in,
                                    Label* target_if_cleared) {
   Branch(target_if_cleared, eq, in, Operand(kClearedWeakHeapObjectLower32));
-
   And(out, in, Operand(~kWeakHeapObjectMask));
 }
 
