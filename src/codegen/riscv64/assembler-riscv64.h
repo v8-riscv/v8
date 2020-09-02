@@ -45,6 +45,7 @@
 #include "src/codegen/label.h"
 #include "src/codegen/riscv64/constants-riscv64.h"
 #include "src/codegen/riscv64/register-riscv64.h"
+#include "src/codegen/constant-pool.h"
 #include "src/objects/contexts.h"
 #include "src/objects/smi.h"
 
@@ -152,7 +153,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   explicit Assembler(const AssemblerOptions&,
                      std::unique_ptr<AssemblerBuffer> = {});
 
-  virtual ~Assembler() {}
+  virtual ~Assembler() { CHECK(constpool_.IsEmpty()); }
 
   // GetCode emits any pending (non-emitted) code and fills the descriptor desc.
   static constexpr int kNoHandlerTable = 0;
@@ -197,11 +198,12 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   bool is_near(Label* L);
   bool is_near(Label* L, OffsetSize bits);
   bool is_near_branch(Label* L);
-  
-  //Get offset from instr.
+
+  // Get offset from instr.
   int BranchOffset(Instr instr);
   int BrachlongOffset(Instr auipc, Instr jalr);
   int JumpOffset(Instr instr);
+  static int LdOffset(Instr instr);
 
   // Returns the branch offset to the given label from the current code
   // position. Links the label to the current position if it is still unbound.
@@ -229,16 +231,17 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
       ICacheFlushMode icache_flush_mode = FLUSH_ICACHE_IF_NEEDED) {
     set_target_value_at(pc, target, icache_flush_mode);
   }
-  // On RISC-V there is no Constant Pool so we skip that parameter.
-  V8_INLINE static Address target_address_at(Address pc,
-                                             Address constant_pool) {
-    return target_address_at(pc);
-  }
-  V8_INLINE static void set_target_address_at(
+
+  static Address target_address_at(Address pc, Address constant_pool);
+
+  static void set_target_address_at(
       Address pc, Address constant_pool, Address target,
-      ICacheFlushMode icache_flush_mode = FLUSH_ICACHE_IF_NEEDED) {
-    set_target_address_at(pc, target, icache_flush_mode);
-  }
+      ICacheFlushMode icache_flush_mode = FLUSH_ICACHE_IF_NEEDED);
+
+  static bool IsConstantPoolAt(Instruction* instr);
+  static int ConstantPoolSizeAt(Instruction* instr);
+  // See Assembler::CheckConstPool for more info.
+  void EmitPoolGuard();
 
   static void set_target_value_at(
       Address pc, uint64_t target,
@@ -641,6 +644,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   // TODO: Replace uses of ToRegister with names once they are properly defined
   void j(int32_t imm21) { jal(zero_reg, imm21); }
   inline void j(Label* L) { j(jump_offset(L)); }
+  inline void b(Label* L) { j(L); }
   void jal(int32_t imm21) { jal(ToRegister(1), imm21); }
   inline void jal(Label* L) { jal(jump_offset(L)); }
   void jr(Register rs) { jalr(zero_reg, rs, 0); }
@@ -701,18 +705,25 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   int InstructionsGeneratedSince(Label* label) {
     return SizeOfCodeGeneratedSince(label) / kInstrSize;
   }
-
+  
+  using BlockConstPoolScope = ConstantPool::BlockScope;
   // Class for scoping postponing the trampoline pool generation.
   class BlockTrampolinePoolScope {
    public:
-    explicit BlockTrampolinePoolScope(Assembler* assem) : assem_(assem) {
+    explicit BlockTrampolinePoolScope(Assembler* assem, int margin = 0)
+        : assem_(assem), block_const_pool_(assem, margin) {
+      assem_->StartBlockTrampolinePool();
+    }
+
+    explicit BlockTrampolinePoolScope(Assembler* assem, PoolEmissionCheck check)
+        : assem_(assem), block_const_pool_(assem, check) {
       assem_->StartBlockTrampolinePool();
     }
     ~BlockTrampolinePoolScope() { assem_->EndBlockTrampolinePool(); }
 
    private:
     Assembler* assem_;
-
+    BlockConstPoolScope block_const_pool_;
     DISALLOW_IMPLICIT_CONSTRUCTORS(BlockTrampolinePoolScope);
   };
 
@@ -749,6 +760,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void dp(uintptr_t data) { dq(data); }
   void dd(Label* label);
 
+  Instruction* pc() const { return reinterpret_cast<Instruction*>(pc_); }
+
   // Postpone the generation of the trampoline pool for the specified number of
   // instructions.
   void BlockTrampolinePoolFor(int instructions);
@@ -775,6 +788,10 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     *reinterpret_cast<Instr*>(buffer_start_ + pos) = instr;
   }
 
+  Address toAddress(int pos) {
+    return reinterpret_cast<Address>(buffer_start_ + pos);
+  }
+
   // Check if an instruction is a branch of some kind.
   static bool IsBranch(Instr instr);
   static bool IsJump(Instr instr);
@@ -785,6 +802,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   static bool IsAddiw(Instr instr);
   static bool IsAddi(Instr instr);
   static bool IsSlli(Instr instr);
+  static bool IsLd(Instr instr);
 
   void CheckTrampolinePool();
 
@@ -866,6 +884,30 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     if (pc_offset() >= next_buffer_check_ - extra_instructions * kInstrSize) {
       CheckTrampolinePool();
     }
+  }
+
+  using BlockPoolsScope = BlockTrampolinePoolScope;
+
+  void RecordConstPool(int size);
+
+  void ForceConstantPoolEmissionWithoutJump() {
+    constpool_.Check(Emission::kForced, Jump::kOmitted);
+  }
+  void ForceConstantPoolEmissionWithJump() {
+    constpool_.Check(Emission::kForced, Jump::kRequired);
+  }
+  // Check if the const pool needs to be emitted while pretending that {margin}
+  // more bytes of instructions have already been emitted.
+  void EmitConstPoolWithJumpIfNeeded(size_t margin = 0) {
+    constpool_.Check(Emission::kIfNeeded, Jump::kRequired, margin);
+  }
+
+  void RecordEntry(uint32_t data, RelocInfo::Mode rmode) {
+    constpool_.RecordEntry(data, rmode);
+  }
+
+  void RecordEntry(uint64_t data, RelocInfo::Mode rmode) {
+    constpool_.RecordEntry(data, rmode);
   }
 
  private:
@@ -1076,6 +1118,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   RegList scratch_register_list_;
 
  private:
+  ConstantPool constpool_;
+
   void AllocateAndInstallRequestedHeapObjects(Isolate* isolate);
 
   int WriteCodeComments();
@@ -1084,6 +1128,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   friend class RelocInfo;
   friend class BlockTrampolinePoolScope;
   friend class EnsureSpace;
+  friend class ConstantPool;
 };
 
 class EnsureSpace {
