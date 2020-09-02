@@ -211,7 +211,7 @@ int ConstantPoolBuilder::Emit(Assembler* assm) {
 
 #endif  // defined(V8_TARGET_ARCH_PPC) || defined(V8_TARGET_ARCH_PPC64)
 
-#if defined(V8_TARGET_ARCH_ARM64)
+#if defined(V8_TARGET_ARCH_ARM64) || defined(V8_TARGET_ARCH_RISCV64)
 
 // Constant Pool.
 

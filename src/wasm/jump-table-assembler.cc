@@ -325,7 +325,14 @@ bool JumpTableAssembler::EmitJumpSlot(Address target) {
 }
 
 void JumpTableAssembler::EmitFarJumpSlot(Address target) {
-  JumpToInstructionStream(target);
+  UseScratchRegisterScope temp(this);
+  Register rd = temp.Acquire();
+  auipc(rd, 0);
+  ld(rd, rd, 4 * kInstrSize);
+  Jump(rd);
+  nop();
+  dq(target);
+  //JumpToInstructionStream(target);
 }
 
 // static
