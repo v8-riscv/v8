@@ -2892,6 +2892,7 @@ void TurboAssembler::Jump(Register target, Condition cond, Register rs,
   BlockTrampolinePoolScope block_trampoline_pool(this);
   if (cond == cc_always) {
     jr(target);
+    EmitConstPoolWithJumpIfNeeded();
   } else {
     BRANCH_ARGS_CHECK(cond, rs, rt);
     Branch(kInstrSize * 2, NegateCondition(cond), rs, rt);
@@ -3093,6 +3094,9 @@ void TurboAssembler::StoreReturnAddressAndCall(Register target) {
 
 void TurboAssembler::Ret(Condition cond, Register rs, const Operand& rt) {
   Jump(ra, cond, rs, rt);
+  if(cond == al){
+    ForceConstantPoolEmissionWithoutJump();
+  }
 }
 
 void TurboAssembler::BranchLong(Label* L) {
@@ -3105,6 +3109,7 @@ void TurboAssembler::BranchLong(Label* L) {
   int32_t Lo12 = (int32_t)imm64 << 20 >> 20;
   auipc(t5, Hi20);  // Read PC + Hi20 into t5.
   jr(t5, Lo12);     // jump PC + Hi20 + Lo12
+  EmitConstPoolWithJumpIfNeeded();
 }
 
 void TurboAssembler::BranchAndLinkLong(Label* L) {
@@ -3602,11 +3607,11 @@ void MacroAssembler::JumpToExternalReference(const ExternalReference& builtin,
 
 void MacroAssembler::JumpToInstructionStream(Address entry) {
   //Ld a Address from a constant pool.
-  auipc(kOffHeapTrampolineRegister, 0);
   //Record a value into constant pool.
   RecordEntry(entry, RelocInfo::OFF_HEAP_TARGET);
   RecordRelocInfo(RelocInfo::OFF_HEAP_TARGET, entry);
-  ld(kOffHeapTrampolineRegister, kOffHeapTrampolineRegister, kInstrSize);
+  auipc(kOffHeapTrampolineRegister, 0);
+  ld(kOffHeapTrampolineRegister, kOffHeapTrampolineRegister, 0);
   Jump(kOffHeapTrampolineRegister);
 }
 
