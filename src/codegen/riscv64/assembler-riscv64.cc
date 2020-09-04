@@ -409,13 +409,22 @@ static inline Instr SetBranchOffset(int32_t pos, int32_t target_pos,
 }
 
 static inline Instr SetLdOffset(int32_t offset, Instr instr) {
+  DCHECK(Assembler::IsLd(instr));
   DCHECK(is_int12(offset));
   instr &= ~kImm12Mask;
   int32_t imm12 = offset << kImm12Shift;
   return instr | (imm12 & kImm12Mask);
 }
 
+static inline Instr SetAuipcOffset(int32_t offset, Instr instr) {
+  DCHECK(Assembler::IsAuipc(instr));
+  DCHECK(is_int20(offset));
+  instr = (instr & ~kImm31_12Mask) | ((offset & kImm19_0Mask) << 12);
+  return instr;
+}
+
 static inline Instr SetJalOffset(int32_t pos, int32_t target_pos, Instr instr) {
+  DCHECK(Assembler::IsJal(instr));
   int32_t imm = target_pos - pos;
   DCHECK_EQ(imm & 1, 0);
   DCHECK(is_intn(imm, Assembler::kJumpOffsetBits));
@@ -461,8 +470,6 @@ void Assembler::target_at_put(int pos, int target_pos, bool is_internal) {
     int32_t Hi20 = (((int32_t)offset + 0x800) >> 12);
     int32_t Lo12 = (int32_t)offset << 20 >> 20;
 
-    const int kImm31_12Mask = ((1 << 20) - 1) << 12;
-    const int kImm19_0Mask = ((1 << 20) - 1);
     instr_auipc = (instr_auipc & ~kImm31_12Mask) |
                   ((Hi20 & kImm19_0Mask) << 12);
     instr_at_put(pos, instr_auipc);
@@ -621,11 +628,17 @@ int Assembler::BrachlongOffset(Instr auipc, Instr jalr) {
 }
 
 int Assembler::LdOffset(Instr instr) {
+  DCHECK(IsLd(instr));
   int32_t imm12 = (instr & kImm12Mask) >> 20;
   imm12 = imm12 << 12 >> 12;
   return imm12;
 }
 
+int Assembler::AuipcOffset(Instr instr){
+   DCHECK(IsAuipc(instr));
+   int32_t imm20 = instr & kImm20Mask;
+   return imm20;
+}
 // We have to use a temporary register for things that can be relocated even
 // if they can be encoded in RISC-V's 12 bits of immediate-offset instruction
 // space.  There is no guarantee that the relocated location can be similarly
@@ -1071,13 +1084,11 @@ void Assembler::auipc(Register rd, int32_t imm20) {
 // Jumps
 
 void Assembler::jal(Register rd, int32_t imm21) {
-  BlockTrampolinePoolScope block_trampoline_pool(this);
   GenInstrJ(JAL, rd, imm21);
   BlockTrampolinePoolFor(1);
 }
 
 void Assembler::jalr(Register rd, Register rs1, int16_t imm12) {
-  BlockTrampolinePoolScope block_trampoline_pool(this);
   GenInstrI(0b000, JALR, rd, rs1, imm12);
   BlockTrampolinePoolFor(1);
 }
@@ -2230,14 +2241,17 @@ void Assembler::CheckTrampolinePool() {
   return;
 }
 
-  void Assembler::set_target_address_at(
-      Address pc, Address constant_pool, Address target,
+void Assembler::set_target_address_at(Address pc, Address constant_pool,
+                                      Address target,
       ICacheFlushMode icache_flush_mode) {
     Instr* instr = reinterpret_cast<Instr*>(pc);
-    if (IsLd(*instr)) {
-      Memory<Address>(LdOffset(*instr) + pc - kInstrSize) = target;
+  if (IsAuipc(*instr)) {
+    DCHECK(IsLd(*reinterpret_cast<Instr*>(pc + 4)));
+    int32_t Hi20 = AuipcOffset(*instr);
+    int32_t Lo12 = LdOffset(*reinterpret_cast<Instr*>(pc + 4));
+    Memory<Address>(pc + Hi20 + Lo12) = target;
       if (icache_flush_mode != SKIP_ICACHE_FLUSH) {
-        FlushInstructionCache(LdOffset(*instr) + pc, 2 * kInstrSize);
+      FlushInstructionCache(pc + Hi20 + Lo12, 2 * kInstrSize);
       }
     } else {
       set_target_address_at(pc, target, icache_flush_mode);
@@ -2246,8 +2260,11 @@ void Assembler::CheckTrampolinePool() {
 
 Address Assembler::target_address_at(Address pc, Address constant_pool) {
   Instr* instr = reinterpret_cast<Instr*>(pc);
-  if (IsLd(*instr)) {
-    return Memory<Address>(LdOffset(*instr) + pc - kInstrSize);
+  if (IsAuipc(*instr)) {
+    DCHECK(IsLd(*reinterpret_cast<Instr*>(pc + 4)));
+    int32_t Hi20 = AuipcOffset(*instr);
+    int32_t Lo12 = LdOffset(*reinterpret_cast<Instr*>(pc + 4));
+    return Memory<Address>(pc + Hi20 + Lo12);
   } else {
     return target_address_at(pc);
   }
@@ -2445,17 +2462,21 @@ int ConstantPool::PrologueSize(Jump require_jump) const {
 void ConstantPool::SetLoadOffsetToConstPoolEntry(int load_offset,
                                                  Instruction* entry_offset,
                                                  const ConstantPoolKey& key) {
-  Instr instr = assm_->instr_at(load_offset);
+  Instr instr_auipc = assm_->instr_at(load_offset);
+  Instr instr_ld = assm_->instr_at(load_offset + 4);
   // Instruction to patch must be 'ld t3, t3, offset' with offset == kInstrSize.
-  DCHECK(assm_->IsLd(instr));
-#ifdef DEBUG
-  int32_t offset = assm_->LdOffset(instr);
-  DCHECK_EQ(offset, kInstrSize);
-#endif
-  int32_t distance = static_cast<int32_t>(reinterpret_cast<Address>(entry_offset) -
-                     reinterpret_cast<Address>(assm_->toAddress(load_offset) - kInstrSize));
-  CHECK(is_int12(distance));
-  assm_->instr_at_put(load_offset, SetLdOffset(distance, instr));
+  DCHECK(assm_->IsAuipc(instr_auipc));
+  DCHECK(assm_->IsLd(instr_ld));
+  DCHECK_EQ(assm_->LdOffset(instr_ld), 0);
+  DCHECK_EQ(assm_->AuipcOffset(instr_auipc), 0);
+  int32_t distance = static_cast<int32_t>(
+      reinterpret_cast<Address>(entry_offset) -
+      reinterpret_cast<Address>(assm_->toAddress(load_offset)));
+  int32_t Hi20 = (((int32_t)distance + 0x800) >> 12);
+  int32_t Lo12 = (int32_t)distance << 20 >> 20;
+  CHECK(is_int32(distance));
+  assm_->instr_at_put(load_offset, SetAuipcOffset(Hi20, instr_auipc));
+  assm_->instr_at_put(load_offset + 4, SetLdOffset(Lo12, instr_ld));
 }
 
 void ConstantPool::Check(Emission force_emit, Jump require_jump,
@@ -2481,8 +2502,7 @@ void ConstantPool::Check(Emission force_emit, Jump require_jump,
     // Check that the code buffer is large enough before emitting the constant
     // pool (this includes the gap to the relocation information).
     int needed_space = worst_case_size + assm_->kGap;
-    int64_t space = assm_->buffer_space();
-    while (space <= needed_space) {
+    while (assm_->buffer_space() <= needed_space) {
       assm_->GrowBuffer();
     }
 
@@ -2494,17 +2514,17 @@ void ConstantPool::Check(Emission force_emit, Jump require_jump,
 }
 
 // Pool entries are accessed with pc relative load therefore this cannot be more
-// than 4 * KB. Since constant pool emission checks are interval based, and we
-// want to keep entries close to the code, we try to emit every 1KB.
-const size_t ConstantPool::kMaxDistToPool32 = 4 * KB;
-const size_t ConstantPool::kMaxDistToPool64 = 4 * KB;
+// than 1 * MB. Since constant pool emission checks are interval based, and we
+// want to keep entries close to the code, we try to emit every 64KB.
+const size_t ConstantPool::kMaxDistToPool32 = 1 * MB;
+const size_t ConstantPool::kMaxDistToPool64 = 1 * MB;
 const size_t ConstantPool::kCheckInterval = 128 * kInstrSize;
-const size_t ConstantPool::kApproxDistToPool32 = 1 * KB;
+const size_t ConstantPool::kApproxDistToPool32 = 64 * KB;
 const size_t ConstantPool::kApproxDistToPool64 = kApproxDistToPool32;
 
-const size_t ConstantPool::kOpportunityDistToPool32 = 1 * KB;
-const size_t ConstantPool::kOpportunityDistToPool64 = 1 * KB;
-const size_t ConstantPool::kApproxMaxEntryCount = 64;
+const size_t ConstantPool::kOpportunityDistToPool32 = 64 * KB;
+const size_t ConstantPool::kOpportunityDistToPool64 = 64 * KB;
+const size_t ConstantPool::kApproxMaxEntryCount = 512;
 
 }  // namespace internal
 }  // namespace v8
