@@ -214,6 +214,8 @@ const int kRdFieldMask = ((1 << kRdBits) - 1) << kRdShift;
 const int kBImm12Mask = kFunct7Mask | kRdFieldMask;
 const int kImm20Mask = ((1 << kImm20Bits) - 1) << kImm20Shift;
 const int kImm12Mask = ((1 << kImm12Bits) - 1) << kImm12Shift;
+const int kImm31_12Mask = ((1 << 20) - 1) << 12;
+const int kImm19_0Mask = ((1 << 20) - 1);
 
 // RISCV CSR related bit mask and shift
 const int kFcsrFlagsBits = 5;
