@@ -153,7 +153,10 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   explicit Assembler(const AssemblerOptions&,
                      std::unique_ptr<AssemblerBuffer> = {});
 
-  virtual ~Assembler() { CHECK(constpool_.IsEmpty()); }
+  virtual ~Assembler() {
+    ForceConstantPoolEmissionWithoutJump();
+    CHECK(constpool_.IsEmpty()); 
+  }
 
   // GetCode emits any pending (non-emitted) code and fills the descriptor desc.
   static constexpr int kNoHandlerTable = 0;
@@ -204,6 +207,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   int BrachlongOffset(Instr auipc, Instr jalr);
   int JumpOffset(Instr instr);
   static int LdOffset(Instr instr);
+  static int AuipcOffset(Instr instr);
 
   // Returns the branch offset to the given label from the current code
   // position. Links the label to the current position if it is still unbound.
@@ -711,19 +715,18 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   class BlockTrampolinePoolScope {
    public:
     explicit BlockTrampolinePoolScope(Assembler* assem, int margin = 0)
-        : assem_(assem), block_const_pool_(assem, margin) {
+        : assem_(assem){
       assem_->StartBlockTrampolinePool();
     }
 
     explicit BlockTrampolinePoolScope(Assembler* assem, PoolEmissionCheck check)
-        : assem_(assem), block_const_pool_(assem, check) {
+        : assem_(assem){
       assem_->StartBlockTrampolinePool();
     }
     ~BlockTrampolinePoolScope() { assem_->EndBlockTrampolinePool(); }
 
    private:
     Assembler* assem_;
-    BlockConstPoolScope block_const_pool_;
     DISALLOW_IMPLICIT_CONSTRUCTORS(BlockTrampolinePoolScope);
   };
 
@@ -900,6 +903,10 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   // more bytes of instructions have already been emitted.
   void EmitConstPoolWithJumpIfNeeded(size_t margin = 0) {
     constpool_.Check(Emission::kIfNeeded, Jump::kRequired, margin);
+  }
+
+  void EmitConstPoolWithoutJumpIfNeeded(size_t margin = 0) {
+    constpool_.Check(Emission::kIfNeeded, Jump::kOmitted, margin);
   }
 
   void RecordEntry(uint32_t data, RelocInfo::Mode rmode) {
