@@ -2389,11 +2389,12 @@ bool Assembler::IsConstantPoolAt(Instruction* instr) {
   bool result = IsLd(instr_value) && (instr->RdValue() == kRegCode_zero_reg);
   // It is still worth asserting the marker is complete.
   // 4: j 0
+#ifdef DEBUG
   Instruction* instr_fllowing = instr + kInstrSize;
   DCHECK(!result || (IsJal(*reinterpret_cast<Instr*>(instr_fllowing)) &&
                      instr_fllowing->Imm20JValue() == 0 &&
                      instr_fllowing->RdValue() == kRegCode_zero_reg));
-
+#endif
   return result;
 }
 
@@ -2447,8 +2448,10 @@ void ConstantPool::SetLoadOffsetToConstPoolEntry(int load_offset,
   Instr instr = assm_->instr_at(load_offset);
   // Instruction to patch must be 'ld t3, t3, offset' with offset == kInstrSize.
   DCHECK(assm_->IsLd(instr));
+#ifdef DEBUG
   int32_t offset = assm_->LdOffset(instr);
   DCHECK_EQ(offset, kInstrSize);
+#endif
   int32_t distance = static_cast<int32_t>(reinterpret_cast<Address>(entry_offset) -
                      reinterpret_cast<Address>(assm_->toAddress(load_offset) - kInstrSize));
   CHECK(is_int12(distance));
