@@ -292,6 +292,34 @@ static void GenAndRunTestForLoadStore(T value, Func test_generator) {
 
   MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
 
+  test_generator(assm);
+
+  __ jr(ra);
+
+  CodeDesc desc;
+  assm.GetCode(isolate, &desc);
+  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+
+  // setup parameters (to pass floats as integers)
+  Param_T t;
+  memset(&t, 0, sizeof(t));
+  SetParam(&t, value);
+
+  int64_t tmp = 0;
+  auto f = GeneratedCode<T(void* base, T val)>::FromCode(*code);
+  auto res = f.Call(&tmp, GetGPRParam<T>(&t));
+  ValidateResult(res, value);
+}
+
+template <typename T, typename Func>
+static void GenAndRunTestForLoadStoreF(T value, Func test_generator) {
+  DCHECK(sizeof(T) == 4 || sizeof(T) == 8);
+
+  Isolate* isolate = CcTest::i_isolate();
+  HandleScope scope(isolate);
+
+  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
+
   if (std::is_same<float, T>::value) {
     __ fmv_w_x(fa0, a1);
   } else if (std::is_same<double, T>::value) {
@@ -389,7 +417,7 @@ static void GenAndRunTest(int64_t expected_res, Func test_generator) {
       __ stname(fa0, a0, 0);                                        \
       __ ldname(fa0, a0, 0);                                        \
     };                                                              \
-    GenAndRunTestForLoadStore<value_type>(store_value, fn);         \
+    GenAndRunTestForLoadStoreF<value_type>(store_value, fn);         \
   }
 
 #define UTEST_R1_FORM_WITH_RES_F(instr_name, inout_type, rs1_fval,      \
