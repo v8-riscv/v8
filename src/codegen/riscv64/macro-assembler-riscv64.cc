@@ -1417,7 +1417,7 @@ int TurboAssembler::InstrCountForLi64Bit(int64_t value) {
   if (is_int32(value)) {
     return InstrCountForLiLower32Bit(value);
   } else {
-    return li_count(value);
+    return li_estimate(value);
   }
   UNREACHABLE();
   return INT_MAX;
@@ -1434,14 +1434,22 @@ void TurboAssembler::li(Register rd, Operand j, LiFlags mode) {
   DCHECK(!j.is_reg());
   BlockTrampolinePoolScope block_trampoline_pool(this);
   if (!MustUseReg(j.rmode()) && mode == OPTIMIZE_SIZE) {
-    if (!FLAG_disable_constant_pool && li_count(j.immediate()) >= 4) {
+    UseScratchRegisterScope temps(this);
+    int count = li_estimate(j.immediate(), temps.hasAvailable());
+    int reverse_count = li_estimate(~j.immediate(), temps.hasAvailable());
+    if (!FLAG_disable_constant_pool && count >= 4 && reverse_count >= 4) {
       // Ld a Address from a constant pool.
       RecordEntry((uint64_t)j.immediate(), j.rmode());
       auipc(rd, 0);
       // Record a value into constant pool.
       ld(rd, rd, 0);
     } else {
-      RV_li(rd, j.immediate());
+      if ((count - reverse_count) > 1) {
+        RV_li(rd, ~j.immediate());
+        not_(rd, rd);
+      } else {
+        RV_li(rd, j.immediate());
+      }
     }
   } else if (MustUseReg(j.rmode())) {
     int64_t immediate;
