@@ -597,7 +597,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void nop();
   void RV_li(Register rd, int64_t imm);
   // Returns the number of instructions required to load the immediate
-  static int li_count(int64_t imm);
+  static int li_estimate(int64_t imm, bool is_get_temp_reg = false);
   // Loads an immediate, always using 8 instructions, regardless of the value,
   // so that it can be modified later.
   void li_constant(Register rd, int64_t imm);
