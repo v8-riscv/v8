@@ -1547,6 +1547,26 @@ TEST(jump_tables3) {
   }
 }
 
+TEST(li_estimate) {
+  std::vector<int64_t> immediates = {
+      -256,      -255,          0,         255,        8192,      0x7FFFFFFF,
+      INT32_MIN, INT32_MAX / 2, INT32_MAX, UINT32_MAX, INT64_MAX, INT64_MAX / 2,
+      INT64_MIN};
+  // Test jump tables with backward jumps and embedded heap objects.
+  CcTest::InitializeVM();
+  Isolate* isolate = CcTest::i_isolate();
+  HandleScope scope(isolate);
+  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
+  for (auto p : immediates) {
+    Label a;
+    assm.bind(&a);
+    assm.RV_li(t0, p);
+    int expected_count = assm.li_estimate(p);
+    int count = assm.InstructionsGeneratedSince(&a);
+    CHECK_EQ(count, expected_count);
+  }
+}
+
 #undef __
 
 }  // namespace internal
