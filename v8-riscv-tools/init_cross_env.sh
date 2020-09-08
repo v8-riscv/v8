@@ -5,11 +5,29 @@
 
 set -e
 
+while getopts ":j:" opt; do
+  case ${opt} in
+    j)
+      NPROC=$OPTARG
+      ;;
+    \?)
+      echo "Unknown option: $OPTARG" 1>&2
+      exit 1
+      ;;
+    : )
+      echo "Invalid option: $OPTARG requires an argument" 1>&2
+      exit 2
+      ;;
+  esac
+done
+shift $((OPTIND -1))
+
 # Config: modify it if you don't like the default path.
 # IMPORTANT: please assert there is no space in pwd folder, or the script may
 #            does undefined behaviors.
-V8_ROOT=$PWD
-RV_HOME=$HOME/opt/riscv
+[ -z "$V8_ROOT" ] && V8_ROOT="$PWD"
+[ -z "$RV_HOME" ] && RV_HOME="$HOME/opt/riscv"
+[ -z "$NPROC"   ] && NPROC=`nproc`
 
 # NOTE: This script supposes you could build a sim build successfully.
 #       which means the depot_tools and other prebuilt binary blobs v8 need were ready.
@@ -31,7 +49,7 @@ git clone https://github.com/riscv/riscv-gnu-toolchain
 pushd riscv-gnu-toolchain
 git submodule update --init --recursive
 ./configure --prefix=$RV_HOME
-make linux -j $(nproc) || make linux -j 1
+make linux -j ${NPROC} || make linux -j 1
 popd
 
 
@@ -51,9 +69,8 @@ gn gen out/riscv64.native.debug \
     is_debug=true target_cpu="riscv64"
     v8_target_cpu="riscv64" use_goma=false
     goma_dir="None"
-    treat_warnings_as_errors=false
     symbol_level = 0'
-ninja -C out/riscv64.native.debug -j $(nproc)
+ninja -C out/riscv64.native.debug -j ${NPROC}
 
 # Remove obj and gen files that not needed.
 rm -rf out/riscv64.native.debug/obj
@@ -70,7 +87,7 @@ cd qemu
 # NOTE: master branch breaks current fedora image
 git checkout v5.0.0
 git submodule update -r --init -f
-./configure --target-list=riscv64-softmmu && make -j $(nproc)
+./configure --target-list=riscv64-softmmu && make -j ${NPROC}
 
 # optional.
 #sudo make install
@@ -124,17 +141,10 @@ echo "     ROOT/.ssh/authorized_keys or add 'PermitRootLogin=yes' in /etc/ssh/ss
 cat <<"EOT"
 # After you built native d8, you could run these commands to test your d8 in QEMU
 # please note the 3333 port, it must match your QEMU setting above.
-scp -r -P 3333 $V8_ROOT/v8/out/riscv64.native.debug $V8_ROOT/v8/tools $V8_ROOT/v8/test root@localhost:~/
-ssh -p 3333 root@localhost python2 ./tools/run-tests.py \
-    --outdir=riscv64.native.debug \
-    -p verbose --report \
-    cctest \
-    unittests \
-    wasm-api-tests \
-    mjsunit \
-    intl \
-    message \
-    debugger \
-    inspector \
-    mkgrokdump 2>&1 | tee v8.build.test.log
+scp -r -P 3333 $V8_ROOT/v8/out/riscv64.native.debug root@localhost:~/
+scp -r -P 3333 $V8_ROOT/v8/test                     root@localhost:~/
+scp -r -P 3333 $V8_ROOT/v8/tools                    root@localhost:~/
+scp -r -P 3333 $V8_ROOT/v8/v8-riscv-tools           root@localhost:~/
+ssh -p 3333 root@localhost python2 ./v8-riscv-tools/test-riscv.sh \
+    -o riscv64.native.debug 2>&1 | tee v8.build.test.log
 EOT
