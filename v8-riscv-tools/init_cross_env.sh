@@ -89,10 +89,10 @@ cat <<"EOTT"
 #       If you want to have a larger disk space in QEMU. run:
 
 sudo apt install libguestfs-tools -y
+
 truncate -r Fedora-Developer-Rawhide-*.raw expanded.raw
 truncate -s 60G expanded.raw
 
-# FIXME: we may not need sudo to run this three commands.
 sudo virt-resize -v -x --expand /dev/sda4 Fedora-Developer-Rawhide-*.raw expanded.raw
 sudo virt-filesystems --long -h --all -a expanded.raw
 sudo virt-df -h -a expanded.raw
