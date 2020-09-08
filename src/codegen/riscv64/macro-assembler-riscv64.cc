@@ -2926,24 +2926,28 @@ void TurboAssembler::Jump(Handle<Code> code, RelocInfo::Mode rmode,
   DCHECK(RelocInfo::IsCodeTarget(rmode));
 
   BlockTrampolinePoolScope block_trampoline_pool(this);
-  if (root_array_available_ && options().isolate_independent_code) {
-    IndirectLoadConstant(t6, code);
-    Add64(t6, t6, Operand(Code::kHeaderSize - kHeapObjectTag));
+  int builtin_index = Builtins::kNoBuiltinId;
+  bool target_is_isolate_independent_builtin =
+      isolate()->builtins()->IsBuiltinHandle(code, &builtin_index) &&
+      Builtins::IsIsolateIndependent(builtin_index);
+
+  if (root_array_available_ && options().isolate_independent_code &&
+      target_is_isolate_independent_builtin) {
+    int offset = code->builtin_index() * kSystemPointerSize +
+                 IsolateData::builtin_entry_table_offset();
+    Ld(t6, MemOperand(kRootRegister, offset));
     Jump(t6, cond, rs, rt);
     return;
-  } else if (options().inline_offheap_trampolines) {
-    int builtin_index = Builtins::kNoBuiltinId;
-    if (isolate()->builtins()->IsBuiltinHandle(code, &builtin_index) &&
-        Builtins::IsIsolateIndependent(builtin_index)) {
-      // Inline the trampoline.
-      RecordCommentForOffHeapTrampoline(builtin_index);
-      CHECK_NE(builtin_index, Builtins::kNoBuiltinId);
-      EmbeddedData d = EmbeddedData::FromBlob();
-      Address entry = d.InstructionStartOfBuiltin(builtin_index);
-      li(t6, Operand(entry, RelocInfo::OFF_HEAP_TARGET));
-      Jump(t6, cond, rs, rt);
-      return;
-    }
+  } else if (options().inline_offheap_trampolines &&
+             target_is_isolate_independent_builtin) {
+    // Inline the trampoline.
+    RecordCommentForOffHeapTrampoline(builtin_index);
+    CHECK_NE(builtin_index, Builtins::kNoBuiltinId);
+    EmbeddedData d = EmbeddedData::FromBlob();
+    Address entry = d.InstructionStartOfBuiltin(builtin_index);
+    li(t6, Operand(entry, RelocInfo::OFF_HEAP_TARGET));
+    Jump(t6, cond, rs, rt);
+    return;
   }
 
   Jump(static_cast<intptr_t>(code.address()), rmode, cond, rs, rt);
@@ -2994,24 +2998,27 @@ void TurboAssembler::Call(Handle<Code> code, RelocInfo::Mode rmode,
                           Condition cond, Register rs, const Operand& rt) {
   BlockTrampolinePoolScope block_trampoline_pool(this);
 
-  if (root_array_available_ && options().isolate_independent_code) {
-    IndirectLoadConstant(t6, code);
-    Add64(t6, t6, Operand(Code::kHeaderSize - kHeapObjectTag));
+  int builtin_index = Builtins::kNoBuiltinId;
+  bool target_is_isolate_independent_builtin =
+      isolate()->builtins()->IsBuiltinHandle(code, &builtin_index) &&
+      Builtins::IsIsolateIndependent(builtin_index);
+  if (root_array_available_ && options().isolate_independent_code &&
+     target_is_isolate_independent_builtin) {
+    int offset = code->builtin_index() * kSystemPointerSize +
+                 IsolateData::builtin_entry_table_offset();
+    LoadRootRelative(t6, offset);
     Call(t6, cond, rs, rt);
     return;
-  } else if (options().inline_offheap_trampolines) {
-    int builtin_index = Builtins::kNoBuiltinId;
-    if (isolate()->builtins()->IsBuiltinHandle(code, &builtin_index) &&
-        Builtins::IsIsolateIndependent(builtin_index)) {
-      // Inline the trampoline.
-      RecordCommentForOffHeapTrampoline(builtin_index);
-      CHECK_NE(builtin_index, Builtins::kNoBuiltinId);
-      EmbeddedData d = EmbeddedData::FromBlob();
-      Address entry = d.InstructionStartOfBuiltin(builtin_index);
-      li(t6, Operand(entry, RelocInfo::OFF_HEAP_TARGET));
-      Call(t6, cond, rs, rt);
-      return;
-    }
+  } else if (options().inline_offheap_trampolines &&
+             target_is_isolate_independent_builtin) {
+    // Inline the trampoline.
+    RecordCommentForOffHeapTrampoline(builtin_index);
+    CHECK_NE(builtin_index, Builtins::kNoBuiltinId);
+    EmbeddedData d = EmbeddedData::FromBlob();
+    Address entry = d.InstructionStartOfBuiltin(builtin_index);
+    li(t6, Operand(entry, RelocInfo::OFF_HEAP_TARGET));
+    Call(t6, cond, rs, rt);
+    return;
   }
 
   DCHECK(RelocInfo::IsCodeTarget(rmode));
@@ -3419,12 +3426,10 @@ void MacroAssembler::InvokeFunctionCode(Register function, Register new_target,
   Register code = kJavaScriptCallCodeStartRegister;
   Ld(code, FieldMemOperand(function, JSFunction::kCodeOffset));
   if (flag == CALL_FUNCTION) {
-    Add64(code, code, Operand(Code::kHeaderSize - kHeapObjectTag));
-    Call(code);
+    CallCodeObject(code);
   } else {
     DCHECK(flag == JUMP_FUNCTION);
-    Add64(code, code, Operand(Code::kHeaderSize - kHeapObjectTag));
-    Jump(code);
+    JumpCodeObject(code);
   }
 
   // Continue here if InvokePrologue does handle the invocation due to
@@ -4341,6 +4346,65 @@ void TurboAssembler::CallForDeoptimization(Address target, int deopt_id,
   DCHECK_LE(deopt_id, 0xFFFF);
   li(kRootRegister, deopt_id);
   Call(target, RelocInfo::RUNTIME_ENTRY);
+}
+
+void TurboAssembler::LoadCodeObjectEntry(Register destination,
+                                         Register code_object) {
+  // Code objects are called differently depending on whether we are generating
+  // builtin code (which will later be embedded into the binary) or compiling
+  // user JS code at runtime.
+  // * Builtin code runs in --jitless mode and thus must not call into on-heap
+  //   Code targets. Instead, we dispatch through the builtins entry table.
+  // * Codegen at runtime does not have this restriction and we can use the
+  //   shorter, branchless instruction sequence. The assumption here is that
+  //   targets are usually generated code and not builtin Code objects.
+  if (options().isolate_independent_code) {
+    DCHECK(root_array_available());
+    Label if_code_is_off_heap,no_builtin_index, out;
+    UseScratchRegisterScope temps(this);
+    Register scratch = temps.Acquire();
+
+    DCHECK(!AreAliased(destination, scratch));
+    DCHECK(!AreAliased(code_object, scratch));
+
+    // Check whether the Code object is an off-heap trampoline. If so, call its
+    // (off-heap) entry point directly without going through the (on-heap)
+    // trampoline.  Otherwise, just call the Code object as always.
+    Lw(scratch, FieldMemOperand(code_object, Code::kFlagsOffset));
+    Branch(&if_code_is_off_heap, ne, scratch,
+         Operand(Code::IsOffHeapTrampoline::kMask));
+    // Not an off-heap trampoline object, the entry point is at
+    // Code::raw_instruction_start().
+    bind(&no_builtin_index);
+    Add64(destination, code_object, Code::kHeaderSize - kHeapObjectTag);
+    Branch(&out);
+
+    // An off-heap trampoline, the entry point is loaded from the builtin entry
+    // table.
+    bind(&if_code_is_off_heap);
+    Lw(scratch, FieldMemOperand(code_object, Code::kBuiltinIndexOffset));
+    //FIXME(RISCV64):on other arch, don't need no_builtin_index.
+    Branch(&no_builtin_index, eq, scratch, Operand(Builtins::kNoBuiltinId));
+    slli(destination, scratch, kSystemPointerSizeLog2);
+    Add64(destination, destination, kRootRegister);
+    Ld(destination,
+        MemOperand(destination, IsolateData::builtin_entry_table_offset()));
+
+    bind(&out);
+  } else {
+    Add64(destination, code_object, Code::kHeaderSize - kHeapObjectTag);
+  }
+}
+
+
+void TurboAssembler::CallCodeObject(Register code_object) {
+  LoadCodeObjectEntry(code_object, code_object);
+  Call(code_object);
+}
+
+void TurboAssembler::JumpCodeObject(Register code_object) {
+  LoadCodeObjectEntry(code_object, code_object);
+  Jump(code_object);
 }
 
 }  // namespace internal

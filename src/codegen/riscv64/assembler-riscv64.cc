@@ -2406,11 +2406,12 @@ bool Assembler::IsConstantPoolAt(Instruction* instr) {
   bool result = IsLd(instr_value) && (instr->RdValue() == kRegCode_zero_reg);
   // It is still worth asserting the marker is complete.
   // 4: j 0
+#ifdef DEBUG
   Instruction* instr_fllowing = instr + kInstrSize;
   DCHECK(!result || (IsJal(*reinterpret_cast<Instr*>(instr_fllowing)) &&
                      instr_fllowing->Imm20JValue() == 0 &&
                      instr_fllowing->RdValue() == kRegCode_zero_reg));
-
+#endif
   return result;
 }
 
