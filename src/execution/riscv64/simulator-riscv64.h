@@ -473,6 +473,10 @@ class Simulator : public SimulatorBase {
   inline int64_t rvc_rs1() const { return get_register(rvc_rs1_reg()); }
   inline int32_t rvc_rs2_reg() const { return instr_.RvcRs2Value(); }
   inline int64_t rvc_rs2() const { return get_register(rvc_rs2_reg()); }
+  inline int32_t rvc_rs1s_reg() const { return instr_.RvcRs1sValue(); }
+  inline int64_t rvc_rs1s() const { return get_register(rvc_rs1s_reg()); }
+  inline int32_t rvc_rs2s_reg() const { return instr_.RvcRs2sValue(); }
+  inline int64_t rvc_rs2s() const { return get_register(rvc_rs2s_reg()); }
   inline int32_t rvc_rd_reg() const { return instr_.RvcRdValue(); }
   inline int16_t boffset() const { return instr_.BranchOffset(); }
   inline int16_t imm12() const { return instr_.Imm12Value(); }
@@ -497,6 +501,10 @@ class Simulator : public SimulatorBase {
   inline void set_rvc_rd(int64_t value, bool trace = true) {
     set_register(rvc_rd_reg(), value);
     if (trace) TraceRegWr(get_register(rvc_rd_reg()), DWORD);
+  }
+  inline void set_rvc_rs1s(int64_t value, bool trace = true) {
+    set_register(rvc_rs1s_reg(), value);
+    if (trace) TraceRegWr(get_register(rvc_rs1s_reg()), DWORD);
   }
   inline int16_t shamt6() const { return (imm12() & 0x3F); }
   inline int16_t shamt5() const { return (imm12() & 0x1F); }
@@ -585,6 +593,7 @@ class Simulator : public SimulatorBase {
   void DecodeRVUType();
   void DecodeRVJType();
   void DecodeCRType();
+  void DecodeCAType();
   void DecodeCIType();
 
   // Used for breakpoints and traps.

@@ -207,6 +207,10 @@ const int kRvcRs1sShift = 7;
 const int kRvcRs1sBits = 3;
 const int kRvcRs2sShift = 2;
 const int kRvcRs2sBits = 3;
+const int kRvcFunctShift = 5;
+const int kRvcFunctBits = 2;
+const int kRvcFunct6Shift = 10;
+const int kRvcFunct6Bits = 6;
 
 // RISCV Instruction bit masks
 const int kBaseOpcodeMask = ((1 << kBaseOpcodeBits) - 1) << kBaseOpcodeShift;
@@ -235,7 +239,11 @@ const int kImm19_0Mask = ((1 << 20) - 1);
 const int kRvcOpcodeMask = 0b11 | (((1 << kRvcFunct3Bits) - 1) << kRvcFunct3Shift);
 const int kRvcFunct3Mask = (((1 << kRvcFunct3Bits) - 1) << kRvcFunct3Shift);
 const int kRvcFunct4Mask = (((1 << kRvcFunct4Bits) - 1) << kRvcFunct4Shift);
+const int kRvcFunct6Mask = (((1 << kRvcFunct6Bits) - 1) << kRvcFunct6Shift);
+const int kRvcFunctMask = (((1 << kRvcFunctBits) - 1) << kRvcFunctShift);
 const int kCRTypeMask = kRvcOpcodeMask | kRvcFunct4Mask;
+const int kCSTypeMask = kRvcOpcodeMask | kRvcFunct6Mask;
+const int kCATypeMask = kRvcOpcodeMask | kRvcFunct6Mask;
 
 // RISCV CSR related bit mask and shift
 const int kFcsrFlagsBits = 5;
@@ -485,6 +493,8 @@ enum Opcode : uint32_t {
   RO_C_NOP_ADDI = C1 | (0b000 << kRvcFunct3Shift),
   RO_C_ADDIW = C1 | (0b001 << kRvcFunct3Shift),
   RO_C_LI = C1 | (0b010 << kRvcFunct3Shift),
+  RO_C_SUB = C1 | (0b100011 << kRvcFunct6Shift),
+  RO_C_ADDW = C1 | (0b100111 << kRvcFunct6Shift),
   RO_C_LUI_ADD = C1 | (0b011 << kRvcFunct3Shift),
   RO_C_MISC_ALU = C1 | (0b100 << kRvcFunct3Shift),
   RO_C_J = C1 | (0b101 << kRvcFunct3Shift),
@@ -699,6 +709,7 @@ class InstructionBase {
     kCIWType,
     kCLType,
     kCSType,
+    kCAType,
     kCBType,
     kCJType,
     kUnsupported = -1
@@ -862,6 +873,11 @@ class InstructionGetters : public T {
     return this->Bits(kFunct5Shift + kFunct5Bits - 1, kFunct5Shift);
   }
 
+  inline int RvcFunct6Value() const {
+    DCHECK(this->IsShortInstruction());
+    return this->Bits(kRvcFunct6Shift + kRvcFunct6Bits - 1, kRvcFunct6Shift);
+  }
+
   inline int RvcFunct4Value() const {
     DCHECK(this->IsShortInstruction());
     return this->Bits(kRvcFunct4Shift + kRvcFunct4Bits - 1, kRvcFunct4Shift);
@@ -870,6 +886,11 @@ class InstructionGetters : public T {
   inline int RvcFunct3Value() const {
     DCHECK(this->IsShortInstruction());
     return this->Bits(kRvcFunct3Shift + kRvcFunct3Bits - 1, kRvcFunct3Shift);
+  }
+
+  inline int RvcFunctValue() const {
+    DCHECK(this->IsShortInstruction());
+    return this->Bits(kRvcFunctShift + kRvcFunctBits - 1, kRvcFunctShift);
   }
 
   inline int CsrValue() const {
@@ -1060,7 +1081,7 @@ InstructionBase::Type InstructionBase::InstructionType() const {
       if (Bits(11, 10) != 0b11)
         return kCBType;
       else
-        return kCSType;
+        return kCAType;
     case RO_C_J:
       return kCJType;
     case RO_C_BEQZ:
