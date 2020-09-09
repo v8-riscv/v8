@@ -590,6 +590,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_ebreak();
   void c_jalr(Register rs1);
   void c_add(Register rd, Register rs2);
+  void c_sub(Register rd, Register rs2);
+  void c_addw(Register rd, Register rs2);
 
   // Privileged
   void uret();
@@ -1027,6 +1029,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void GenInstrU(Opcode opcode, Register rd, int32_t imm20);
   void GenInstrJ(Opcode opcode, Register rd, int32_t imm20);
   void GenInstrCR(uint8_t funct4, Opcode opcode, Register rd, Register rs2);
+  void GenInstrCA(uint8_t funct6, Opcode opcode, Register rd, uint8_t funct, Register rs2);
   void GenInstrCI(uint8_t funct3, Opcode opcode, Register rd, int8_t imm6);
   void GenInstrCIU(uint8_t funct3, Opcode opcode, Register rd, uint8_t uimm6);
 
