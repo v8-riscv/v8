@@ -507,6 +507,9 @@ UTEST_CONV_F_FROM_I(fcvt_d_lu, uint64_t, double,
                     std::numeric_limits<uint64_t>::max(),
                     (double)(std::numeric_limits<uint64_t>::max()))
 
+// -- RV64C Standard Extension --
+UTEST_R1_FORM_WITH_RES(c_mv, int64_t, int64_t, 0x0f5600ab123400, 0x0f5600ab123400)
+
 // -- Assembler Pseudo Instructions --
 UTEST_R1_FORM_WITH_RES(mv, int64_t, int64_t, 0x0f5600ab123400, 0x0f5600ab123400)
 UTEST_R1_FORM_WITH_RES(not_, int64_t, int64_t, 0, ~0)
