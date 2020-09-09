@@ -850,6 +850,30 @@ void Assembler::GenInstrJ(Opcode opcode, Register rd, int32_t imm21) {
   emit(instr);
 }
 
+void Assembler::GenInstrCR(uint8_t funct4, Opcode opcode, 
+                          Register rd, Register rs2) {
+  DCHECK(is_uint4(funct4) && rd.is_valid() && rs2.is_valid());
+  ShortInstr instr = opcode | (rs2.code() << kRvcRs2Shift) | (rd.code() << kRvcRdShift) |
+                   (funct4 << kRvcFunct4Shift);
+  emit(instr);
+}
+
+void Assembler::GenInstrCI(uint8_t funct3, Opcode opcode, Register rd,
+                           int8_t imm6) {
+  DCHECK(is_uint3(funct3) && rd.is_valid() && is_int6(imm6));
+  ShortInstr instr = opcode | ((imm6 & 0x1f) << 2) | (rd.code() << kRvcRdShift) |
+                   ((imm6 & 0x20) << 7) | (funct3 << kRvcFunct3Shift);
+  emit(instr);
+}
+
+void Assembler::GenInstrCIU(uint8_t funct3, Opcode opcode, Register rd,
+                           uint8_t uimm6) {
+  DCHECK(is_uint3(funct3) && rd.is_valid() && is_uint6(uimm6));
+  ShortInstr instr = opcode | ((uimm6 & 0x1f) << 2) | (rd.code() << kRvcRdShift) |
+                   ((uimm6 & 0x20) << 7) | (funct3 << kRvcFunct3Shift);
+  emit(instr);
+}
+
 // ----- Instruction class templates match those in the compiler
 
 void Assembler::GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,
@@ -1779,6 +1803,25 @@ void Assembler::fcvt_d_lu(FPURegister rd, Register rs1, RoundingMode frm) {
 
 void Assembler::fmv_d_x(FPURegister rd, Register rs1) {
   GenInstrALUFP_rr(0b1111001, 0b000, rd, rs1, zero_reg);
+}
+
+// RV64C Standard Extension
+void Assembler::c_nop() {
+  GenInstrCI(0b000, C1, ToRegister(0), 0);
+}
+
+void Assembler::c_addi(Register rd, int8_t imm6) {
+  DCHECK(rd != ToRegister(0) && imm6 != 0);
+  GenInstrCI(0b000, C1, rd, imm6);
+}
+
+void Assembler::c_ebreak() {
+  GenInstrCR(0b1001, C2, ToRegister(0), ToRegister(0));
+}
+
+void Assembler::c_add(Register rd, Register rs2) {
+  DCHECK(rd != ToRegister(0) && rs2 != ToRegister(0));
+  GenInstrCR(0b1001, C2, rd, rs2);
 }
 
 // Privileged
