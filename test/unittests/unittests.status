@@ -57,5 +57,7 @@
 ['variant == stress_snapshot', {
   '*': [SKIP],  # only relevant for mjsunit tests.
 }],
-
+['is_clang == False and arch == riscv64',{
+  'LoggingTest.SourceLocation':[SKIP] #issue-174
+}],
 ]
