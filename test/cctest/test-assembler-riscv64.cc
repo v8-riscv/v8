@@ -1266,6 +1266,32 @@ TEST(RVC_CR) {
   }
 }
 
+TEST(RVC_CA) {
+  // Test RV64C extension CA type instructions.
+  CcTest::InitializeVM();
+
+  // Test c.sub
+  {
+    auto fn = [](MacroAssembler& assm) {
+      __ RV_li(a1, MIN_VAL_IMM12);
+      __ c_sub(a0, a1);
+    };
+    auto res = GenAndRunTest<int64_t>(LARGE_INT_UNDER_32_BIT, fn);
+    CHECK_EQ(LARGE_INT_UNDER_32_BIT - MIN_VAL_IMM12, res);
+  }
+
+  // Test c.addw
+  {
+    auto fn = [](MacroAssembler& assm) {
+      __ RV_li(a1, MIN_VAL_IMM12);
+      __ c_addw(a0, a1);
+    };
+    auto res = GenAndRunTest<int64_t>(LARGE_INT_UNDER_32_BIT, fn);
+    CHECK_EQ(LARGE_INT_UNDER_32_BIT + MIN_VAL_IMM12, res);
+  }
+
+}
+
 TEST(TARGET_ADDR) {
   CcTest::InitializeVM();
   Isolate* isolate = CcTest::i_isolate();
