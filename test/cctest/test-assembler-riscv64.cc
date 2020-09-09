@@ -1149,6 +1149,35 @@ TEST(NAN_BOX) {
   CHECK_EQ((uint64_t)bit_cast<uint32_t>(t.a), t.res);
 }
 
+TEST(RVC_CI) {
+  // Test RV64C extension CI type instructions.
+  CcTest::InitializeVM();
+
+  // Test c.addi
+  {
+    auto fn = [](MacroAssembler& assm) { __ c_addi(a0, -15); };
+    auto res = GenAndRunTest<int64_t>(LARGE_INT_EXCEED_32_BIT, fn);
+    CHECK_EQ(LARGE_INT_EXCEED_32_BIT - 15, res);
+  }
+
+}
+
+TEST(RVC_CR) {
+  // Test RV64C extension CR type instructions.
+  CcTest::InitializeVM();
+
+  // Test c.add
+  {
+    auto fn = [](MacroAssembler& assm) { 
+      __ RV_li(a1, MIN_VAL_IMM12);
+      __ c_add(a0, a1); 
+    };
+    auto res = GenAndRunTest<int64_t>(LARGE_INT_EXCEED_32_BIT, fn);
+    CHECK_EQ(LARGE_INT_EXCEED_32_BIT + MIN_VAL_IMM12, res);
+  }
+
+}
+
 TEST(TARGET_ADDR) {
   CcTest::InitializeVM();
   Isolate* isolate = CcTest::i_isolate();
