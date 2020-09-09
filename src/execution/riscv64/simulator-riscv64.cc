@@ -3119,6 +3119,38 @@ void Simulator::DecodeCRType() {
       UNSUPPORTED();
   }
 }
+
+void Simulator::DecodeCAType() {
+  switch (instr_.RvcFunct6Value()) {
+    case 0b100011:
+      switch (instr_.RvcFunctValue()) {
+       case 0b00: //c.sub
+         if (instr_.RvcRdValue() != 0 && instr_.RvcRs2Value() != 0)
+           set_rvc_rs1s(sext_xlen(rvc_rs1s() - rvc_rs2s()));
+         else
+           UNSUPPORTED_RISCV();
+         break;
+       default:
+         UNSUPPORTED_RISCV();
+      }
+      break;
+    case 0b100111:
+      switch (instr_.RvcFunctValue()) {
+       case 0b01: //c.addw
+         if (instr_.RvcRdValue() != 0 && instr_.RvcRs2Value() != 0)
+           set_rvc_rs1s(sext32(rvc_rs1s() + rvc_rs2s()));
+         else
+           UNSUPPORTED_RISCV();
+         break;
+       default:
+         UNSUPPORTED_RISCV();
+      }
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+
 void Simulator::DecodeCIType() {
   switch (instr_.RvcOpcode()) {
     case RO_C_NOP_ADDI:
@@ -3197,6 +3229,9 @@ void Simulator::InstructionDecode(Instruction* instr) {
       break;
     case Instruction::kCRType:
       DecodeCRType();
+      break;
+    case Instruction::kCAType:
+      DecodeCAType();
       break;
     case Instruction::kCIType:
       DecodeCIType();
