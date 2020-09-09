@@ -79,6 +79,7 @@ class Decoder {
   void PrintImm20J(Instruction* instr);
   void PrintShamt(Instruction* instr);
   void PrintShamt32(Instruction* instr);
+  void PrintRvcImm6(Instruction* instr);
   void PrintAcquireRelease(Instruction* instr);
   void PrintBranchOffset(Instruction* instr);
   void PrintStoreOffset(Instruction* instr);
@@ -96,6 +97,8 @@ class Decoder {
   void DecodeBType(Instruction* instr);
   void DecodeUType(Instruction* instr);
   void DecodeJType(Instruction* instr);
+  void DecodeCRType(Instruction* instr);
+  void DecodeCIType(Instruction* instr);
 
   // Printing of instruction name.
   void PrintInstructionName(Instruction* instr);
@@ -103,6 +106,8 @@ class Decoder {
   // Handle formatting of instructions and their options.
   int FormatRegister(Instruction* instr, const char* option);
   int FormatFPURegisterOrRoundMode(Instruction* instr, const char* option);
+  int FormatRvcRegister(Instruction* instr, const char* option);
+  int FormatRvcImm(Instruction* instr, const char* option);
   int FormatOption(Instruction* instr, const char* option);
   void Format(Instruction* instr, const char* format);
   void Unknown(Instruction* instr);
@@ -220,6 +225,11 @@ void Decoder::PrintShamt(Instruction* instr) {
 
 void Decoder::PrintShamt32(Instruction* instr) {
   int32_t imm = instr->Shamt32();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImm6(Instruction* instr) {
+  int32_t imm = instr->RvcImm6Value();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
 }
 
@@ -378,6 +388,70 @@ int Decoder::FormatFPURegisterOrRoundMode(Instruction* instr,
   UNREACHABLE();
 }
 
+// Handle all C extension register based formatting in this function to reduce the
+// complexity of FormatOption.
+int Decoder::FormatRvcRegister(Instruction* instr, const char* format) {
+  DCHECK_EQ(format[0], 'C');
+  DCHECK(format[1] == 'r' || format[1] == 'f');
+  if (format[2] == 's') {  // 'Crs[12]: Rs register.
+    if (format[3] == '1') {
+      if (format[4] == 's') {   // 'Crs1s: 3-bits register
+        int reg = instr->RvcRs1sValue();
+        if (format[1] == 'r') {
+          PrintRegister(reg);
+        } else if (format[1] == 'f') {
+          PrintFPURegister(reg);
+        }
+        return 5;
+      }
+      int reg = instr->RvcRs1Value();
+      if (format[1] == 'r') {
+        PrintRegister(reg);
+      } else if (format[1] == 'f') {
+        PrintFPURegister(reg);
+      }
+      return 4;
+    } else if (format[3] == '2') {
+      if (format[4] == 's') {   // 'Crs2s: 3-bits register
+        int reg = instr->RvcRs2sValue();
+        if (format[1] == 'r') {
+          PrintRegister(reg);
+        } else if (format[1] == 'f') {
+          PrintFPURegister(reg);
+        }
+        PrintRegister(reg);
+        return 5;
+      }
+      int reg = instr->RvcRs2Value();
+      if (format[1] == 'r') {
+        PrintRegister(reg);
+      } else if (format[1] == 'f') {
+        PrintFPURegister(reg);
+      }
+      return 4;
+    }
+    UNREACHABLE();
+  } else if (format[2] == 'd') {  // 'Crd: rd register.
+    int reg = instr->RvcRdValue();
+    if (format[1] == 'r') {
+      PrintRegister(reg);
+    } else if (format[1] == 'f') {
+      PrintFPURegister(reg);
+    }
+    return 3;
+  }
+  UNREACHABLE();
+}
+
+// Handle all C extension immediates based formatting in this function to reduce the
+// complexity of FormatOption.
+int Decoder::FormatRvcImm(Instruction* instr, const char* format) {
+  // TODO: add other rvc imm format
+  DCHECK(STRING_STARTS_WITH(format, "Cimm6"));
+  PrintRvcImm6(instr);
+  return 5;
+}
+
 // FormatOption takes a formatting string and interprets it based on
 // the current instructions. The format string points to the first
 // character of the option string (the option escape has already been
@@ -385,6 +459,14 @@ int Decoder::FormatFPURegisterOrRoundMode(Instruction* instr,
 // characters that were consumed from the formatting string.
 int Decoder::FormatOption(Instruction* instr, const char* format) {
   switch (format[0]) {
+    case 'C': {  // `C extension
+      if (format[1] == 'r' || format[1] == 'f') {
+        return FormatRvcRegister(instr, format);
+      } else if (format[1] == 'i') {
+        return FormatRvcImm(instr, format);
+      }
+      UNREACHABLE();
+    }
     case 'c': {  // `csr: CSR registers
       if (format[1] == 's') {
         if (format[2] == 'r') {
@@ -1343,6 +1425,33 @@ void Decoder::DecodeJType(Instruction* instr) {
   }
 }
 
+void Decoder::DecodeCRType(Instruction* instr) {
+  switch (instr->RvcFunct4Value()) {
+    case 0b1001:  
+      if (instr->RvcRs1Value() == 0 && instr->RvcRs2Value() == 0)
+        Format(instr, "ebreak");
+      else if (instr->RvcRdValue() != 0 && instr->RvcRs2Value() != 0)
+        Format(instr, "add       'Crd, 'Crd, 'Crs2");
+      else
+        UNSUPPORTED_RISCV();
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+void Decoder::DecodeCIType(Instruction* instr) {
+  switch (instr->RvcOpcode()) {
+    case RO_C_NOP_ADDI:
+      if (instr->RvcRdValue() == 0)
+        Format(instr, "nop");
+      else
+        Format(instr, "addi      'Crd, 'Crd, 'Cimm6");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+
 // Disassemble the instruction at *instr_ptr into the output buffer.
 // All instructions are one word long, except for the simulator
 // pseudo-instruction stop(msg). For that one special case, we return
@@ -1374,11 +1483,17 @@ int Decoder::InstructionDecode(byte* instr_ptr) {
     case Instruction::kJType:
       DecodeJType(instr);
       break;
+    case Instruction::kCRType:
+      DecodeCRType(instr);
+      break;
+    case Instruction::kCIType:
+      DecodeCIType(instr);
+      break;
     default:
       Format(instr, "UNSUPPORTED");
       UNSUPPORTED_RISCV();
   }
-  return kInstrSize;
+  return instr->InstructionSize();
 }
 
 }  // namespace internal
@@ -1440,7 +1555,7 @@ void Disassembler::Disassemble(FILE* f, byte* begin, byte* end,
     byte* prev_pc = pc;
     pc += d.InstructionDecode(buffer, pc);
     v8::internal::PrintF(f, "%p    %08x      %s\n", static_cast<void*>(prev_pc),
-                         *reinterpret_cast<int32_t*>(prev_pc), buffer.begin());
+                         *reinterpret_cast<uint32_t*>(prev_pc), buffer.begin());
   }
 }
 
