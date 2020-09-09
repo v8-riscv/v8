@@ -3095,10 +3095,21 @@ void Simulator::DecodeRVJType() {
 }
 void Simulator::DecodeCRType() {
   switch (instr_.RvcFunct4Value()) {
+    case 0b1000:  
+      if (instr_.RvcRs1Value() != 0 && instr_.RvcRs2Value() == 0) {  // c.jr
+        set_pc(rvc_rs1());
+      } else if (instr_.RvcRdValue() != 0 && instr_.RvcRs2Value() != 0) { // c.mv
+        set_rvc_rd(sext_xlen(rvc_rs2()));
+      } else
+        UNSUPPORTED_RISCV();
+      break;
     case 0b1001:  
       if (instr_.RvcRs1Value() == 0 && instr_.RvcRs2Value() == 0) {    // c.ebreak
         RiscvDebugger dbg(this);
         dbg.Debug();
+      } else if (instr_.RvcRdValue() != 0 && instr_.RvcRs2Value() == 0) { // c.jalr
+        set_register(ra, get_pc() + kShortInstrSize);
+        set_pc(rvc_rs1());
       } else if (instr_.RvcRdValue() != 0 && instr_.RvcRs2Value() != 0) // c.add
         set_rvc_rd(sext_xlen(rvc_rs1() + rvc_rs2()));
       else

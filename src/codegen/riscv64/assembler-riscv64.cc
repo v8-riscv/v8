@@ -1815,8 +1815,23 @@ void Assembler::c_addi(Register rd, int8_t imm6) {
   GenInstrCI(0b000, C1, rd, imm6);
 }
 
+void Assembler::c_jr(Register rs1) {
+  GenInstrCR(0b1000, C2, rs1, ToRegister(0));
+  BlockTrampolinePoolFor(1);
+}
+
+void Assembler::c_mv(Register rd, Register rs2) {
+  DCHECK(rd != ToRegister(0) && rs2 != ToRegister(0));
+  GenInstrCR(0b1000, C2, rd, rs2);
+}
+
 void Assembler::c_ebreak() {
   GenInstrCR(0b1001, C2, ToRegister(0), ToRegister(0));
+}
+
+void Assembler::c_jalr(Register rs1) {
+  GenInstrCR(0b1001, C2, rs1, ToRegister(0));
+  BlockTrampolinePoolFor(1);
 }
 
 void Assembler::c_add(Register rd, Register rs2) {
