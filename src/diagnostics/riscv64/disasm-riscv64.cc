@@ -1427,9 +1427,19 @@ void Decoder::DecodeJType(Instruction* instr) {
 
 void Decoder::DecodeCRType(Instruction* instr) {
   switch (instr->RvcFunct4Value()) {
+    case 0b1000:  
+      if (instr->RvcRs1Value() != 0 && instr->RvcRs2Value() == 0)
+        Format(instr, "jr        'Crs1");
+      else if (instr->RvcRdValue() != 0 && instr->RvcRs2Value() != 0)
+        Format(instr, "mv        'Crd, 'Crs2");
+      else
+        UNSUPPORTED_RISCV();
+      break;
     case 0b1001:  
       if (instr->RvcRs1Value() == 0 && instr->RvcRs2Value() == 0)
         Format(instr, "ebreak");
+      else if (instr->RvcRdValue() != 0 && instr->RvcRs2Value() == 0)
+        Format(instr, "jalr      'Crs1");
       else if (instr->RvcRdValue() != 0 && instr->RvcRs2Value() != 0)
         Format(instr, "add       'Crd, 'Crd, 'Crs2");
       else
