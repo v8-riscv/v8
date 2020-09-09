@@ -3093,6 +3093,33 @@ void Simulator::DecodeRVJType() {
       UNSUPPORTED();
   }
 }
+void Simulator::DecodeCRType() {
+  switch (instr_.RvcFunct4Value()) {
+    case 0b1001:  
+      if (instr_.RvcRs1Value() == 0 && instr_.RvcRs2Value() == 0) {    // c.ebreak
+        RiscvDebugger dbg(this);
+        dbg.Debug();
+      } else if (instr_.RvcRdValue() != 0 && instr_.RvcRs2Value() != 0) // c.add
+        set_rvc_rd(sext_xlen(rvc_rs1() + rvc_rs2()));
+      else
+        UNSUPPORTED();
+      break;
+    default:
+      UNSUPPORTED();
+  }
+}
+void Simulator::DecodeCIType() {
+  switch (instr_.RvcOpcode()) {
+    case RO_C_NOP_ADDI:
+      if (instr_.RvcRdValue() == 0) // c.nop
+        break;
+      else                          // c.addi
+        set_rvc_rd(sext_xlen(rvc_rs1() + rvc_imm6()));
+      break;
+    default:
+      UNSUPPORTED();
+  }
+}
 
 // Executes the current instruction.
 void Simulator::InstructionDecode(Instruction* instr) {
@@ -3137,6 +3164,12 @@ void Simulator::InstructionDecode(Instruction* instr) {
     case Instruction::kJType:
       DecodeRVJType();
       break;
+    case Instruction::kCRType:
+      DecodeCRType();
+      break;
+    case Instruction::kCIType:
+      DecodeCIType();
+      break;
     default:
       if (::v8::internal::FLAG_trace_sim) {
         std::cout << "Unrecognized instruction [@pc=0x" << std::hex
@@ -3153,7 +3186,7 @@ void Simulator::InstructionDecode(Instruction* instr) {
   }
 
   if (!pc_modified_) {
-    set_register(pc, reinterpret_cast<int64_t>(instr) + kInstrSize);
+    set_register(pc, reinterpret_cast<int64_t>(instr) + instr->InstructionSize());
   }
 }
 

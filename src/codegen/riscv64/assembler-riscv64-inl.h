@@ -239,6 +239,13 @@ void Assembler::emit(Instr x) {
   EmitHelper(x);
 }
 
+void Assembler::emit(ShortInstr x) {
+  if (!is_buffer_growth_blocked()) {
+    CheckBuffer();
+  }
+  EmitHelper(x);
+}
+
 void Assembler::emit(uint64_t data) {
   if (!is_buffer_growth_blocked()) CheckBuffer();
   EmitHelper(data);
