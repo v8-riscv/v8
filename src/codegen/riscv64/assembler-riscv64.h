@@ -578,6 +578,12 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void fcvt_d_lu(FPURegister rd, Register rs1, RoundingMode frm = RNE);
   void fmv_d_x(FPURegister rd, Register rs1);
 
+  // RV64C Standard Extension
+  void c_nop();
+  void c_addi(Register rd, int8_t imm6);
+  void c_ebreak();
+  void c_add(Register rd, Register rs2);
+
   // Privileged
   void uret();
   void sret();
@@ -964,6 +970,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   inline void CheckBuffer();
   void GrowBuffer();
   inline void emit(Instr x);
+  inline void emit(ShortInstr x);
   inline void emit(uint64_t x);
   template <typename T>
   inline void EmitHelper(T x);
@@ -1012,6 +1019,9 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
                  int16_t imm12);
   void GenInstrU(Opcode opcode, Register rd, int32_t imm20);
   void GenInstrJ(Opcode opcode, Register rd, int32_t imm20);
+  void GenInstrCR(uint8_t funct4, Opcode opcode, Register rd, Register rs2);
+  void GenInstrCI(uint8_t funct3, Opcode opcode, Register rd, int8_t imm6);
+  void GenInstrCIU(uint8_t funct3, Opcode opcode, Register rd, uint8_t uimm6);
 
   // ----- Instruction class templates match those in LLVM's RISCVInstrInfo.td
   void GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,
