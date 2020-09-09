@@ -134,8 +134,9 @@ class FPURegisters {
 // -----------------------------------------------------------------------------
 // Instructions encoding constants.
 
-// On RISCV all instructions are 32 bits.
-using Instr = int32_t;
+// On RISCV all instructions are 32 bits, except for RVC.
+using Instr    = int32_t;
+using ShortInstr = int16_t;
 
 // Special Software Interrupt codes when used in the presence of the RISC-V
 // simulator.
@@ -191,6 +192,21 @@ const int kCsrBits = 12;
 const int kMemOrderBits = 4;
 const int kPredOrderShift = 24;
 const int kSuccOrderShift = 20;
+// for C extension
+const int kRvcFunct4Shift = 12;
+const int kRvcFunct4Bits = 4;
+const int kRvcFunct3Shift = 13;
+const int kRvcFunct3Bits = 3;
+const int kRvcRs1Shift = 7;
+const int kRvcRs1Bits = 5;
+const int kRvcRs2Shift = 2;
+const int kRvcRs2Bits = 5;
+const int kRvcRdShift = 7;
+const int kRvcRdBits = 5;
+const int kRvcRs1sShift = 7;
+const int kRvcRs1sBits = 3;
+const int kRvcRs2sShift = 2;
+const int kRvcRs2sBits = 3;
 
 // RISCV Instruction bit masks
 const int kBaseOpcodeMask = ((1 << kBaseOpcodeBits) - 1) << kBaseOpcodeShift;
@@ -216,6 +232,10 @@ const int kImm20Mask = ((1 << kImm20Bits) - 1) << kImm20Shift;
 const int kImm12Mask = ((1 << kImm12Bits) - 1) << kImm12Shift;
 const int kImm31_12Mask = ((1 << 20) - 1) << 12;
 const int kImm19_0Mask = ((1 << 20) - 1);
+const int kRvcOpcodeMask = 0b11 | (((1 << kRvcFunct3Bits) - 1) << kRvcFunct3Shift);
+const int kRvcFunct3Mask = (((1 << kRvcFunct3Bits) - 1) << kRvcFunct3Shift);
+const int kRvcFunct4Mask = (((1 << kRvcFunct4Bits) - 1) << kRvcFunct4Shift);
+const int kCRTypeMask = kRvcOpcodeMask | kRvcFunct4Mask;
 
 // RISCV CSR related bit mask and shift
 const int kFcsrFlagsBits = 5;
@@ -264,6 +284,10 @@ enum Opcode : uint32_t {
   JALR = 0b1100111,    // I form: JALR
   JAL = 0b1101111,     // J form: JAL
   SYSTEM = 0b1110011,  // I form: ECALL EBREAK Zicsr ext
+  // C extension
+  C0 = 0b00,           
+  C1 = 0b01,
+  C2 = 0b10,
 
   // Note use RO (RiscV Opcode) prefix
   // RV32I Base Instruction Set
@@ -449,6 +473,36 @@ enum Opcode : uint32_t {
   RO_FCVT_D_LU = OP_FP | (0b1101001 << kFunct7Shift) | (0b00011 << kRs2Shift),
   RO_FMV_D_X = OP_FP | (0b000 << kFunct3Shift) | (0b1111001 << kFunct7Shift) |
                (0b00000 << kRs2Shift),
+
+  // RV64C Standard Extension
+  RO_C_ADDI4SPN = C0 | (0b000 << kRvcFunct3Shift),
+  RO_C_FLD = C0 | (0b001 << kRvcFunct3Shift),
+  RO_C_LW = C0 | (0b010 << kRvcFunct3Shift),
+  RO_C_LD = C0 | (0b011 << kRvcFunct3Shift),
+  RO_C_FSD = C0 | (0b101 << kRvcFunct3Shift),
+  RO_C_SW = C0 | (0b110 << kRvcFunct3Shift),
+  RO_C_SD = C0 | (0b111 << kRvcFunct3Shift),
+  RO_C_NOP_ADDI = C1 | (0b000 << kRvcFunct3Shift),
+  RO_C_ADDIW = C1 | (0b001 << kRvcFunct3Shift),
+  RO_C_LI = C1 | (0b010 << kRvcFunct3Shift),
+  RO_C_LUI_ADD = C1 | (0b011 << kRvcFunct3Shift),
+  RO_C_MISC_ALU = C1 | (0b100 << kRvcFunct3Shift),
+  RO_C_J = C1 | (0b101 << kRvcFunct3Shift),
+  RO_C_BEQZ = C1 | (0b110 << kRvcFunct3Shift),
+  RO_C_BNEZ = C1 | (0b111 << kRvcFunct3Shift),
+  RO_C_SLLI = C2 | (0b000 << kRvcFunct3Shift),
+  RO_C_FLDSP = C2 | (0b001 << kRvcFunct3Shift),
+  RO_C_LWSP = C2 | (0b010 << kRvcFunct3Shift),
+  RO_C_LDSP = C2 | (0b011 << kRvcFunct3Shift),
+  RO_C_JR_MV_ADD = C2 | (0b100 << kRvcFunct3Shift),
+  RO_C_JR = C2 | (0b1000 << kRvcFunct4Shift),
+  RO_C_MV = C2 | (0b1000 << kRvcFunct4Shift),
+  RO_C_EBREAK = C2 | (0b1001 << kRvcFunct4Shift),
+  RO_C_JALR = C2 | (0b1001 << kRvcFunct4Shift),
+  RO_C_ADD = C2 | (0b1001 << kRvcFunct4Shift),
+  RO_C_FSDSP = C2 | (0b101 << kRvcFunct3Shift),
+  RO_C_SWSP = C2 | (0b110 << kRvcFunct3Shift),
+  RO_C_SDSP = C2 | (0b111 << kRvcFunct3Shift),
 };
 
 // ----- Emulated conditions.
@@ -610,12 +664,15 @@ inline Hint NegateHint(Hint hint) { return no_hint; }
 // These constants are declared in assembler-riscv64.cc, as they use named
 // registers and other constants.
 
+// An Illegal instruction
+const Instr kIllegalInstr = 0;  // All other bits are 0s (i.e., ecall)
 // An ECALL instruction, used for redirected real time call
 const Instr rtCallRedirInstr = SYSTEM;  // All other bits are 0s (i.e., ecall)
 // An EBreak instruction, used for debugging and semi-hosting
 const Instr kBreakInstr = SYSTEM | 1 << kImm12Shift;  // ebreak
 
 constexpr uint8_t kInstrSize = 4;
+constexpr uint8_t kShortInstrSize = 2;
 constexpr uint8_t kInstrSizeLog2 = 2;
 
 class InstructionBase {
@@ -635,11 +692,33 @@ class InstructionBase {
     kBType,
     kUType,
     kJType,
+    // C extension
+    kCRType,
+    kCIType,
+    kCSSType,
+    kCIWType,
+    kCLType,
+    kCSType,
+    kCBType,
+    kCJType,
     kUnsupported = -1
   };
 
+
+  inline bool IsShortInstruction() const {
+    uint8_t FirstByte = *reinterpret_cast<const uint8_t*>(this);
+    return (FirstByte & 0x03) <= C2;
+  }
+
+  inline uint8_t InstructionSize() const {
+    return this->IsShortInstruction() ? kShortInstrSize : kInstrSize;
+  }
+
   // Get the raw instruction bits.
   inline Instr InstructionBits() const {
+    if (this->IsShortInstruction()) {
+      return 0x0000FFFF & (*reinterpret_cast<const ShortInstr*>(this));
+    }
     return *reinterpret_cast<const Instr*>(this);
   }
 
@@ -704,6 +783,11 @@ class InstructionGetters : public T {
     return this->InstructionBits() & kBaseOpcodeMask;
   }
 
+  inline int RvcOpcode() const {
+    DCHECK(this->IsShortInstruction());
+    return this->InstructionBits() & kRvcOpcodeMask;
+  }
+
   inline int Rs1Value() const {
     DCHECK(this->InstructionType() == InstructionBase::kRType ||
            this->InstructionType() == InstructionBase::kR4Type ||
@@ -735,6 +819,30 @@ class InstructionGetters : public T {
     return this->Bits(kRdShift + kRdBits - 1, kRdShift);
   }
 
+  inline int RvcRdValue() const {
+    DCHECK(this->IsShortInstruction());
+    return this->Bits(kRvcRdShift + kRvcRdBits - 1, kRvcRdShift);
+  }
+
+  inline int RvcRs1Value() const {
+    return this->RvcRdValue();
+  }
+
+  inline int RvcRs2Value() const {
+    DCHECK(this->IsShortInstruction());
+    return this->Bits(kRvcRs2Shift + kRvcRs2Bits - 1, kRvcRs2Shift);
+  }
+
+  inline int RvcRs1sValue() const {
+    DCHECK(this->IsShortInstruction());
+    return 0b1000 + this->Bits(kRvcRs1sShift + kRvcRs1sBits - 1, kRvcRs1sShift);
+  }
+
+  inline int RvcRs2sValue() const {
+    DCHECK(this->IsShortInstruction());
+    return 0b1000 + this->Bits(kRvcRs2sShift + kRvcRs2sBits - 1, kRvcRs2sShift);
+  }
+
   inline int Funct7Value() const {
     DCHECK(this->InstructionType() == InstructionBase::kRType);
     return this->Bits(kFunct7Shift + kFunct7Bits - 1, kFunct7Shift);
@@ -752,6 +860,16 @@ class InstructionGetters : public T {
     DCHECK(this->InstructionType() == InstructionBase::kRType &&
            this->BaseOpcode() == OP_FP);
     return this->Bits(kFunct5Shift + kFunct5Bits - 1, kFunct5Shift);
+  }
+
+  inline int RvcFunct4Value() const {
+    DCHECK(this->IsShortInstruction());
+    return this->Bits(kRvcFunct4Shift + kRvcFunct4Bits - 1, kRvcFunct4Shift);
+  }
+
+  inline int RvcFunct3Value() const {
+    DCHECK(this->IsShortInstruction());
+    return this->Bits(kRvcFunct3Shift + kRvcFunct3Bits - 1, kRvcFunct3Shift);
   }
 
   inline int CsrValue() const {
@@ -851,6 +969,15 @@ class InstructionGetters : public T {
     return this->Bits(kImm12Shift + 4, kImm12Shift);
   }
 
+  inline int RvcImm6Value() const {
+    DCHECK(this->IsShortInstruction());
+    // | funct3 | imm[5] | rs1/rd | imm[4:0] | opcode |
+    //  15         12              6        2        
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm6 = ((Bits & 0x1000) >> 7) | ((Bits & 0x7c) >> 2);
+    return imm6 << 26 >> 26;
+  }
+
   inline bool AqValue() const { return this->Bits(kAqShift, kAqShift); }
 
   inline bool RlValue() const { return this->Bits(kRlShift, kRlShift); }
@@ -890,6 +1017,47 @@ const int kBranchReturnOffset = 2 * kInstrSize;
 static const int kNegOffset = 0x00008000;
 
 InstructionBase::Type InstructionBase::InstructionType() const {
+  // RV64C Instruction
+  switch (InstructionBits() & kRvcOpcodeMask) {
+    case RO_C_ADDI4SPN:
+      return kCIWType;
+    case RO_C_FLD:
+    case RO_C_LW:
+    case RO_C_LD:
+      return kCLType;
+    case RO_C_FSD:
+    case RO_C_SW:
+    case RO_C_SD:
+      return kCSType;
+    case RO_C_NOP_ADDI:
+    case RO_C_ADDIW:
+    case RO_C_LI:
+    case RO_C_LUI_ADD:
+      return kCIType;
+    case RO_C_MISC_ALU:
+      if (Bits(11, 10) != 0b11)
+        return kCBType;
+      else
+        return kCSType;
+    case RO_C_J:
+      return kCJType;
+    case RO_C_BEQZ:
+    case RO_C_BNEZ:
+      return kCBType;
+    case RO_C_SLLI:
+    case RO_C_FLDSP:
+    case RO_C_LWSP:
+    case RO_C_LDSP:
+      return kCIType;
+    case RO_C_JR_MV_ADD:
+      return kCRType;
+    case RO_C_FSDSP:
+    case RO_C_SWSP:
+    case RO_C_SDSP:
+      return kCSSType;
+    default:
+      break;
+  }
   // RISCV routine
   switch (InstructionBits() & kBaseOpcodeMask) {
     case LOAD:
