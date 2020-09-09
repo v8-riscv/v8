@@ -580,7 +580,10 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   // RV64C Standard Extension
   void c_nop();
   void c_addi(Register rd, int8_t imm6);
+  void c_jr(Register rs1);
+  void c_mv(Register rd, Register rs2);
   void c_ebreak();
+  void c_jalr(Register rs1);
   void c_add(Register rd, Register rs2);
 
   // Privileged
