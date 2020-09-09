@@ -134,8 +134,9 @@ class FPURegisters {
 // -----------------------------------------------------------------------------
 // Instructions encoding constants.
 
-// On RISCV all instructions are 32 bits.
-using Instr = int32_t;
+// On RISCV all instructions are 32 bits, except for RVC.
+using Instr    = int32_t;
+using RvcInstr = uint16_t;
 
 // Special Software Interrupt codes when used in the presence of the RISC-V
 // simulator.
@@ -191,6 +192,21 @@ const int kCsrBits = 12;
 const int kMemOrderBits = 4;
 const int kPredOrderShift = 24;
 const int kSuccOrderShift = 20;
+// for C extension
+const int kRvcFunct4Shift = 12;
+const int kRvcFunct4Bits = 4;
+const int kRvcFunct3Shift = 13;
+const int kRvcFunct3Bits = 3;
+const int kRvcRs1Shift = 7;
+const int kRvcRs1Bits = 5;
+const int kRvcRs2Shift = 2;
+const int kRvcRs2Bits = 5;
+const int kRvcRdShift = 7;
+const int kRvcRdBits = 5;
+const int kRvcRs1sShift = 7;
+const int kRvcRs1sBits = 3;
+const int kRvcRs2sShift = 2;
+const int kRvcRs2sBits = 3;
 
 // RISCV Instruction bit masks
 const int kBaseOpcodeMask = ((1 << kBaseOpcodeBits) - 1) << kBaseOpcodeShift;
@@ -214,6 +230,10 @@ const int kRdFieldMask = ((1 << kRdBits) - 1) << kRdShift;
 const int kBImm12Mask = kFunct7Mask | kRdFieldMask;
 const int kImm20Mask = ((1 << kImm20Bits) - 1) << kImm20Shift;
 const int kImm12Mask = ((1 << kImm12Bits) - 1) << kImm12Shift;
+const int kRvcOpcodeMask = 0b11 | (((1 << kRvcFunct3Bits) - 1) << kRvcFunct3Shift);
+const int kRvcFunct3Mask = (((1 << kRvcFunct3Bits) - 1) << kRvcFunct3Shift);
+const int kRvcFunct4Mask = (((1 << kRvcFunct4Bits) - 1) << kRvcFunct4Shift);
+const int kCRTypeMask = kRvcOpcodeMask | kRvcFunct4Mask;
 
 // RISCV CSR related bit mask and shift
 const int kFcsrFlagsBits = 5;
@@ -262,6 +282,33 @@ enum Opcode : uint32_t {
   JALR = 0b1100111,    // I form: JALR
   JAL = 0b1101111,     // J form: JAL
   SYSTEM = 0b1110011,  // I form: ECALL EBREAK Zicsr ext
+  // C extension
+  C0 = 0b00,           
+  C1 = 0b01,
+  C2 = 0b10,
+  RVC_ADDI4SPN = C0 | (0b000 << kRvcFunct3Shift),
+  RVC_FLD = C0 | (0b001 << kRvcFunct3Shift),
+  RVC_LW = C0 | (0b010 << kRvcFunct3Shift),
+  RVC_LD = C0 | (0b011 << kRvcFunct3Shift),
+  RVC_FSD = C0 | (0b101 << kRvcFunct3Shift),
+  RVC_SW = C0 | (0b110 << kRvcFunct3Shift),
+  RVC_SD = C0 | (0b111 << kRvcFunct3Shift),
+  RVC_NOP_ADDI = C1 | (0b000 << kRvcFunct3Shift),
+  RVC_ADDIW = C1 | (0b001 << kRvcFunct3Shift),
+  RVC_LI = C1 | (0b010 << kRvcFunct3Shift),
+  RVC_LUI_ADD = C1 | (0b011 << kRvcFunct3Shift),
+  RVC_MISC_ALU = C1 | (0b100 << kRvcFunct3Shift),
+  RVC_J = C1 | (0b101 << kRvcFunct3Shift),
+  RVC_BEQZ = C1 | (0b110 << kRvcFunct3Shift),
+  RVC_BNEZ = C1 | (0b111 << kRvcFunct3Shift),
+  RVC_SLLI = C2 | (0b000 << kRvcFunct3Shift),
+  RVC_FLDSP = C2 | (0b001 << kRvcFunct3Shift),
+  RVC_LWSP = C2 | (0b010 << kRvcFunct3Shift),
+  RVC_LDSP = C2 | (0b011 << kRvcFunct3Shift),
+  RVC_J_MV_ADD = C2 | (0b100 << kRvcFunct3Shift),
+  RVC_FSDSP = C2 | (0b101 << kRvcFunct3Shift),
+  RVC_SWSP = C2 | (0b110 << kRvcFunct3Shift),
+  RVC_SDSP = C2 | (0b111 << kRvcFunct3Shift),
 
   // Note use RO (RiscV Opcode) prefix
   // RV32I Base Instruction Set
@@ -447,6 +494,46 @@ enum Opcode : uint32_t {
   RO_FCVT_D_LU = OP_FP | (0b1101001 << kFunct7Shift) | (0b00011 << kRs2Shift),
   RO_FMV_D_X = OP_FP | (0b000 << kFunct3Shift) | (0b1111001 << kFunct7Shift) |
                (0b00000 << kRs2Shift),
+
+
+  // RV32C Standard Extension (RV64 based)
+  RO_C_AIID4SPN = RVC_ADDI4SPN,
+  RO_C_FLD = RVC_FLD,
+  RO_C_LW = RVC_LW,
+  RO_C_LD = RVC_LD,
+  RO_C_FSD = RVC_FSD,
+  RO_C_SW = RVC_SW,
+  RO_C_SD = RVC_SD,
+  RO_C_NOP = RVC_NOP_ADDI,
+  RO_C_ADDI = RVC_NOP_ADDI,
+  RO_C_ADDIW = RVC_ADDIW,
+  RO_C_LI = RVC_LI,
+  RO_C_ADDI16SP = RVC_LUI_ADD,
+  RO_C_LUI = RVC_LUI_ADD,
+  RO_C_SRLI64 = RVC_MISC_ALU,
+  RO_C_SRAI64 = RVC_MISC_ALU,
+  RO_C_ANDI = RVC_MISC_ALU,
+  RO_C_SUB = RVC_MISC_ALU,
+  RO_C_XOR = RVC_MISC_ALU,
+  RO_C_OR = RVC_MISC_ALU,
+  RO_C_AND = RVC_MISC_ALU,
+  RO_C_SUBW = RVC_MISC_ALU,
+  RO_C_ADDW = RVC_MISC_ALU,
+  RO_C_J = RVC_J,
+  RO_C_BEQZ = RVC_BEQZ,
+  RO_C_BNEZ = RVC_BNEZ,
+  RO_C_SLLI = RVC_SLLI,
+  RO_C_FLDSP = RVC_FLDSP,
+  RO_C_LWSP = RVC_LWSP,
+  RO_C_LDSP = RVC_LDSP,
+  RO_C_JR = C2 | (0b1000 << kRvcFunct4Shift),
+  RO_C_MV = C2 | (0b1000 << kRvcFunct4Shift),
+  RO_C_EBREAK = C2 | (0b1001 << kRvcFunct4Shift),
+  RO_C_JALR = C2 | (0b1001 << kRvcFunct4Shift),
+  RO_C_ADD = C2 | (0b1001 << kRvcFunct4Shift),
+  RO_C_FSDSP = RVC_FSDSP,
+  RO_C_SWSP = RVC_SWSP,
+  RO_C_SDSP = RVC_SDSP,
 };
 
 // ----- Emulated conditions.
@@ -608,12 +695,15 @@ inline Hint NegateHint(Hint hint) { return no_hint; }
 // These constants are declared in assembler-riscv64.cc, as they use named
 // registers and other constants.
 
+// An Illegal instruction
+const Instr kIllegalInstr = 0;  // All other bits are 0s (i.e., ecall)
 // An ECALL instruction, used for redirected real time call
 const Instr rtCallRedirInstr = SYSTEM;  // All other bits are 0s (i.e., ecall)
 // An EBreak instruction, used for debugging and semi-hosting
 const Instr kBreakInstr = SYSTEM | 1 << kImm12Shift;  // ebreak
 
 constexpr uint8_t kInstrSize = 4;
+constexpr uint8_t kRvcInstrSize = 2;
 constexpr uint8_t kInstrSizeLog2 = 2;
 
 class InstructionBase {
@@ -633,11 +723,28 @@ class InstructionBase {
     kBType,
     kUType,
     kJType,
+    // C extension
+    kCRType,
+    kCIType,
+    kCSSType,
+    kCIWType,
+    kCLType,
+    kCSType,
+    kCBType,
+    kCJType,
     kUnsupported = -1
   };
 
+  inline uint8_t InstructionSize() const {
+    uint8_t FirstByte = *reinterpret_cast<const uint8_t*>(this);
+    return (FirstByte & 0x03) < 0x03 ? kRvcInstrSize : kInstrSize;
+  }
+
   // Get the raw instruction bits.
   inline Instr InstructionBits() const {
+    if (this->InstructionSize() == kRvcInstrSize) {
+      return (Instr)*reinterpret_cast<const RvcInstr*>(this);
+    }
     return *reinterpret_cast<const Instr*>(this);
   }
 
@@ -702,6 +809,11 @@ class InstructionGetters : public T {
     return this->InstructionBits() & kBaseOpcodeMask;
   }
 
+  inline int RvcOpcode() const {
+    DCHECK(this->InstructionSize() == kRvcInstrSize);
+    return this->InstructionBits() & kRvcOpcodeMask;
+  }
+
   inline int Rs1Value() const {
     DCHECK(this->InstructionType() == InstructionBase::kRType ||
            this->InstructionType() == InstructionBase::kR4Type ||
@@ -733,6 +845,30 @@ class InstructionGetters : public T {
     return this->Bits(kRdShift + kRdBits - 1, kRdShift);
   }
 
+  inline int RvcRdValue() const {
+    DCHECK(this->InstructionSize() == kRvcInstrSize);
+    return this->Bits(kRvcRdShift + kRvcRdBits - 1, kRvcRdShift);
+  }
+
+  inline int RvcRs1Value() const {
+    return this->RvcRdValue();
+  }
+
+  inline int RvcRs2Value() const {
+    DCHECK(this->InstructionSize() == kRvcInstrSize);
+    return this->Bits(kRvcRs2Shift + kRvcRs2Bits - 1, kRvcRs2Shift);
+  }
+
+  inline int RvcRs1sValue() const {
+    DCHECK(this->InstructionSize() == kRvcInstrSize);
+    return 0b1000 + this->Bits(kRvcRs1sShift + kRvcRs1sBits - 1, kRvcRs1sShift);
+  }
+
+  inline int RvcRs2sValue() const {
+    DCHECK(this->InstructionSize() == kRvcInstrSize);
+    return 0b1000 + this->Bits(kRvcRs2sShift + kRvcRs2sBits - 1, kRvcRs2sShift);
+  }
+
   inline int Funct7Value() const {
     DCHECK(this->InstructionType() == InstructionBase::kRType);
     return this->Bits(kFunct7Shift + kFunct7Bits - 1, kFunct7Shift);
@@ -750,6 +886,14 @@ class InstructionGetters : public T {
     DCHECK(this->InstructionType() == InstructionBase::kRType &&
            this->BaseOpcode() == OP_FP);
     return this->Bits(kFunct5Shift + kFunct5Bits - 1, kFunct5Shift);
+  }
+
+  inline int RvcFunct4Value() const {
+    return this->Bits(kRvcFunct4Shift + kRvcFunct4Bits - 1, kRvcFunct4Shift);
+  }
+
+  inline int RvcFunct3Value() const {
+    return this->Bits(kRvcFunct3Shift + kRvcFunct3Bits - 1, kRvcFunct3Shift);
   }
 
   inline int CsrValue() const {
@@ -849,6 +993,118 @@ class InstructionGetters : public T {
     return this->Bits(kImm12Shift + 4, kImm12Shift);
   }
 
+  inline int RvcImm() const {
+    // | funct3 | imm[5] | rs1/rd | imm[4:0] | opcode |
+    //  15         12              6        2        
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm = ((Bits & 0x1000) >> 7) | ((Bits & 0x7c) >> 2);
+    return imm << 26 >> 26;
+  }
+
+  inline int RvcImmU() const {
+    // | funct3 | nzimm[17] | rs1/rd | nzimm[16:12] | opcode |
+    //  15         12                 6            2        
+    int32_t imm = this->RvcImm();
+    return (uint32_t)imm << 12 >> 12;
+  }
+
+  inline int RvcImmAddi4spn() const {
+    // | funct3 | nzuimm[5:4|9:6|2|3] | rd' | opcode |
+    //  15       12                  5             
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm = ((Bits & 0x1800) >> 7) | ((Bits & 0x780) >> 1) 
+                  | ((Bits & 0x40) >> 4) | ((Bits & 0x20) >> 2);
+    return imm;
+  }
+
+  inline int RvcImmAddi16sp() const {
+    // | funct3 | nzimm[9] | 2 | nzimm[4|6|8:7|5] | opcode |
+    //  15         12           6                2        
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm = ((Bits & 0x1000) >> 3) | ((Bits & 0x40) >> 2) 
+                  | ((Bits & 0x20) << 1) | ((Bits & 0x18) << 4) 
+                  | ((Bits & 0x4) << 3);
+    return imm << 22 >> 22;
+  }
+
+  inline int RvcImmLwsp() const {
+    // | funct3 | uimm[5] | rs1 | uimm[4:2|7:6] | opcode |
+    //  15         12            6             2        
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm = ((Bits & 0x1000) >> 7) | ((Bits & 0x70) >> 2)
+                  | ((Bits & 0xc) << 4);
+    return imm;
+  }
+
+  inline int RvcImmLdsp() const {
+    // | funct3 | uimm[5] | rs1 | uimm[4:3|8:6] | opcode |
+    //  15         12            6             2        
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm = ((Bits & 0x1000) >> 7) | ((Bits & 0x60) >> 2)
+                  | ((Bits & 0x1c) << 4);
+    return imm;
+  }
+
+  inline int RvcImmSwsp() const {
+    // | funct3 | uimm[5:2|7:6] | rs2 | opcode |
+    //  15       12            7                     
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm = ((Bits & 0x1e00) >> 7) | ((Bits & 0x180) >> 1);
+    return imm;
+  }
+
+  inline int RvcImmSdsp() const {
+    // | funct3 | uimm[5:3|8:6] | rs2 | opcode |
+    //  15       12            7                     
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm = ((Bits & 0x1c00) >> 7) | ((Bits & 0x380) >> 1);
+    return imm;
+  }
+
+  inline int RvcImmLw() const {
+    // | funct3 | uimm[5:3] | rs1′   | uimm[2|6] | opcode |
+    //  15       12       10        6         5
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm = ((Bits & 0x1c00) >> 7) | ((Bits & 0x40) >> 4) 
+                  | ((Bits & 0x20) << 1);
+    return imm;
+  }
+
+  inline int RvcImmLd() const {
+    // | funct3 | uimm[5:3] | rs1′ | uimm[7:6] | rd′ | opcode |
+    //  15       12       10        6         5
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm = ((Bits & 0x1c00) >> 7) | ((Bits & 0x60) << 1);
+    return imm;
+  }
+
+  inline int RvcImmJ() const {
+    // | funct3 | imm[11|4|9:8|10|6|7|3:1|5] | opcode |
+    //  15       12                         2        
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm = ((Bits & 0x1000) >> 3) | ((Bits & 0x800) >> 7) 
+                  | ((Bits & 0x600) >> 1) | ((Bits & 0x100) << 2) 
+                  | ((Bits & 0x80) >> 1) | ((Bits & 0x40) << 1) 
+                  | ((Bits & 0x38) >> 2) | ((Bits & 0x4) << 3);
+    return imm << 20 >> 20;
+  }
+
+  inline int RvcImmB() const {
+    // | funct3 | imm[8|4:3] | rs1′ | imm[7:6|2:1|5] | opcode |
+    //  15       12        10        6              2
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm = ((Bits & 0x1000) >> 4) | ((Bits & 0xc00) >> 7) 
+                  | ((Bits & 0x60) << 1) | ((Bits & 0x18) >> 2) 
+                  | ((Bits & 0x4) << 3);
+    return imm;
+  }
+
+  inline int RvcShamt() const {
+    // | funct3 | nzuimm[5] | rs1/rd | nzuimm[4:0] | opcode |
+    //  15         12                 6           2        
+    return this->RvcImm() & 0x3f;
+  }
+
   inline bool AqValue() const { return this->Bits(kAqShift, kAqShift); }
 
   inline bool RlValue() const { return this->Bits(kRlShift, kRlShift); }
@@ -888,6 +1144,47 @@ const int kBranchReturnOffset = 2 * kInstrSize;
 static const int kNegOffset = 0x00008000;
 
 InstructionBase::Type InstructionBase::InstructionType() const {
+  // RV32C Instruction (RV64 based)
+  switch (InstructionBits() & kRvcOpcodeMask) {
+    case RVC_ADDI4SPN:
+      return kCIWType;
+    case RVC_FLD:
+    case RVC_LW:
+    case RVC_LD:
+      return kCLType;
+    case RVC_FSD:
+    case RVC_SW:
+    case RVC_SD:
+      return kCSType;
+    case RVC_NOP_ADDI:
+    case RVC_ADDIW:
+    case RVC_LI:
+    case RVC_LUI_ADD:
+      return kCIType;
+    case RVC_MISC_ALU:
+      if (Bits(11, 10) != 0b11)
+        return kCBType;
+      else
+        return kCSType;
+    case RVC_J:
+      return kCJType;
+    case RVC_BEQZ:
+    case RVC_BNEZ:
+      return kCBType;
+    case RVC_SLLI:
+    case RVC_FLDSP:
+    case RVC_LWSP:
+    case RVC_LDSP:
+      return kCIType;
+    case RVC_J_MV_ADD:
+      return kCRType;
+    case RVC_FSDSP:
+    case RVC_SWSP:
+    case RVC_SDSP:
+      return kCSSType;
+    default:
+      break;
+  }
   // RISCV routine
   switch (InstructionBits() & kBaseOpcodeMask) {
     case LOAD:

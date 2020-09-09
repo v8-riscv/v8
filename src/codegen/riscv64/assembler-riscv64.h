@@ -574,6 +574,12 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void fcvt_d_lu(FPURegister rd, Register rs1, RoundingMode frm = RNE);
   void fmv_d_x(FPURegister rd, Register rs1);
 
+  // RV64C Standard Extension
+  void c_nop();
+  void c_addi(Register rd, int16_t imm);
+  void c_ebreak();
+  void c_add(Register rd, Register rs2);
+
   // Privileged
   void uret();
   void sret();
@@ -957,6 +963,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   inline void CheckBuffer();
   void GrowBuffer();
   inline void emit(Instr x);
+  inline void emit(RvcInstr x);
   inline void emit(uint64_t x);
   template <typename T>
   inline void EmitHelper(T x);

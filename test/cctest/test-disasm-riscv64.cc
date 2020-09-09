@@ -459,6 +459,22 @@ TEST(PSEUDO) {
   VERIFY_RUN();
 }
 
+TEST(RV64C) {
+  SET_UP();
+
+  // 000 | 01 1011 10 | 101 | 00
+//   COMPARE(emit(0x0dd4), "00000dd4       c.addi4spn  a3, 724");
+
+  COMPARE(c_nop(), "00000001       c.nop");
+  // 000 | 1 | 10011 | 00111 | 01
+  COMPARE(c_addi(s3, -25), "0000199d       c.addi    s3, -25");
+  COMPARE(c_ebreak(), "00009002       c.ebreak");
+  // 1001 | 10110 | 00101 | 10
+  COMPARE(c_add(s6, t0), "00009b16       c.add     s6, t0");
+
+  VERIFY_RUN();
+}
+
 /*
 TEST(Previleged) {
   SET_UP();

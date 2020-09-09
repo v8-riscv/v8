@@ -79,6 +79,19 @@ class Decoder {
   void PrintImm20J(Instruction* instr);
   void PrintShamt(Instruction* instr);
   void PrintShamt32(Instruction* instr);
+  void PrintRvcImm(Instruction* instr);
+  void PrintRvcImmU(Instruction* instr);
+  void PrintRvcImmLdsp(Instruction* instr);
+  void PrintRvcImmLwsp(Instruction* instr);
+  void PrintRvcImmLd(Instruction* instr);
+  void PrintRvcImmLw(Instruction* instr);
+  void PrintRvcImmSdsp(Instruction* instr);
+  void PrintRvcImmSwsp(Instruction* instr);
+  void PrintRvcImmAddi4spn(Instruction* instr);
+  void PrintRvcImmAddi16sp(Instruction* instr);
+  void PrintRvcImmB(Instruction* instr);
+  void PrintRvcImmJ(Instruction* instr);
+  void PrintRvcShamt(Instruction* instr);
   void PrintAcquireRelease(Instruction* instr);
   void PrintBranchOffset(Instruction* instr);
   void PrintStoreOffset(Instruction* instr);
@@ -96,6 +109,14 @@ class Decoder {
   void DecodeBType(Instruction* instr);
   void DecodeUType(Instruction* instr);
   void DecodeJType(Instruction* instr);
+  void DecodeCRType(Instruction* instr);
+  void DecodeCIType(Instruction* instr);
+  void DecodeCSSType(Instruction* instr);
+  void DecodeCIWType(Instruction* instr);
+  void DecodeCLType(Instruction* instr);
+  void DecodeCSType(Instruction* instr);
+  void DecodeCBType(Instruction* instr);
+  void DecodeCJType(Instruction* instr);
 
   // Printing of instruction name.
   void PrintInstructionName(Instruction* instr);
@@ -103,6 +124,8 @@ class Decoder {
   // Handle formatting of instructions and their options.
   int FormatRegister(Instruction* instr, const char* option);
   int FormatFPURegisterOrRoundMode(Instruction* instr, const char* option);
+  int FormatRvcRegister(Instruction* instr, const char* option);
+  int FormatRvcImm(Instruction* instr, const char* option);
   int FormatOption(Instruction* instr, const char* option);
   void Format(Instruction* instr, const char* format);
   void Unknown(Instruction* instr);
@@ -220,6 +243,74 @@ void Decoder::PrintShamt(Instruction* instr) {
 
 void Decoder::PrintShamt32(Instruction* instr) {
   int32_t imm = instr->Shamt32();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImm(Instruction* instr) {
+  int32_t imm = instr->RvcImm();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImmU(Instruction* instr) {
+  int32_t imm = instr->RvcImmU();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "0x%x", imm);
+}
+
+void Decoder::PrintRvcImmLdsp(Instruction* instr) {
+  int32_t imm = instr->RvcImmLdsp();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImmLwsp(Instruction* instr) {
+  int32_t imm = instr->RvcImmLwsp();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImmLd(Instruction* instr) {
+  int32_t imm = instr->RvcImmLd();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImmLw(Instruction* instr) {
+  int32_t imm = instr->RvcImmLw();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImmSdsp(Instruction* instr) {
+  int32_t imm = instr->RvcImmSdsp();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImmSwsp(Instruction* instr) {
+  int32_t imm = instr->RvcImmSwsp();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImmAddi4spn(Instruction* instr) {
+  int32_t imm = instr->RvcImmAddi4spn();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImmAddi16sp(Instruction* instr) {
+  int32_t imm = instr->RvcImmAddi16sp();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImmB(Instruction* instr) {
+  int32_t imm = instr->RvcImmB();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImmJ(Instruction* instr) {
+  // TODO: print message like Imm20J
+  // const char* target = converter_.NameOfAddress(reinterpret_cast<byte*>(instr) + imm);
+  // out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d -> %s", imm, target);
+  int32_t imm = instr->RvcImmJ();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcShamt(Instruction* instr) {
+  int32_t imm = instr->RvcShamt();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
 }
 
@@ -378,6 +469,127 @@ int Decoder::FormatFPURegisterOrRoundMode(Instruction* instr,
   UNREACHABLE();
 }
 
+// Handle all C extension register based formatting in this function to reduce the
+// complexity of FormatOption.
+int Decoder::FormatRvcRegister(Instruction* instr, const char* format) {
+  DCHECK_EQ(format[0], 'C');
+  DCHECK(format[1] == 'r' || format[1] == 'f');
+  if (format[2] == 's') {  // 'Crs[12]: Rs register.
+    if (format[3] == '1') {
+      if (format[4] == 's') {   // 'Crs1s: 3-bits register
+        int reg = instr->RvcRs1sValue();
+        if (format[1] == 'r') {
+          PrintRegister(reg);
+        } else if (format[1] == 'f') {
+          PrintFPURegister(reg);
+        }
+        return 5;
+      }
+      int reg = instr->RvcRs1Value();
+      if (format[1] == 'r') {
+        PrintRegister(reg);
+      } else if (format[1] == 'f') {
+        PrintFPURegister(reg);
+      }
+      return 4;
+    } else if (format[3] == '2') {
+      if (format[4] == 's') {   // 'Crs2s: 3-bits register
+        int reg = instr->RvcRs2sValue();
+        if (format[1] == 'r') {
+          PrintRegister(reg);
+        } else if (format[1] == 'f') {
+          PrintFPURegister(reg);
+        }
+        PrintRegister(reg);
+        return 5;
+      }
+      int reg = instr->RvcRs2Value();
+      if (format[1] == 'r') {
+        PrintRegister(reg);
+      } else if (format[1] == 'f') {
+        PrintFPURegister(reg);
+      }
+      return 4;
+    }
+    UNREACHABLE();
+  } else if (format[2] == 'd') {  // 'Crd: rd register.
+    int reg = instr->RvcRdValue();
+    if (format[1] == 'r') {
+      PrintRegister(reg);
+    } else if (format[1] == 'f') {
+      PrintFPURegister(reg);
+    }
+    return 3;
+  }
+  UNREACHABLE();
+}
+
+// Handle all C extension immediates based formatting in this function to reduce the
+// complexity of FormatOption.
+int Decoder::FormatRvcImm(Instruction* instr, const char* format) {
+  DCHECK_EQ(format[0], 'C');
+  DCHECK(STRING_STARTS_WITH(format, "Cimm"));
+  if (format[4] == 'L') {
+    if (format[5] == 'd') {
+      if (format[6] == 's') {
+        DCHECK(STRING_STARTS_WITH(format, "CimmLdsp"));
+        PrintRvcImmLdsp(instr);
+        return 8;
+      }
+      DCHECK(STRING_STARTS_WITH(format, "CimmLd"));
+      PrintRvcImmLd(instr);
+      return 6;
+    } else if (format[5] == 'w') {
+      if (format[6] == 's') {
+        DCHECK(STRING_STARTS_WITH(format, "CimmLwsp"));
+        PrintRvcImmLwsp(instr);
+        return 8;
+      }
+      DCHECK(STRING_STARTS_WITH(format, "CimmLw"));
+      PrintRvcImmLw(instr);
+      return 6;
+    }
+    UNREACHABLE();
+  } else if (format[4] == 'S') {
+    if (format[5] == 'd') {
+      DCHECK(STRING_STARTS_WITH(format, "CimmSdsp"));
+      PrintRvcImmSdsp(instr);
+      return 8;
+    } else if (format[5] == 'w') {
+      DCHECK(STRING_STARTS_WITH(format, "CimmSwsp"));
+      PrintRvcImmSwsp(instr);
+      return 8;
+    }
+    UNREACHABLE();
+  } else if (format[4] == 'U') {
+    DCHECK(STRING_STARTS_WITH(format, "CimmU"));
+    PrintRvcImmU(instr);
+    return 5;
+  } else if (format[4] == 'A') {
+    if (format[8] == '4') {
+      DCHECK(STRING_STARTS_WITH(format, "CimmAddi4spn"));
+      PrintRvcImmAddi4spn(instr);
+      return 12;
+    } else if (format[8] == '1' && format[9] == '6') {
+      DCHECK(STRING_STARTS_WITH(format, "CimmAddi16sp"));
+      PrintRvcImmAddi16sp(instr);
+      return 12;
+    }
+    UNREACHABLE();
+  } else if (format[4] == 'B') {
+    DCHECK(STRING_STARTS_WITH(format, "CimmB"));
+    PrintRvcImmB(instr);
+    return 5;
+  } else if (format[4] == 'J') {
+    DCHECK(STRING_STARTS_WITH(format, "CimmJ"));
+    PrintRvcImmJ(instr);
+    return 5;
+  } 
+  DCHECK(STRING_STARTS_WITH(format, "Cimm"));
+  PrintRvcImm(instr);
+  return 4;
+}
+
 // FormatOption takes a formatting string and interprets it based on
 // the current instructions. The format string points to the first
 // character of the option string (the option escape has already been
@@ -385,6 +597,18 @@ int Decoder::FormatFPURegisterOrRoundMode(Instruction* instr,
 // characters that were consumed from the formatting string.
 int Decoder::FormatOption(Instruction* instr, const char* format) {
   switch (format[0]) {
+    case 'C': {  // `C extension
+      if (format[1] == 'r' || format[1] == 'f') {
+        return FormatRvcRegister(instr, format);
+      } else if (format[1] == 'i') {
+        return FormatRvcImm(instr, format);
+      } else if (format[1] == 's') {
+        DCHECK(STRING_STARTS_WITH(format, "Cshamt"));
+        PrintRvcShamt(instr);
+        return 6;
+      }
+      UNREACHABLE();
+    }
     case 'c': {  // `csr: CSR registers
       if (format[1] == 's') {
         if (format[2] == 'r') {
@@ -1343,6 +1567,181 @@ void Decoder::DecodeJType(Instruction* instr) {
   }
 }
 
+void Decoder::DecodeCRType(Instruction* instr) {
+  switch (instr->RvcFunct4Value()) {
+    case 0b1000:  
+      if (instr->RvcRs1Value() != 0 && instr->RvcRs2Value() == 0)
+        Format(instr, "c.jr      'Crs1");
+      else if (instr->RvcRdValue() != 0 && instr->RvcRs2Value() != 0)
+        Format(instr, "c.mv      'Crd, 'Crs2");
+      else
+        UNSUPPORTED_RISCV();
+      break;
+    case 0b1001:  
+      if (instr->RvcRs1Value() == 0 && instr->RvcRs2Value() == 0)
+        Format(instr, "c.ebreak");
+      else if (instr->RvcRdValue() != 0 && instr->RvcRs2Value() == 0)
+        Format(instr, "c.jalr    'Crs1");
+      else if (instr->RvcRdValue() != 0 && instr->RvcRs2Value() != 0)
+        Format(instr, "c.add     'Crd, 'Crs2");
+      else
+        UNSUPPORTED_RISCV();
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+void Decoder::DecodeCIType(Instruction* instr) {
+  switch (instr->RvcOpcode()) {
+    case RVC_NOP_ADDI:
+      if (instr->RvcRdValue() == 0)
+        Format(instr, "c.nop");
+      else
+        Format(instr, "c.addi    'Crd, 'Cimm");
+      break;
+    case RO_C_ADDIW:
+      Format(instr, "c.addiw   'Crd, 'Cimm");
+      break;
+    case RO_C_LI:
+      Format(instr, "c.li      'Crd, 'Cimm");
+      break;
+    case RVC_LUI_ADD:
+      if (instr->RvcRdValue() == 2)
+        Format(instr, "c.addi16sp  'Crd, 'CimmAddi16sp");
+      else if (instr->RvcRdValue() != 0 && instr->RvcRdValue() != 2)
+        Format(instr, "c.lui     'Crd, 'CimmU");
+      else
+        UNSUPPORTED_RISCV();
+      break;
+    case RO_C_SLLI:
+      Format(instr, "c.slli    'Crd, 'Cshamt");
+      break;
+    case RO_C_FLDSP:
+      Format(instr, "c.fldsp   'Crd, 'CimmLdsp(x2)");
+      break;
+    case RO_C_LWSP:
+      Format(instr, "c.lwsp    'Crd, 'CimmLwsp(x2)");
+      break;
+    case RO_C_LDSP:
+      Format(instr, "c.ldsp    'Crd, 'CimmLdsp(x2)");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+void Decoder::DecodeCSSType(Instruction* instr) {
+  switch (instr->RvcOpcode()) {
+    case RO_C_FSDSP:
+      Format(instr, "c.fsdsp   'Crs2, 'CimmSdsp(x2)");
+      break;
+    case RO_C_SWSP:
+      Format(instr, "c.swsp    'Crs2, 'CimmSwsp(x2)");
+      break;
+    case RO_C_SDSP:
+      Format(instr, "c.sdsp    'Crs2, 'CimmSdsp(x2)");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+void Decoder::DecodeCIWType(Instruction* instr) {
+  if (instr->InstructionBits() == kIllegalInstr)
+    Format(instr, "illegal instruction");
+  else
+    Format(instr, "c.addi4spn  'Crs2s, 'CimmAddi4spn");
+}
+void Decoder::DecodeCLType(Instruction* instr) {
+  switch (instr->RvcOpcode()) {
+    case RO_C_FLD:
+      Format(instr, "c.fld     'Cfs2s, 'CimmLd('Crs1s)");
+      break;
+    case RO_C_LW:
+      Format(instr, "c.lw      'Crs2s, 'CimmLw('Crs1s)");
+      break;
+    case RO_C_LD:
+      Format(instr, "c.ld      'Crs2s, 'CimmLd('Crs1s)");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+void Decoder::DecodeCSType(Instruction* instr) {
+  switch (instr->RvcOpcode()) {
+    case RO_C_FSD:
+      Format(instr, "c.fsd     'Crs2s, 'CimmLd('Crs1s)");
+      break;
+    case RO_C_SW:
+      Format(instr, "c.sw      'Crs2s, 'CimmLw('Crs1s)");
+      break;
+    case RO_C_SD:
+      Format(instr, "c.sd      'Crs2s, 'CimmLd('Crs1s)");
+      break;
+    case RVC_MISC_ALU:
+      if (instr->Bit(12) == 0) {
+        switch (instr->Bits(6, 5)) {
+          case 0b00:
+            Format(instr, "c.sub     'Crs1s, 'Crs2s");
+            break;
+          case 0b01:
+            Format(instr, "c.xor     'Crs1s, 'Crs2s");
+            break;
+          case 0b10:
+            Format(instr, "c.or      'Crs1s, 'Crs2s");
+            break;
+          case 0b11:
+            Format(instr, "c.and     'Crs1s, 'Crs2s");
+            break;
+          default:
+            UNSUPPORTED_RISCV();
+        }
+      } else {
+        switch (instr->Bits(6, 5)) {
+          case 0b00:
+            Format(instr, "c.subw    'Crs1s, 'Crs2s");
+            break;
+          case 0b01:
+            Format(instr, "c.addw    'Crs1s, 'Crs2s");
+            break;
+          default:
+            UNSUPPORTED_RISCV();
+        }
+      }
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+void Decoder::DecodeCBType(Instruction* instr) {
+  switch (instr->RvcOpcode()) {
+    case RO_C_BEQZ:
+      Format(instr, "c.beqz    'Crs1s, 'CimmB");
+      break;
+    case RO_C_BNEZ:
+      Format(instr, "c.bnez    'Crs1s, 'CimmB");
+      break;
+    case RVC_MISC_ALU:
+      switch (instr->Bits(11, 10)) {
+        case 0b00:
+          Format(instr, "c.srli    'Crs1s, 'Cshamt");
+          break;
+        case 0b01:
+          Format(instr, "c.srai    'Crs1s, 'Cshamt");
+          break;
+        case 0b10:
+          Format(instr, "c.andi    'Crs1s, 'Cimm");
+          break;
+        default:
+          UNSUPPORTED_RISCV();
+      }
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+void Decoder::DecodeCJType(Instruction* instr) {
+  Format(instr, "c.j       'CimmJ");
+}
+
 // Disassemble the instruction at *instr_ptr into the output buffer.
 // All instructions are one word long, except for the simulator
 // pseudo-instruction stop(msg). For that one special case, we return
@@ -1374,11 +1773,35 @@ int Decoder::InstructionDecode(byte* instr_ptr) {
     case Instruction::kJType:
       DecodeJType(instr);
       break;
+    case Instruction::kCRType:
+      DecodeCRType(instr);
+      break;
+    case Instruction::kCIType:
+      DecodeCIType(instr);
+      break;
+    case Instruction::kCSSType:
+      DecodeCSSType(instr);
+      break;
+    case Instruction::kCIWType:
+      DecodeCIWType(instr);
+      break;
+    case Instruction::kCLType:
+      DecodeCLType(instr);
+      break;
+    case Instruction::kCSType:
+      DecodeCSType(instr);
+      break;
+    case Instruction::kCBType:
+      DecodeCBType(instr);
+      break;
+    case Instruction::kCJType:
+      DecodeCJType(instr);
+      break;
     default:
       Format(instr, "UNSUPPORTED");
       UNSUPPORTED_RISCV();
   }
-  return kInstrSize;
+  return instr->InstructionSize();
 }
 
 }  // namespace internal
@@ -1440,7 +1863,7 @@ void Disassembler::Disassemble(FILE* f, byte* begin, byte* end,
     byte* prev_pc = pc;
     pc += d.InstructionDecode(buffer, pc);
     v8::internal::PrintF(f, "%p    %08x      %s\n", static_cast<void*>(prev_pc),
-                         *reinterpret_cast<int32_t*>(prev_pc), buffer.begin());
+                         *reinterpret_cast<uint32_t*>(prev_pc), buffer.begin());
   }
 }
 

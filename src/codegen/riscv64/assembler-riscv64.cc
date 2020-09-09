@@ -1770,6 +1770,27 @@ void Assembler::fmv_d_x(FPURegister rd, Register rs1) {
   GenInstrALUFP_rr(0b1111001, 0b000, rd, rs1, zero_reg);
 }
 
+// RV64C Standard Extension
+void Assembler::c_nop() {
+  emit((RvcInstr)0x0001);
+}
+
+void Assembler::c_addi(Register rd, int16_t imm) {
+  RvcInstr instr = C1 | ((imm & 0x1f) << 2) | (rd.code() << kRvcRdShift) |
+                   ((imm & 0x20) << 7) | (0b000 << kRvcFunct3Shift);
+  emit(instr);
+}
+
+void Assembler::c_ebreak() {
+  emit((RvcInstr)0x9002);
+}
+
+void Assembler::c_add(Register rd, Register rs2) {
+  RvcInstr instr = C2 | (rs2.code() << kRvcRs2Shift) | (rd.code() << kRvcRdShift) |
+                   (0b1001 << kRvcFunct4Shift);
+  emit(instr);
+}
+
 // Privileged
 
 void Assembler::uret() {
