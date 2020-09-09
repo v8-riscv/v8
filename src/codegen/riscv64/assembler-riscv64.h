@@ -154,7 +154,6 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
                      std::unique_ptr<AssemblerBuffer> = {});
 
   virtual ~Assembler() {
-    ForceConstantPoolEmissionWithoutJump();
     CHECK(constpool_.IsEmpty()); 
   }
 
