@@ -607,10 +607,8 @@ void ConstantPool::Emit(const ConstantPoolKey& key) {
 }
 
 bool ConstantPool::ShouldEmitNow(Jump require_jump, size_t margin) const {
-  DEBUG_PRINTF("ShouldEmitNow\n");
   if (IsEmpty()) return false;
   if (Entry32Count() + Entry64Count() > ConstantPool::kApproxMaxEntryCount) {
-    DEBUG_PRINTF("> ConstantPool::kApproxMaxEntryCount\n");
     return true;
   }
   // We compute {dist32/64}, i.e. the distance from the first instruction
@@ -636,11 +634,6 @@ bool ConstantPool::ShouldEmitNow(Jump require_jump, size_t margin) const {
     bool approximate_distance_exceeded = dist64 >= kApproxDistToPool64;
     if (next_check_too_late || opportune_emission_without_jump ||
         approximate_distance_exceeded) {
-      DEBUG_PRINTF("Entry64Count true:%d,%d,%d\n",next_check_too_late,
-                   opportune_emission_without_jump,
-                   approximate_distance_exceeded);
-      DEBUG_PRINTF("%zu,%zu,%zu\n",dist64,kCheckInterval,kMaxDistToPool64);
-      DEBUG_PRINTF("%lu,%zu\n",dist64 + 2 * kCheckInterval,kMaxDistToPool64);
       return true;
     }
   }
@@ -652,9 +645,6 @@ bool ConstantPool::ShouldEmitNow(Jump require_jump, size_t margin) const {
     bool approximate_distance_exceeded = dist32 >= kApproxDistToPool32;
     if (next_check_too_late || opportune_emission_without_jump ||
         approximate_distance_exceeded) {
-    DEBUG_PRINTF("Entry32Count true:%d,%d,%d\n",next_check_too_late,
-        opportune_emission_without_jump,
-        approximate_distance_exceeded);
       return true;
     }
   }
