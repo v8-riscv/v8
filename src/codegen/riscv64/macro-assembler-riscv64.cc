@@ -2877,7 +2877,7 @@ void TurboAssembler::Jump(Register target, Condition cond, Register rs,
   BlockTrampolinePoolScope block_trampoline_pool(this);
   if (cond == cc_always) {
     jr(target);
-    EmitConstPoolWithJumpIfNeeded();
+    ForceConstantPoolEmissionWithoutJump();
   } else {
     BRANCH_ARGS_CHECK(cond, rs, rt);
     Branch(kInstrSize * 2, NegateCondition(cond), rs, rt);
