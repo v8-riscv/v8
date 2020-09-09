@@ -459,6 +459,17 @@ TEST(PSEUDO) {
   VERIFY_RUN();
 }
 
+TEST(RV64C) {
+  SET_UP();
+
+  COMPARE(c_nop(), "00000001       nop");
+  COMPARE(c_addi(s3, -25), "0000199d       addi      s3, s3, -25");
+  COMPARE(c_ebreak(), "00009002       ebreak");
+  COMPARE(c_add(s6, t0), "00009b16       add       s6, s6, t0");
+
+  VERIFY_RUN();
+}
+
 /*
 TEST(Previleged) {
   SET_UP();
