@@ -856,6 +856,15 @@ void Assembler::GenInstrCR(uint8_t funct4, Opcode opcode,
   emit(instr);
 }
 
+void Assembler::GenInstrCA(uint8_t funct6, Opcode opcode,
+                          Register rd, uint8_t funct, Register rs2) {
+  DCHECK(is_uint6(funct6) && rd.is_valid() && rs2.is_valid() && is_uint2(funct));
+  ShortInstr instr = opcode | ((rs2.code() & kRvcRs2sBits) << kRvcRs2sShift) |
+                            ((rd.code() & kRvcRs1sBits) << kRvcRs1sShift) |
+                            (funct6 << kRvcFunct6Shift) | (funct << kRvcFunctShift);
+  emit(instr);
+}
+
 void Assembler::GenInstrCI(uint8_t funct3, Opcode opcode, Register rd,
                            int8_t imm6) {
   DCHECK(is_uint3(funct3) && rd.is_valid() && is_int6(imm6));
@@ -1865,6 +1874,17 @@ void Assembler::c_jalr(Register rs1) {
 void Assembler::c_add(Register rd, Register rs2) {
   DCHECK(rd != zero_reg && rs2 != zero_reg);
   GenInstrCR(0b1001, C2, rd, rs2);
+}
+
+// CA Instructions
+void Assembler::c_addw(Register rd, Register rs2) {
+  DCHECK(rd != zero_reg && rs2 != zero_reg);
+  GenInstrCA(0b100111, C1, rd, 0b01, rs2);
+}
+
+void Assembler::c_sub(Register rd, Register rs2) {
+  DCHECK(rd != ToRegister(0) && rs2 != ToRegister(0));
+  GenInstrCA(0b100011, C1, rd, 0b00, rs2);
 }
 
 // Privileged
