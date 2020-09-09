@@ -1440,7 +1440,15 @@ void TurboAssembler::li(Register rd, Operand j, LiFlags mode) {
   DCHECK(!j.is_reg());
   BlockTrampolinePoolScope block_trampoline_pool(this);
   if (!MustUseReg(j.rmode()) && mode == OPTIMIZE_SIZE) {
-    RV_li(rd, j.immediate());
+    if (!FLAG_disable_constant_pool && li_count(j.immediate()) >= 4) {
+      // Ld a Address from a constant pool.
+      RecordEntry((uint64_t)j.immediate(), j.rmode());
+      auipc(rd, 0);
+      // Record a value into constant pool.
+      ld(rd, rd, 0);
+    } else {
+      RV_li(rd, j.immediate());
+    }
   } else if (MustUseReg(j.rmode())) {
     int64_t immediate;
     if (j.IsHeapObjectRequest()) {
@@ -3092,7 +3100,7 @@ void TurboAssembler::StoreReturnAddressAndCall(Register target) {
 
 void TurboAssembler::Ret(Condition cond, Register rs, const Operand& rt) {
   Jump(ra, cond, rs, rt);
-  if(cond == al){
+  if (cond == al) {
     ForceConstantPoolEmissionWithoutJump();
   }
 }
@@ -3614,12 +3622,16 @@ void MacroAssembler::JumpToExternalReference(const ExternalReference& builtin,
 }
 
 void MacroAssembler::JumpToInstructionStream(Address entry) {
-  //Ld a Address from a constant pool.
-  //Record a value into constant pool.
-  RecordEntry(entry, RelocInfo::OFF_HEAP_TARGET);
-  RecordRelocInfo(RelocInfo::OFF_HEAP_TARGET, entry);
-  auipc(kOffHeapTrampolineRegister, 0);
-  ld(kOffHeapTrampolineRegister, kOffHeapTrampolineRegister, 0);
+  // Ld a Address from a constant pool.
+  // Record a value into constant pool.
+  if (FLAG_disable_constant_pool) {
+    li(kOffHeapTrampolineRegister, Operand(entry, RelocInfo::OFF_HEAP_TARGET));
+  } else {
+    RecordEntry(entry, RelocInfo::OFF_HEAP_TARGET);
+    RecordRelocInfo(RelocInfo::OFF_HEAP_TARGET, entry);
+    auipc(kOffHeapTrampolineRegister, 0);
+    ld(kOffHeapTrampolineRegister, kOffHeapTrampolineRegister, 0);
+  }
   Jump(kOffHeapTrampolineRegister);
 }
 
