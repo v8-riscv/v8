@@ -2141,16 +2141,19 @@ void Assembler::GrowBuffer() {
 
 void Assembler::db(uint8_t data) {
   if (!is_buffer_growth_blocked()) CheckBuffer();
+  DEBUG_PRINTF("%p: constant 0x%x\n", pc_, data);
   EmitHelper(data);
 }
 
 void Assembler::dd(uint32_t data) {
   if (!is_buffer_growth_blocked()) CheckBuffer();
+  DEBUG_PRINTF("%p: constant 0x%x\n", pc_, data);
   EmitHelper(data);
 }
 
 void Assembler::dq(uint64_t data) {
   if (!is_buffer_growth_blocked()) CheckBuffer();
+  DEBUG_PRINTF("%p: constant 0x%lx\n", pc_, data);
   EmitHelper(data);
 }
 

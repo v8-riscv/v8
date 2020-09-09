@@ -225,18 +225,18 @@ void Assembler::CheckBuffer() {
 
 template <typename T>
 void Assembler::EmitHelper(T x) {
-  DEBUG_PRINTF("%p: ", pc_);
-  disassembleInstr((int)x);
   *reinterpret_cast<T*>(pc_) = x;
   pc_ += sizeof(x);
-  CheckTrampolinePoolQuick();
 }
 
 void Assembler::emit(Instr x) {
   if (!is_buffer_growth_blocked()) {
     CheckBuffer();
   }
+  DEBUG_PRINTF("%p: ", pc_);
+  disassembleInstr(x);
   EmitHelper(x);
+  CheckTrampolinePoolQuick();
 }
 
 void Assembler::emit(uint64_t data) {
