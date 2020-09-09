@@ -101,6 +101,7 @@ class Decoder {
   void DecodeUType(Instruction* instr);
   void DecodeJType(Instruction* instr);
   void DecodeCRType(Instruction* instr);
+  void DecodeCAType(Instruction* instr);
   void DecodeCIType(Instruction* instr);
 
   // Printing of instruction name.
@@ -437,7 +438,6 @@ int Decoder::FormatRvcRegister(Instruction* instr, const char* format) {
         } else if (format[1] == 'f') {
           PrintFPURegister(reg);
         }
-        PrintRegister(reg);
         return 5;
       }
       int reg = instr->RvcRs2Value();
@@ -1483,6 +1483,38 @@ void Decoder::DecodeCRType(Instruction* instr) {
       UNSUPPORTED_RISCV();
   }
 }
+
+void Decoder::DecodeCAType(Instruction* instr) {
+  switch (instr->RvcFunct6Value()) {
+    case 0b100011:
+      switch (instr->RvcFunctValue()) {
+       case 0b00: //c.sub
+         if (instr->RvcRdValue() != 0 && instr->RvcRs2Value() != 0)
+           Format(instr, "sub       'Crs1s, 'Crs1s, 'Crs2s");
+         else
+           UNSUPPORTED_RISCV();
+         break;
+       default:
+         UNSUPPORTED_RISCV();
+      }
+      break;
+    case 0b100111:
+      switch (instr->RvcFunctValue()) {
+       case 0b01: //c.addw
+         if (instr->RvcRdValue() != 0 && instr->RvcRs2Value() != 0)
+           Format(instr, "addw       'Crs1s, 'Crs1s, 'Crs2s");
+         else
+           UNSUPPORTED_RISCV();
+         break;
+       default:
+         UNSUPPORTED_RISCV();
+      }
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+
 void Decoder::DecodeCIType(Instruction* instr) {
   switch (instr->RvcOpcode()) {
     case RO_C_NOP_ADDI:
@@ -1546,6 +1578,9 @@ int Decoder::InstructionDecode(byte* instr_ptr) {
       break;
     case Instruction::kCRType:
       DecodeCRType(instr);
+      break;
+    case Instruction::kCAType:
+      DecodeCAType(instr);
       break;
     case Instruction::kCIType:
       DecodeCIType(instr);
