@@ -2324,35 +2324,49 @@ void TurboAssembler::Clz64(Register rd, Register xx) {
 void TurboAssembler::Ctz32(Register rd, Register rs) {
   // Convert trailing zeroes to trailing ones, and bits to their left
   // to zeroes.
-  UseScratchRegisterScope temps(this);
+  
   BlockTrampolinePoolScope block_trampoline_pool(this);
-  Register scratch = temps.Acquire();
-  Add64(scratch, rs, -1);
-  Xor(rd, scratch, rs);
-  And(rd, rd, scratch);
-  // Count number of leading zeroes.
+  {
+    UseScratchRegisterScope temps(this);
+    Register scratch = temps.Acquire();
+    Add64(scratch, rs, -1);
+    Xor(rd, scratch, rs);
+    And(rd, rd, scratch);
+    // Count number of leading zeroes.
+  }
   Clz32(rd, rd);
-  // Subtract number of leading zeroes from 32 to get number of trailing
-  // ones. Remember that the trailing ones were formerly trailing zeroes.
-  li(scratch, 32);
-  Sub32(rd, scratch, rd);
+  {
+    // Subtract number of leading zeroes from 32 to get number of trailing
+    // ones. Remember that the trailing ones were formerly trailing zeroes.
+    UseScratchRegisterScope temps(this);
+    Register scratch = temps.Acquire();
+    li(scratch, 32);
+    Sub32(rd, scratch, rd);
+  }
 }
 
 void TurboAssembler::Ctz64(Register rd, Register rs) {
   // Convert trailing zeroes to trailing ones, and bits to their left
   // to zeroes.
-  UseScratchRegisterScope temps(this);
+
   BlockTrampolinePoolScope block_trampoline_pool(this);
-  Register scratch = temps.Acquire();
-  Add64(scratch, rs, -1);
-  Xor(rd, scratch, rs);
-  And(rd, rd, scratch);
-  // Count number of leading zeroes.
+  {
+    UseScratchRegisterScope temps(this);
+    Register scratch = temps.Acquire();
+    Add64(scratch, rs, -1);
+    Xor(rd, scratch, rs);
+    And(rd, rd, scratch);
+    // Count number of leading zeroes.
+  }
   Clz64(rd, rd);
-  // Subtract number of leading zeroes from 64 to get number of trailing
-  // ones. Remember that the trailing ones were formerly trailing zeroes.
-  li(scratch, 64);
-  Sub64(rd, scratch, rd);
+  {
+    // Subtract number of leading zeroes from 64 to get number of trailing
+    // ones. Remember that the trailing ones were formerly trailing zeroes.
+    UseScratchRegisterScope temps(this);
+    Register scratch = temps.Acquire();
+    li(scratch, 64);
+    Sub64(rd, scratch, rd);
+  }
 }
 
 void TurboAssembler::Popcnt32(Register rd, Register rs) {
@@ -2607,8 +2621,13 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
   DCHECK(L == nullptr || offset == 0);
   UseScratchRegisterScope temps(this);
   BlockTrampolinePoolScope block_trampoline_pool(this);
-  Register scratch = temps.hasAvailable() ? temps.Acquire() : t5;
-
+  Register scratch = no_reg;
+  if (!rt.is_reg()) {
+    scratch = temps.Acquire();
+    li(scratch, rt);
+  }else {
+    scratch = rt.rm();
+  }
   {
     BlockTrampolinePoolScope block_trampoline_pool(this);
     switch (cond) {
@@ -2623,7 +2642,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset21)) return false;
           j(offset);
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13, &scratch, rt))
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
           DCHECK(rs != scratch);
           beq(rs, scratch, offset);
@@ -2634,7 +2653,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         if (rt.is_reg() && rs == rt.rm()) {
           break;  // No code needs to be emitted
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13, &scratch, rt))
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
           DCHECK(rs != scratch);
           bne(rs, scratch, offset);
@@ -2647,7 +2666,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         if (rt.is_reg() && rs == rt.rm()) {
           break;  // No code needs to be emitted.
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13, &scratch, rt))
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
           DCHECK(rs != scratch);
           bgt(rs, scratch, offset);
@@ -2659,7 +2678,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset21)) return false;
           j(offset);
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13, &scratch, rt))
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
           DCHECK(rs != scratch);
           bge(rs, scratch, offset);
@@ -2670,7 +2689,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         if (rt.is_reg() && rs == rt.rm()) {
           break;  // No code needs to be emitted.
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13, &scratch, rt))
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
           DCHECK(rs != scratch);
           blt(rs, scratch, offset);
@@ -2682,7 +2701,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset21)) return false;
           j(offset);
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13, &scratch, rt))
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
           DCHECK(rs != scratch);
           ble(rs, scratch, offset);
@@ -2695,7 +2714,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         if (rt.is_reg() && rs == rt.rm()) {
           break;  // No code needs to be emitted.
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13, &scratch, rt))
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
           DCHECK(rs != scratch);
           bgtu(rs, scratch, offset);
@@ -2707,7 +2726,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset21)) return false;
           j(offset);
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13, &scratch, rt))
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
           DCHECK(rs != scratch);
           bgeu(rs, scratch, offset);
@@ -2718,7 +2737,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         if (rt.is_reg() && rs == rt.rm()) {
           break;  // No code needs to be emitted.
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13, &scratch, rt))
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
           DCHECK(rs != scratch);
           bltu(rs, scratch, offset);
@@ -2730,7 +2749,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset21)) return false;
           j(offset);
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13, &scratch, rt))
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
           DCHECK(rs != scratch);
           bleu(rs, scratch, offset);
