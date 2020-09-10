@@ -321,9 +321,6 @@ void MacroAssembler::RecordWrite(Register object, Register address,
                                  SaveFPRegsMode fp_mode,
                                  RememberedSetAction remembered_set_action,
                                  SmiCheck smi_check) {
-  DCHECK(!AreAliased(object, address, value, t5));
-  DCHECK(!AreAliased(object, address, value, t6));
-
   if (emit_debug_code()) {
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -386,7 +383,6 @@ void TurboAssembler::Add32(Register rd, Register rs, const Operand& rt) {
       // li handles the relocation.
       UseScratchRegisterScope temps(this);
       Register scratch = temps.Acquire();
-      DCHECK(rs != scratch);
       RV_li(scratch, rt.immediate());
       addw(rd, rs, scratch);
     }
@@ -404,7 +400,6 @@ void TurboAssembler::Add64(Register rd, Register rs, const Operand& rt) {
       UseScratchRegisterScope temps(this);
       Register scratch = temps.Acquire();
       BlockTrampolinePoolScope block_trampoline_pool(this);
-      DCHECK(rs != scratch);
       RV_li(scratch, rt.immediate());
       add(rd, rs, scratch);
     }
@@ -423,7 +418,6 @@ void TurboAssembler::Sub32(Register rd, Register rs, const Operand& rt) {
     } else {
       UseScratchRegisterScope temps(this);
       Register scratch = temps.Acquire();
-      DCHECK(rs != scratch);
       if (-rt.immediate() >> 12 == 0 && !MustUseReg(rt.rmode())) {
         // Use load -imm and addu when loading -imm generates one instruction.
         RV_li(scratch, -rt.immediate());
@@ -452,14 +446,12 @@ void TurboAssembler::Sub64(Register rd, Register rs, const Operand& rt) {
       DCHECK(rt.immediate() != std::numeric_limits<int32_t>::min());
       UseScratchRegisterScope temps(this);
       Register scratch = temps.Acquire();
-      DCHECK(rs != scratch);
       RV_li(scratch, -rt.immediate());
       add(rd, rs, scratch);
     } else {
       // li handles the relocation.
       UseScratchRegisterScope temps(this);
       Register scratch = temps.Acquire();
-      DCHECK(rs != scratch);
       RV_li(scratch, rt.immediate());
       sub(rd, rs, scratch);
     }
@@ -473,7 +465,6 @@ void TurboAssembler::Mul32(Register rd, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     mulw(rd, rs, scratch);
   }
@@ -486,7 +477,6 @@ void TurboAssembler::Mulh32(Register rd, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     mul(rd, rs, scratch);
   }
@@ -511,7 +501,6 @@ void TurboAssembler::Mul64(Register rd, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     mul(rd, rs, scratch);
   }
@@ -524,7 +513,6 @@ void TurboAssembler::Mulh64(Register rd, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     mulh(rd, rs, scratch);
   }
@@ -537,7 +525,6 @@ void TurboAssembler::Div32(Register res, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     divw(res, rs, scratch);
   }
@@ -550,7 +537,6 @@ void TurboAssembler::Mod32(Register rd, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     remw(rd, rs, scratch);
   }
@@ -563,7 +549,6 @@ void TurboAssembler::Modu32(Register rd, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     remuw(rd, rs, scratch);
   }
@@ -576,7 +561,6 @@ void TurboAssembler::Div64(Register rd, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     div(rd, rs, scratch);
   }
@@ -589,7 +573,6 @@ void TurboAssembler::Divu32(Register res, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     divuw(res, rs, scratch);
   }
@@ -602,7 +585,6 @@ void TurboAssembler::Divu64(Register res, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     divu(res, rs, scratch);
   }
@@ -615,7 +597,6 @@ void TurboAssembler::Mod64(Register rd, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     rem(rd, rs, scratch);
   }
@@ -628,7 +609,6 @@ void TurboAssembler::Modu64(Register rd, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     remu(rd, rs, scratch);
   }
@@ -644,7 +624,6 @@ void TurboAssembler::And(Register rd, Register rs, const Operand& rt) {
       // li handles the relocation.
       UseScratchRegisterScope temps(this);
       Register scratch = temps.Acquire();
-      DCHECK(rs != scratch);
       RV_li(scratch, rt.immediate());
       and_(rd, rs, scratch);
     }
@@ -661,7 +640,6 @@ void TurboAssembler::Or(Register rd, Register rs, const Operand& rt) {
       // li handles the relocation.
       UseScratchRegisterScope temps(this);
       Register scratch = temps.Acquire();
-      DCHECK(rs != scratch);
       RV_li(scratch, rt.immediate());
       or_(rd, rs, scratch);
     }
@@ -678,7 +656,6 @@ void TurboAssembler::Xor(Register rd, Register rs, const Operand& rt) {
       // li handles the relocation.
       UseScratchRegisterScope temps(this);
       Register scratch = temps.Acquire();
-      DCHECK(rs != scratch);
       RV_li(scratch, rt.immediate());
       xor_(rd, rs, scratch);
     }
@@ -749,7 +726,6 @@ void TurboAssembler::Slt(Register rd, Register rs, const Operand& rt) {
       UseScratchRegisterScope temps(this);
       Register scratch = temps.Acquire();
       BlockTrampolinePoolScope block_trampoline_pool(this);
-      DCHECK(rs != scratch);
       RV_li(scratch, rt.immediate());
       slt(rd, rs, scratch);
     }
@@ -767,7 +743,6 @@ void TurboAssembler::Sltu(Register rd, Register rs, const Operand& rt) {
       UseScratchRegisterScope temps(this);
       Register scratch = temps.Acquire();
       BlockTrampolinePoolScope block_trampoline_pool(this);
-      DCHECK(rs != scratch);
       RV_li(scratch, rt.immediate());
       sltu(rd, rs, scratch);
     }
@@ -782,7 +757,6 @@ void TurboAssembler::Sle(Register rd, Register rs, const Operand& rt) {
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
     BlockTrampolinePoolScope block_trampoline_pool(this);
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     slt(rd, scratch, rs);
   }
@@ -797,7 +771,6 @@ void TurboAssembler::Sleu(Register rd, Register rs, const Operand& rt) {
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
     BlockTrampolinePoolScope block_trampoline_pool(this);
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     sltu(rd, scratch, rs);
   }
@@ -822,7 +795,6 @@ void TurboAssembler::Sgt(Register rd, Register rs, const Operand& rt) {
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
     BlockTrampolinePoolScope block_trampoline_pool(this);
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     slt(rd, scratch, rs);
   }
@@ -836,7 +808,6 @@ void TurboAssembler::Sgtu(Register rd, Register rs, const Operand& rt) {
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
     BlockTrampolinePoolScope block_trampoline_pool(this);
-    DCHECK(rs != scratch);
     RV_li(scratch, rt.immediate());
     sltu(rd, scratch, rs);
   }
@@ -899,7 +870,6 @@ void TurboAssembler::Sll64(Register rd, Register rs, const Operand& rt) {
 void TurboAssembler::Ror(Register rd, Register rs, const Operand& rt) {
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
-  DCHECK(rs != scratch);
   if (rt.is_reg()) {
     negw(scratch, rt.rm());
     sllw(scratch, rs, scratch);
@@ -924,7 +894,6 @@ void TurboAssembler::Ror(Register rd, Register rs, const Operand& rt) {
 void TurboAssembler::Dror(Register rd, Register rs, const Operand& rt) {
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
-  DCHECK(rs != scratch);
   if (rt.is_reg()) {
     negw(scratch, rt.rm());
     sll(scratch, rs, scratch);
@@ -957,7 +926,6 @@ void TurboAssembler::CalcScaledAddress(Register rd, Register rt, Register rs,
 // Change endianness
 void TurboAssembler::ByteSwap(Register rd, Register rs, int operand_size) {
   DCHECK(operand_size == 4 || operand_size == 8);
-  DCHECK(rd != t5 && rd != t6);
   if (operand_size == 4) {
     // Uint32_t x1 = 0x00FF00FF;
     // x0 = (x0 << 16 | x0 >> 16);
@@ -2390,7 +2358,6 @@ void TurboAssembler::Popcnt32(Register rd, Register rs) {
   // uint32_t B2 = 0x0F0F0F0F;     // (T)~(T)0/255*15
   // uint32_t value = 0x01010101;  // (T)~(T)0/255
 
-  DCHECK(rd != t5 && rd != t6 && rs != t5 && rs != t6);
   uint32_t shift = 24;
   UseScratchRegisterScope temps(this);
   BlockTrampolinePoolScope block_trampoline_pool(this);
@@ -2425,7 +2392,6 @@ void TurboAssembler::Popcnt64(Register rd, Register rs) {
   // uint64_t value = 0x0101010101010101l;  // (T)~(T)0/255
   // uint64_t shift = 24;                   // (sizeof(T) - 1) * BITS_PER_BYTE
 
-  DCHECK(rd != t5 && rd != t6 && rs != t5 && rs != t6);
   uint64_t shift = 24;
   UseScratchRegisterScope temps(this);
   BlockTrampolinePoolScope block_trampoline_pool(this);
@@ -2644,7 +2610,6 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         } else {
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
-          DCHECK(rs != scratch);
           beq(rs, scratch, offset);
         }
         break;
@@ -2655,7 +2620,6 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         } else {
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
-          DCHECK(rs != scratch);
           bne(rs, scratch, offset);
         }
         break;
@@ -2668,7 +2632,6 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         } else {
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
-          DCHECK(rs != scratch);
           bgt(rs, scratch, offset);
         }
         break;
@@ -2680,7 +2643,6 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         } else {
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
-          DCHECK(rs != scratch);
           bge(rs, scratch, offset);
         }
         break;
@@ -2691,7 +2653,6 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         } else {
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
-          DCHECK(rs != scratch);
           blt(rs, scratch, offset);
         }
         break;
@@ -2703,7 +2664,6 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         } else {
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
-          DCHECK(rs != scratch);
           ble(rs, scratch, offset);
         }
         break;
@@ -2716,7 +2676,6 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         } else {
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
-          DCHECK(rs != scratch);
           bgtu(rs, scratch, offset);
         }
         break;
@@ -2728,7 +2687,6 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         } else {
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
-          DCHECK(rs != scratch);
           bgeu(rs, scratch, offset);
         }
         break;
@@ -2739,7 +2697,6 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         } else {
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
-          DCHECK(rs != scratch);
           bltu(rs, scratch, offset);
         }
         break;
@@ -2751,7 +2708,6 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         } else {
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
             return false;
-          DCHECK(rs != scratch);
           bleu(rs, scratch, offset);
         }
         break;
