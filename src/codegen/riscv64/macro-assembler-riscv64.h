@@ -1150,7 +1150,6 @@ void TurboAssembler::GenerateSwitchTable(Register index, size_t case_count,
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
   Register scratch2 = temps.Acquire();
-  DCHECK(scratch2 != scratch);
 
   Align(8);
   // Load the address from the jump table at index and jump to it
