@@ -104,12 +104,14 @@
 
    # the following all fail w/ symptons captured in issue #166
    'float_exprs': [SKIP],
-   'skip-stack-guard-page': [SKIP],
    'proposals/tail-call/conversions': [SKIP],
    'proposals/tail-call/float_exprs': [SKIP],
    'proposals/tail-call/f64': [SKIP],
    'proposals/tail-call/f32': [SKIP],
-   'proposals/tail-call/skip-stack-guard-page': [SKIP],
+   
+   # These tests need larger stack size on simulator.
+   'skip-stack-guard-page': '--sim-stack-size=8192',
+   'proposals/tail-call/skip-stack-guard-page': '--sim-stack-size=8192',
 }],  # 'arch == riscv or arch == riscv64
 
 ['arch == ppc or arch == ppc64', {
