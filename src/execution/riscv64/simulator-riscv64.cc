@@ -2877,17 +2877,17 @@ void Simulator::DecodeRVIType() {
       break;
     }
     case RO_SLLI: {
-      require(shamt() < xlen);
-      set_rd(sext_xlen(rs1() << shamt()));
+      require(shamt6() < xlen);
+      set_rd(sext_xlen(rs1() << shamt6()));
       break;
     }
     case RO_SRLI: {  //  RO_SRAI
       if (!instr_.IsArithShift()) {
-        require(shamt() < xlen);
-        set_rd(sext_xlen(zext_xlen(rs1()) >> shamt()));
+        require(shamt6() < xlen);
+        set_rd(sext_xlen(zext_xlen(rs1()) >> shamt6()));
       } else {
-        require(shamt() < xlen);
-        set_rd(sext_xlen(sext_xlen(rs1()) >> shamt()));
+        require(shamt6() < xlen);
+        set_rd(sext_xlen(sext_xlen(rs1()) >> shamt6()));
       }
       break;
     }
@@ -2897,14 +2897,14 @@ void Simulator::DecodeRVIType() {
       break;
     }
     case RO_SLLIW: {
-      set_rd(sext32(rs1() << shamt32()));
+      set_rd(sext32(rs1() << shamt5()));
       break;
     }
     case RO_SRLIW: {  //  RO_SRAIW
       if (!instr_.IsArithShift()) {
-        set_rd(sext32(uint32_t(rs1()) >> shamt32()));
+        set_rd(sext32(uint32_t(rs1()) >> shamt5()));
       } else {
-        set_rd(sext32(int32_t(rs1()) >> shamt32()));
+        set_rd(sext32(int32_t(rs1()) >> shamt5()));
       }
       break;
     }
@@ -3071,10 +3071,10 @@ void Simulator::DecodeRVUType() {
   // U Type doesn't have additoinal mask
   switch (instr_.BaseOpcodeFieldRaw()) {
     case RO_LUI:
-      set_rd(u_imm());
+      set_rd(u_imm20());
       break;
     case RO_AUIPC:
-      set_rd(sext_xlen(u_imm() + get_pc()));
+      set_rd(sext_xlen(u_imm20() + get_pc()));
       break;
     default:
       UNSUPPORTED();
@@ -3126,6 +3126,26 @@ void Simulator::DecodeCIType() {
         break;
       else                          // c.addi
         set_rvc_rd(sext_xlen(rvc_rs1() + rvc_imm6()));
+      break;
+    case RO_C_ADDIW:
+      set_rvc_rd(sext32(rvc_rs1() + rvc_imm6()));
+      break;
+    case RO_C_LI:
+      set_rvc_rd(sext_xlen(rvc_imm6()));
+      break;
+    case RO_C_LUI_ADD:
+      if (instr_.RvcRdValue() == 2) {
+        // c.addi16sp
+        int64_t value = get_register(sp) + rvc_imm6addi16sp();
+        set_register(sp, value);
+      } else if (instr_.RvcRdValue() != 0 && instr_.RvcRdValue() != 2)
+        // c.lui
+        set_rvc_rd(rvc_u_imm6());
+      else
+        UNSUPPORTED();
+      break;
+    case RO_C_SLLI:
+      set_rvc_rd(sext_xlen(rvc_rs1() << rvc_shamt6()));
       break;
     default:
       UNSUPPORTED();
