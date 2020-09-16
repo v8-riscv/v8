@@ -1805,35 +1805,65 @@ void Assembler::fmv_d_x(FPURegister rd, Register rs1) {
 
 // RV64C Standard Extension
 void Assembler::c_nop() {
-  GenInstrCI(0b000, C1, ToRegister(0), 0);
+  GenInstrCI(0b000, C1, zero_reg, 0);
 }
 
 void Assembler::c_addi(Register rd, int8_t imm6) {
-  DCHECK(rd != ToRegister(0) && imm6 != 0);
+  DCHECK(rd != zero_reg && imm6 != 0);
   GenInstrCI(0b000, C1, rd, imm6);
 }
 
+void Assembler::c_addiw(Register rd, int8_t imm6) {
+  DCHECK(rd != zero_reg);
+  GenInstrCI(0b001, C1, rd, imm6);
+}
+
+void Assembler::c_addi16sp(int16_t imm10) {
+  DCHECK(is_int10(imm10) && (imm10 & 0xf) == 0);
+  uint8_t uimm6 = ((imm10 & 0x200) >> 4) | (imm10 & 0x10) 
+                | ((imm10 & 0x40) >> 3) | ((imm10 & 0x180) >> 6)
+                | ((imm10 & 0x20) >> 5);
+  GenInstrCIU(0b011, C1, sp, uimm6);
+}
+
+void Assembler::c_li(Register rd, int8_t imm6) {
+  DCHECK(rd != zero_reg);
+  GenInstrCI(0b010, C1, rd, imm6);
+}
+
+void Assembler::c_lui(Register rd, int8_t imm6) {
+  DCHECK(rd != zero_reg && rd != sp && imm6 != 0);
+  GenInstrCI(0b011, C1, rd, imm6);
+}
+
+void Assembler::c_slli(Register rd, uint8_t uimm6) {
+  DCHECK(rd != zero_reg && uimm6 != 0);
+  GenInstrCIU(0b000, C2, rd, uimm6);
+}
+
 void Assembler::c_jr(Register rs1) {
-  GenInstrCR(0b1000, C2, rs1, ToRegister(0));
+  DCHECK(rs1 != zero_reg);
+  GenInstrCR(0b1000, C2, rs1, zero_reg);
   BlockTrampolinePoolFor(1);
 }
 
 void Assembler::c_mv(Register rd, Register rs2) {
-  DCHECK(rd != ToRegister(0) && rs2 != ToRegister(0));
+  DCHECK(rd != zero_reg && rs2 != zero_reg);
   GenInstrCR(0b1000, C2, rd, rs2);
 }
 
 void Assembler::c_ebreak() {
-  GenInstrCR(0b1001, C2, ToRegister(0), ToRegister(0));
+  GenInstrCR(0b1001, C2, zero_reg, zero_reg);
 }
 
 void Assembler::c_jalr(Register rs1) {
-  GenInstrCR(0b1001, C2, rs1, ToRegister(0));
+  DCHECK(rs1 != zero_reg);
+  GenInstrCR(0b1001, C2, rs1, zero_reg);
   BlockTrampolinePoolFor(1);
 }
 
 void Assembler::c_add(Register rd, Register rs2) {
-  DCHECK(rd != ToRegister(0) && rs2 != ToRegister(0));
+  DCHECK(rd != zero_reg && rs2 != zero_reg);
   GenInstrCR(0b1001, C2, rd, rs2);
 }
 
