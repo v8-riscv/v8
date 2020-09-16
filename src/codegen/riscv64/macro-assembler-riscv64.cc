@@ -1058,9 +1058,7 @@ void TurboAssembler::UnalignedLoadHelper(Register rd, const MemOperand& rs) {
 }
 
 template <int NBYTES>
-void TurboAssembler::UnalignedFLoadHelper(FPURegister frd, const MemOperand& rs,
-                                          Register scratch) {
-  DCHECK(scratch != rs.rm());
+void TurboAssembler::UnalignedFLoadHelper(FPURegister frd, const MemOperand& rs) {
   DCHECK(NBYTES == 4 || NBYTES == 8);
 
   BlockTrampolinePoolScope block_trampoline_pool(this);
@@ -1069,13 +1067,14 @@ void TurboAssembler::UnalignedFLoadHelper(FPURegister frd, const MemOperand& rs,
   if (NeedAdjustBaseAndOffset(rs, OffsetAccessType::TWO_ACCESSES, NBYTES - 1)) {
     // Adjust offset for two accesses and check if offset + 3 fits into int12.
     Register scratch_base = temps.Acquire();
-    DCHECK(scratch_base != scratch && scratch_base != rs.rm());
+    DCHECK(scratch_base != rs.rm());
     AdjustBaseAndOffset(&source, scratch_base, OffsetAccessType::TWO_ACCESSES,
                         NBYTES - 1);
   }
 
   Register scratch_other = temps.Acquire();
-  DCHECK(scratch_other != scratch && scratch_other != rs.rm());
+  Register scratch = temps.Acquire();
+  DCHECK(scratch != rs.rm() && scratch_other != scratch && scratch_other != rs.rm());
   LoadNBytes<NBYTES, true>(scratch, source, scratch_other);
   if (NBYTES == 4)
     fmv_w_x(frd, scratch);
@@ -1115,11 +1114,10 @@ void TurboAssembler::UnalignedStoreHelper(Register rd, const MemOperand& rs,
 
 template <int NBYTES>
 void TurboAssembler::UnalignedFStoreHelper(FPURegister frd,
-                                           const MemOperand& rs,
-                                           Register scratch) {
-  DCHECK(scratch != rs.rm());
+                                           const MemOperand& rs) {
   DCHECK(NBYTES == 8 || NBYTES == 4);
-
+  UseScratchRegisterScope temps(this);
+  Register scratch = temps.Acquire();
   if (NBYTES == 4) {
     fmv_x_w(scratch, frd);
   } else {
@@ -1210,24 +1208,20 @@ void MacroAssembler::StoreWordPair(Register rd, const MemOperand& rs,
   Sw(scratch, MemOperand(rs.rm(), rs.offset() + kPointerSize / 2));
 }
 
-void TurboAssembler::ULoadFloat(FPURegister fd, const MemOperand& rs,
-                                Register scratch) {
-  UnalignedFLoadHelper<4>(fd, rs, scratch);
+void TurboAssembler::ULoadFloat(FPURegister fd, const MemOperand& rs) {
+  UnalignedFLoadHelper<4>(fd, rs);
 }
 
-void TurboAssembler::UStoreFloat(FPURegister fd, const MemOperand& rs,
-                                 Register scratch) {
-  UnalignedFStoreHelper<4>(fd, rs, scratch);
+void TurboAssembler::UStoreFloat(FPURegister fd, const MemOperand& rs) {
+  UnalignedFStoreHelper<4>(fd, rs);
 }
 
-void TurboAssembler::ULoadDouble(FPURegister fd, const MemOperand& rs,
-                                 Register scratch) {
-  UnalignedFLoadHelper<8>(fd, rs, scratch);
+void TurboAssembler::ULoadDouble(FPURegister fd, const MemOperand& rs) {
+  UnalignedFLoadHelper<8>(fd, rs);
 }
 
-void TurboAssembler::UStoreDouble(FPURegister fd, const MemOperand& rs,
-                                  Register scratch) {
-  UnalignedFStoreHelper<8>(fd, rs, scratch);
+void TurboAssembler::UStoreDouble(FPURegister fd, const MemOperand& rs) {
+  UnalignedFStoreHelper<8>(fd, rs);
 }
 
 void TurboAssembler::Lb(Register rd, const MemOperand& rs) {

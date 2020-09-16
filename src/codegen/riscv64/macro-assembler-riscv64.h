@@ -556,11 +556,9 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
                             Register scratch_other = no_reg);
 
   template <int NBYTES>
-  void UnalignedFLoadHelper(FPURegister frd, const MemOperand& rs,
-                            Register scratch);
+  void UnalignedFLoadHelper(FPURegister frd, const MemOperand& rs);
   template <int NBYTES>
-  void UnalignedFStoreHelper(FPURegister frd, const MemOperand& rs,
-                             Register scratch);
+  void UnalignedFStoreHelper(FPURegister frd, const MemOperand& rs);
 
   template <typename Reg_T, typename Func>
   void AlignedLoadHelper(Reg_T target, const MemOperand& rs, Func generator);
@@ -584,11 +582,11 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void Uld(Register rd, const MemOperand& rs);
   void Usd(Register rd, const MemOperand& rs);
 
-  void ULoadFloat(FPURegister fd, const MemOperand& rs, Register scratch);
-  void UStoreFloat(FPURegister fd, const MemOperand& rs, Register scratch);
+  void ULoadFloat(FPURegister fd, const MemOperand& rs);
+  void UStoreFloat(FPURegister fd, const MemOperand& rs);
 
-  void ULoadDouble(FPURegister fd, const MemOperand& rs, Register scratch);
-  void UStoreDouble(FPURegister fd, const MemOperand& rs, Register scratch);
+  void ULoadDouble(FPURegister fd, const MemOperand& rs);
+  void UStoreDouble(FPURegister fd, const MemOperand& rs);
 
   void Lb(Register rd, const MemOperand& rs);
   void Lbu(Register rd, const MemOperand& rs);
