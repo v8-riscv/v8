@@ -469,6 +469,9 @@ TEST(RV64C) {
   COMPARE(c_li(t6, -15), "00005fc5       li        t6, -15");
   COMPARE(c_lui(s1, 0xf4), "000074d1       lui       s1, 0xffff4");
   COMPARE(c_slli(s9, 60), "00001cf2       slli      s9, s9, 60");
+  COMPARE(c_fldsp(fa1, 360), "000035b6       fld       fa1, 360(sp)");
+  COMPARE(c_lwsp(s7, 244), "00005bde       lw        s7, 244(sp)");
+  COMPARE(c_ldsp(s6, 344), "00006b76       ld        s6, 344(sp)");
 
   COMPARE(c_jr(a1), "00008582       jr        a1");
   COMPARE(c_mv(t0, a4), "000082ba       mv        t0, a4");
