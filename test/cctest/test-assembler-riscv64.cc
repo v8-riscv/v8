@@ -1209,6 +1209,46 @@ TEST(RVC_CI) {
     auto res = GenAndRunTest<int64_t>(LARGE_INT_EXCEED_32_BIT, fn);
     CHECK_EQ(LARGE_INT_EXCEED_32_BIT - 15, res);
   }
+
+  // Test c.addiw
+  {
+    auto fn = [](MacroAssembler& assm) { __ c_addiw(a0, -20); };
+    auto res = GenAndRunTest<int32_t>(LARGE_INT_UNDER_32_BIT, fn);
+    CHECK_EQ(LARGE_INT_UNDER_32_BIT - 20, res);
+  }
+
+  // Test c.addi16sp
+  {
+    auto fn = [](MacroAssembler& assm) { 
+      __ mv(sp, a0);
+      __ c_addi16sp(-432); 
+      __ mv(a0, sp);
+    };
+    auto res = GenAndRunTest<int64_t>(66666, fn);
+    CHECK_EQ(66666 - 432, res);
+  }
+
+  // Test c.li
+  {
+    auto fn = [](MacroAssembler& assm) { __ c_li(a0, -15); };
+    auto res = GenAndRunTest<int64_t>(1234543, fn);
+    CHECK_EQ(-15, res);
+  }
+
+  // Test c.lui
+  {
+    auto fn = [](MacroAssembler& assm) { __ c_lui(a0, -20); };
+    auto res = GenAndRunTest<int64_t>(0x1234567, fn);
+    CHECK_EQ(0xfffffffffffec000, (uint64_t)res);
+  }
+
+  // Test c.slli
+  {
+    auto fn = [](MacroAssembler& assm) { __ c_slli(a0, 13); };
+    auto res = GenAndRunTest<int64_t>(0x1234'5678ULL, fn);
+    CHECK_EQ(0x1234'5678ULL << 13, res);
+  }
+
 }
 
 TEST(RVC_CR) {

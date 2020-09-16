@@ -80,6 +80,9 @@ class Decoder {
   void PrintShamt(Instruction* instr);
   void PrintShamt32(Instruction* instr);
   void PrintRvcImm6(Instruction* instr);
+  void PrintRvcImm6U(Instruction* instr);
+  void PrintRvcImm6Addi16sp(Instruction* instr);
+  void PrintRvcShamt(Instruction* instr);
   void PrintAcquireRelease(Instruction* instr);
   void PrintBranchOffset(Instruction* instr);
   void PrintStoreOffset(Instruction* instr);
@@ -230,6 +233,21 @@ void Decoder::PrintShamt32(Instruction* instr) {
 
 void Decoder::PrintRvcImm6(Instruction* instr) {
   int32_t imm = instr->RvcImm6Value();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImm6U(Instruction* instr) {
+  int32_t imm = instr->RvcImm6Value() & 0xFFFFF;
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "0x%x", imm);
+}
+
+void Decoder::PrintRvcImm6Addi16sp(Instruction* instr) {
+  int32_t imm = instr->RvcImm6Addi16spValue();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcShamt(Instruction* instr) {
+  int32_t imm = instr->RvcShamt6();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
 }
 
@@ -448,6 +466,18 @@ int Decoder::FormatRvcRegister(Instruction* instr, const char* format) {
 int Decoder::FormatRvcImm(Instruction* instr, const char* format) {
   // TODO: add other rvc imm format
   DCHECK(STRING_STARTS_WITH(format, "Cimm6"));
+  if (format[5] == 'U') {
+    DCHECK(STRING_STARTS_WITH(format, "Cimm6U"));
+    PrintRvcImm6U(instr);
+    return 6;
+  } else if (format[5] == 'A') {
+    if (format[9] == '1' && format[10] == '6') {
+      DCHECK(STRING_STARTS_WITH(format, "Cimm6Addi16sp"));
+      PrintRvcImm6Addi16sp(instr);
+      return 13;
+    }
+    UNREACHABLE();
+  }
   PrintRvcImm6(instr);
   return 5;
 }
@@ -464,6 +494,10 @@ int Decoder::FormatOption(Instruction* instr, const char* format) {
         return FormatRvcRegister(instr, format);
       } else if (format[1] == 'i') {
         return FormatRvcImm(instr, format);
+      } else if (format[1] == 's') {
+        DCHECK(STRING_STARTS_WITH(format, "Cshamt"));
+        PrintRvcShamt(instr);
+        return 6;
       }
       UNREACHABLE();
     }
@@ -1456,6 +1490,23 @@ void Decoder::DecodeCIType(Instruction* instr) {
         Format(instr, "nop");
       else
         Format(instr, "addi      'Crd, 'Crd, 'Cimm6");
+      break;
+    case RO_C_ADDIW:
+      Format(instr, "addiw     'Crd, 'Crd, 'Cimm6");
+      break;
+    case RO_C_LI:
+      Format(instr, "li        'Crd, 'Cimm6");
+      break;
+    case RO_C_LUI_ADD:
+      if (instr->RvcRdValue() == 2)
+        Format(instr, "addi      sp, sp, 'Cimm6Addi16sp");
+      else if (instr->RvcRdValue() != 0 && instr->RvcRdValue() != 2)
+        Format(instr, "lui       'Crd, 'Cimm6U");
+      else
+        UNSUPPORTED_RISCV();
+      break;
+    case RO_C_SLLI:
+      Format(instr, "slli      'Crd, 'Crd, 'Cshamt");
       break;
     default:
       UNSUPPORTED_RISCV();
