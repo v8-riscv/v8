@@ -480,6 +480,7 @@ class Simulator : public SimulatorBase {
   inline int32_t imm5CSR() const { return instr_.Rs1Value(); }
   inline int16_t csr_reg() const { return instr_.CsrValue(); }
   inline int16_t rvc_imm6() const { return instr_.RvcImm6Value(); }
+  inline int16_t rvc_imm6addi16sp() const { return instr_.RvcImm6Addi16spValue(); }
 
   inline void set_rd(int64_t value, bool trace = true) {
     set_register(rd_reg(), value);
@@ -497,10 +498,12 @@ class Simulator : public SimulatorBase {
     set_register(rvc_rd_reg(), value);
     if (trace) TraceRegWr(get_register(rvc_rd_reg()), DWORD);
   }
-  inline int16_t shamt() const { return (imm12() & 0x3F); }
-  inline int16_t shamt32() const { return (imm12() & 0x1F); }
+  inline int16_t shamt6() const { return (imm12() & 0x3F); }
+  inline int16_t shamt5() const { return (imm12() & 0x1F); }
+  inline int16_t rvc_shamt6() const { return instr_.RvcShamt6(); }
   inline int32_t s_imm12() const { return instr_.StoreOffset(); }
-  inline int32_t u_imm() const { return instr_.Imm20UValue() << 12; }
+  inline int32_t u_imm20() const { return instr_.Imm20UValue() << 12; }
+  inline int32_t rvc_u_imm6() const { return instr_.RvcImm6Value() << 12; }
   inline void require(bool check) {
     if (!check) {
       SignalException(kIllegalInstruction);
