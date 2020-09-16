@@ -3179,6 +3179,27 @@ void Simulator::DecodeCIType() {
     case RO_C_SLLI:
       set_rvc_rd(sext_xlen(rvc_rs1() << rvc_shamt6()));
       break;
+    case RO_C_FLDSP: {
+      int64_t addr = get_register(sp) + rvc_imm6_ldsp();
+      double val = ReadMem<double>(addr, instr_.instr());
+      set_rvc_drd(val, false);
+      TraceMemRd(addr, val, get_fpu_register(rvc_frd_reg()));
+      break;
+    }
+    case RO_C_LWSP: {
+      int64_t addr = get_register(sp) + rvc_imm6_lwsp();
+      int64_t val = ReadMem<int32_t>(addr, instr_.instr());
+      set_rvc_rd(sext_xlen(val), false);
+      TraceMemRd(addr, val, get_register(rvc_rd_reg()));
+      break;
+    }
+    case RO_C_LDSP: {
+      int64_t addr = get_register(sp) + rvc_imm6_ldsp();
+      int64_t val = ReadMem<int64_t>(addr, instr_.instr());
+      set_rvc_rd(sext_xlen(val), false);
+      TraceMemRd(addr, val, get_register(rvc_rd_reg()));
+      break;
+    }
     default:
       UNSUPPORTED();
   }
