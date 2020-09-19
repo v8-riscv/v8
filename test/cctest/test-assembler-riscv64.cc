@@ -85,6 +85,16 @@ using F5 = void*(void* p0, void* p1, int p2, int p3, int p4);
     CHECK_EQ(expected_res, res);                                              \
   }
 
+#define UTEST_AMO_WITH_RES(instr_name, aq, rl, inout_type, rs1_val, rs2_val,   \
+                           expected_res)                                       \
+  TEST(RISCV_UTEST_##instr_name) {                                             \
+    CcTest::InitializeVM();                                                    \
+    auto fn = [](MacroAssembler& assm) { __ instr_name(aq, rl, a1, a0, a2); }; \
+    auto res =                                                                 \
+        GenAndRunTestForAMO<inout_type, inout_type>(rs1_val, rs2_val, fn);     \
+    CHECK_EQ(expected_res, res);                                               \
+  }
+
 #define UTEST_LOAD_STORE(ldname, stname, value_type, value) \
   TEST(RISCV_UTEST_##stname##ldname) {                      \
     CcTest::InitializeVM();                                 \
@@ -108,6 +118,16 @@ using F5 = void*(void* p0, void* p1, int p2, int p3, int p4);
       __ ldname(fa0, a0, 0);                                        \
     };                                                              \
     GenAndRunTestForLoadStore<value_type>(store_value, fn);         \
+  }
+
+#define UTEST_LR_SC(ldname, stname, aq, rl, value_type, value) \
+  TEST(RISCV_UTEST_##stname##ldname) {                         \
+    CcTest::InitializeVM();                                    \
+    auto fn = [](MacroAssembler& assm) {                       \
+      __ ldname(aq, rl, a1, a0);                               \
+      __ stname(aq, rl, a0, a0, a1);                           \
+    };                                                         \
+    GenAndRunTestForLRSC<value_type>(value, fn);               \
   }
 
 #define UTEST_R1_FORM_WITH_RES_F(instr_name, type, rs1_fval, expected_fres) \
@@ -391,33 +411,59 @@ UTEST_R2_FORM_WITH_OP(divuw, uint32_t, 1000, 100, /)
 UTEST_R2_FORM_WITH_OP(remw, int32_t, 1234, -91, %)
 UTEST_R2_FORM_WITH_OP(remuw, uint32_t, 1234, 43, %)
 
-/*
-// RV32A Standard Extension
-void lr_w(bool aq, bool rl, Register rd, Register rs1);
-void sc_w(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amoswap_w(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amoadd_w(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amoxor_w(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amoand_w(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amoor_w(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amomin_w(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amomax_w(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amominu_w(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amomaxu_w(bool aq, bool rl, Register rd, Register rs1, Register rs2);
+// -- RV32A Standard Extension --
+UTEST_LR_SC(lr_w, sc_w, false, false, int32_t, 0xFBB1A75C)
+UTEST_AMO_WITH_RES(amoswap_w, false, false, uint32_t, 0xFBB1A75C, 0xA75C0A9C,
+                   (uint32_t)0xA75C0A9C)
+UTEST_AMO_WITH_RES(amoadd_w, false, false, uint32_t, 0xFBB1A75C, 0xA75C0A9C,
+                   (uint32_t)0xFBB1A75C + (uint32_t)0xA75C0A9C)
+UTEST_AMO_WITH_RES(amoxor_w, false, false, uint32_t, 0xFBB1A75C, 0xA75C0A9C,
+                   (uint32_t)0xFBB1A75C ^ (uint32_t)0xA75C0A9C)
+UTEST_AMO_WITH_RES(amoand_w, false, false, uint32_t, 0xFBB1A75C, 0xA75C0A9C,
+                   (uint32_t)0xFBB1A75C & (uint32_t)0xA75C0A9C)
+UTEST_AMO_WITH_RES(amoor_w, false, false, uint32_t, 0xFBB1A75C, 0xA75C0A9C,
+                   (uint32_t)0xFBB1A75C | (uint32_t)0xA75C0A9C)
+UTEST_AMO_WITH_RES(amomin_w, false, false, int32_t, 0xFBB1A75C, 0xA75C0A9C,
+                   std::min((int32_t)0xFBB1A75C, (int32_t)0xA75C0A9C))
+UTEST_AMO_WITH_RES(amomax_w, false, false, int32_t, 0xFBB1A75C, 0xA75C0A9C,
+                   std::max((int32_t)0xFBB1A75C, (int32_t)0xA75C0A9C))
+UTEST_AMO_WITH_RES(amominu_w, false, false, uint32_t, 0xFBB1A75C, 0xA75C0A9C,
+                   std::min((uint32_t)0xFBB1A75C, (uint32_t)0xA75C0A9C))
+UTEST_AMO_WITH_RES(amomaxu_w, false, false, uint32_t, 0xFBB1A75C, 0xA75C0A9C,
+                   std::max((uint32_t)0xFBB1A75C, (uint32_t)0xA75C0A9C))
 
-// RV64A Standard Extension (in addition to RV32A)
-void lr_d(bool aq, bool rl, Register rd, Register rs1);
-void sc_d(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amoswap_d(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amoadd_d(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amoxor_d(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amoand_d(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amoor_d(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amomin_d(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amomax_d(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amominu_d(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-void amomaxu_d(bool aq, bool rl, Register rd, Register rs1, Register rs2);
-*/
+// -- RV64A Standard Extension (in addition to RV32A) --
+UTEST_LR_SC(lr_d, sc_d, false, false, int64_t, 0xFBB10A9Cbfb76aa6)
+UTEST_AMO_WITH_RES(amoswap_d, false, false, int64_t, 0xFBB10A9Cbfb76aa6,
+                   0x284ff922346ad35c, (int64_t)0x284ff922346ad35c)
+UTEST_AMO_WITH_RES(amoadd_d, false, false, int64_t, 0xFBB10A9Cbfb76aa6,
+                   0x284ff922346ad35c,
+                   (int64_t)0xFBB10A9Cbfb76aa6 + (int64_t)0x284ff922346ad35c)
+UTEST_AMO_WITH_RES(amoxor_d, false, false, int64_t, 0xFBB10A9Cbfb76aa6,
+                   0x284ff922346ad35c,
+                   (int64_t)0xFBB10A9Cbfb76aa6 ^ (int64_t)0x284ff922346ad35c)
+UTEST_AMO_WITH_RES(amoand_d, false, false, int64_t, 0xFBB10A9Cbfb76aa6,
+                   0x284ff922346ad35c,
+                   (int64_t)0xFBB10A9Cbfb76aa6 & (int64_t)0x284ff922346ad35c)
+UTEST_AMO_WITH_RES(amoor_d, false, false, int64_t, 0xFBB10A9Cbfb76aa6,
+                   0x284ff922346ad35c,
+                   (int64_t)0xFBB10A9Cbfb76aa6 | (int64_t)0x284ff922346ad35c)
+UTEST_AMO_WITH_RES(amomin_d, false, false, int64_t, 0xFBB10A9Cbfb76aa6,
+                   0x284ff922346ad35c,
+                   std::min((int64_t)0xFBB10A9Cbfb76aa6,
+                            (int64_t)0x284ff922346ad35c))
+UTEST_AMO_WITH_RES(amomax_d, false, false, int64_t, 0xFBB10A9Cbfb76aa6,
+                   0x284ff922346ad35c,
+                   std::max((int64_t)0xFBB10A9Cbfb76aa6,
+                            (int64_t)0x284ff922346ad35c))
+UTEST_AMO_WITH_RES(amominu_d, false, false, uint64_t, 0xFBB10A9Cbfb76aa6,
+                   0x284ff922346ad35c,
+                   std::min((uint64_t)0xFBB10A9Cbfb76aa6,
+                            (uint64_t)0x284ff922346ad35c))
+UTEST_AMO_WITH_RES(amomaxu_d, false, false, uint64_t, 0xFBB10A9Cbfb76aa6,
+                   0x284ff922346ad35c,
+                   std::max((uint64_t)0xFBB10A9Cbfb76aa6,
+                            (uint64_t)0x284ff922346ad35c))
 
 // -- RV32F Standard Extension --
 UTEST_LOAD_STORE_F(flw, fsw, float, -2345.678f)
@@ -508,7 +554,8 @@ UTEST_CONV_F_FROM_I(fcvt_d_lu, uint64_t, double,
                     (double)(std::numeric_limits<uint64_t>::max()))
 
 // -- RV64C Standard Extension --
-UTEST_R1_FORM_WITH_RES(c_mv, int64_t, int64_t, 0x0f5600ab123400, 0x0f5600ab123400)
+UTEST_R1_FORM_WITH_RES(c_mv, int64_t, int64_t, 0x0f5600ab123400,
+                       0x0f5600ab123400)
 
 // -- Assembler Pseudo Instructions --
 UTEST_R1_FORM_WITH_RES(mv, int64_t, int64_t, 0x0f5600ab123400, 0x0f5600ab123400)
@@ -1162,7 +1209,6 @@ TEST(RVC_CI) {
     auto res = GenAndRunTest<int64_t>(LARGE_INT_EXCEED_32_BIT, fn);
     CHECK_EQ(LARGE_INT_EXCEED_32_BIT - 15, res);
   }
-
 }
 
 TEST(RVC_CR) {
@@ -1171,14 +1217,13 @@ TEST(RVC_CR) {
 
   // Test c.add
   {
-    auto fn = [](MacroAssembler& assm) { 
+    auto fn = [](MacroAssembler& assm) {
       __ RV_li(a1, MIN_VAL_IMM12);
-      __ c_add(a0, a1); 
+      __ c_add(a0, a1);
     };
     auto res = GenAndRunTest<int64_t>(LARGE_INT_EXCEED_32_BIT, fn);
     CHECK_EQ(LARGE_INT_EXCEED_32_BIT + MIN_VAL_IMM12, res);
   }
-
 }
 
 TEST(TARGET_ADDR) {
