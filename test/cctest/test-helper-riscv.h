@@ -215,6 +215,112 @@ void GenAndRunTestForLoadStore(T value, Func test_generator) {
   CHECK_EQ(bit_cast<T>(res), value);
 }
 
+template <typename T, typename Func>
+void GenAndRunTestForLRSC(T value, Func test_generator) {
+  DCHECK(sizeof(T) == 4 || sizeof(T) == 8);
+
+  Isolate* isolate = CcTest::i_isolate();
+  HandleScope scope(isolate);
+
+  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
+
+  if (std::is_same<float, T>::value) {
+    assm.fmv_w_x(fa0, a1);
+  } else if (std::is_same<double, T>::value) {
+    assm.fmv_d_x(fa0, a1);
+  }
+
+  if (std::is_same<int32_t, T>::value) {
+    assm.sw(a1, a0, 0);
+  } else if (std::is_same<int64_t, T>::value) {
+    assm.sd(a1, a0, 0);
+  }
+  test_generator(assm);
+
+  if (std::is_same<float, T>::value) {
+    assm.fmv_x_w(a0, fa0);
+  } else if (std::is_same<double, T>::value) {
+    assm.fmv_x_d(a0, fa0);
+  }
+  assm.jr(ra);
+
+  CodeDesc desc;
+  assm.GetCode(isolate, &desc);
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+#if defined(DEBUG)
+  code->Print();
+#endif
+  using INT_T =
+      typename std::conditional<sizeof(T) == 4, int32_t, int64_t>::type;
+
+  T tmp = 0;
+  auto f = GeneratedCode<INT_T(void* base, INT_T val)>::FromCode(*code);
+  auto res = f.Call(&tmp, bit_cast<T>(value));
+  CHECK_EQ(bit_cast<T>(res), static_cast<T>(0));
+}
+
+template <typename INPUT_T, typename OUTPUT_T, typename Func>
+OUTPUT_T GenAndRunTestForAMO(INPUT_T input0, INPUT_T input1,
+                             Func test_generator) {
+  DCHECK(sizeof(INPUT_T) == 4 || sizeof(INPUT_T) == 8);
+  DCHECK(sizeof(OUTPUT_T) == 4 || sizeof(OUTPUT_T) == 8);
+  Isolate* isolate = CcTest::i_isolate();
+  HandleScope scope(isolate);
+
+  MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
+
+  // handle floating-point parameters
+  if (std::is_same<float, INPUT_T>::value) {
+    assm.fmv_w_x(fa0, a1);
+    assm.fmv_w_x(fa1, a2);
+  } else if (std::is_same<double, INPUT_T>::value) {
+    assm.fmv_d_x(fa0, a1);
+    assm.fmv_d_x(fa1, a2);
+  }
+
+  // store base integer
+  if (std::is_same<int32_t, INPUT_T>::value ||
+      std::is_same<uint32_t, INPUT_T>::value) {
+    assm.sw(a1, a0, 0);
+  } else if (std::is_same<int64_t, INPUT_T>::value ||
+             std::is_same<uint64_t, INPUT_T>::value) {
+    assm.sd(a1, a0, 0);
+  }
+  test_generator(assm);
+
+  // handle floating-point result
+  if (std::is_same<float, OUTPUT_T>::value) {
+    assm.fmv_x_w(a0, fa0);
+  } else if (std::is_same<double, OUTPUT_T>::value) {
+    assm.fmv_x_d(a0, fa0);
+  }
+
+  // load written integer
+  if (std::is_same<int32_t, INPUT_T>::value ||
+      std::is_same<uint32_t, INPUT_T>::value) {
+    assm.lw(a0, a0, 0);
+  } else if (std::is_same<int64_t, INPUT_T>::value ||
+             std::is_same<uint64_t, INPUT_T>::value) {
+    assm.ld(a0, a0, 0);
+  }
+
+  assm.jr(ra);
+
+  CodeDesc desc;
+  assm.GetCode(isolate, &desc);
+  Handle<Code> code =
+      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+#if defined(DEBUG)
+  code->Print();
+#endif
+  OUTPUT_T tmp = 0;
+  auto f =
+      GeneratedCode<OUTPUT_T(void* base, INPUT_T, INPUT_T)>::FromCode(*code);
+  auto res = f.Call(&tmp, bit_cast<INPUT_T>(input0), bit_cast<INPUT_T>(input1));
+  return bit_cast<OUTPUT_T>(res);
+}
+
 Handle<Code> AssembleCodeImpl(Func assemble);
 
 template <typename Signature>
