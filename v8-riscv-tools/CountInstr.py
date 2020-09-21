@@ -9,23 +9,27 @@ import re
 import subprocess
 from collections import Counter
 import argparse
+from prettytable import PrettyTable 
 
-
-def count(sub):
-    couts = []
-    for line in sub.stdout.readlines():
+def Count(sub):
+    couts = Counter()
+    for line in sub.stdout:
         split = line.strip().decode('utf-8').split()
         if("0x" not in split[0]):
             continue
         if(len(split) >= 4):
-            couts.append(split[2])
-    cout = Counter(couts).items()
+            couts.update([split[2]])
+    cout = couts.items()
     cout = list(cout)
     cout.sort(key=lambda x: x[1], reverse=True)
-    
-    return len(couts), cout
 
-def init():
+    num = 0
+    for key, value in couts.items():
+        num += value
+
+    return num, cout
+
+def ArgsInit():
     parser = argparse.ArgumentParser()
     parser.add_argument('arch1', help="The path of an architecture executable d8.")
     parser.add_argument('arch2', help="The path of an architecture executable d8.")
@@ -34,32 +38,30 @@ def init():
     return args, unknown
 
 
-def compare(arch1, arch2):
-    print("\t{}\t\t\t\t{}\n".format(arch1[2], arch2[2]))
-    print("total:\t{}\t\t\t\t{}\t\t\tmore: {:.2%}\n".format(
-        arch1[0], arch2[0], float(arch1[0] - arch2[0]) / arch2[0]))
-    print("\tinstr\tratio\tcount\t",end=' ')
-    print("\tinstr\tratio\tcount")
-    print("------------------------------------------------------------------------")
-    for n, v in zip(arch1[1], arch2[1]):
-        print("\t{}\t{:.2%}\t{}\t".format(n[0], float(n[1]) / arch1[0],n[1]),end=' ')
-        print("\t{}\t{:.2%}\t{}".format(v[0], float(v[1]) / arch2[0], n[1]))
+def Compare(arch1, arch2):
+    summary = PrettyTable(["Summary", arch1[2], arch2[2]])
+    summary.add_row(["count", arch1[0], arch2[0]])
+    print(summary)
 
+    x = PrettyTable(["arch1_instr","arch1_ratio","arch1_count","arch2_instr","arch2_ratio","arch2_count"])
+    for n, v in zip(arch1[1], arch2[1]):
+        row = [n[0], "{:.2%}".format(float(n[1]) / arch1[0]),n[1]]
+        row.extend([v[0], "{:.2%}".format(float(v[1]) / arch2[0]), v[1]])
+        x.add_row(row)
+    print(x)
 
 if __name__ == "__main__":
-    args, run_args = init()
+    args, run_args = ArgsInit()
     run_args.append("--trace-sim")
     run_args.insert(0, args.arch1)
     run_args.extend(args.d8_object)
-    print(args,run_args)
     sub = subprocess.Popen(
         run_args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-    risv = (count(sub))+tuple(["arch1"])
+    risv = (Count(sub))+tuple(["arch1"])
 
     run_args[0] = args.arch2
     sub = subprocess.Popen(
         run_args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    mips64el = (count(sub))+tuple(["arhc2"])
-    compare(risv, mips64el)
+    mips64el = (Count(sub))+tuple(["arhc2"])
+    Compare(risv, mips64el)
     pass
