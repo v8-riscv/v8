@@ -281,11 +281,9 @@ void Assembler::CodeTargetAlign() {
 // instruction using the label.
 
 // The link chain is terminated by a value in the instruction of 0,
-// which is an otherwise illegal value (branch 0 is inf loop).
-
-const int kEndOfChain = 0;
-
-// Determines the end of the Jump chain (a subset of the label link chain).
+// which is an otherwise illegal value (branch 0 is inf loop). When this case
+// is detected, return an position of -1, an otherwise illegal position.
+const int kEndOfChain = -1;
 const int kEndOfJumpChain = 0;
 
 bool Assembler::IsBranch(Instr instr) {
@@ -379,12 +377,12 @@ int Assembler::target_at(int pos, bool is_internal) {
     Instr instr_jalr = instr_at(pos + 4);
     DCHECK(IsJalr(instr_jalr));
     int32_t offset = BrachlongOffset(instr_auipc, instr_jalr);
-    if(offset  == kEndOfJumpChain) 
+    if(offset == kEndOfJumpChain) 
       return kEndOfChain;
     return offset + pos;
   } else {
     // Emitted label constant, not part of a branch.
-    if (instr == 0) {
+    if (instr == kEndOfJumpChain) {
       return kEndOfChain;
     } else {
       int32_t imm18 = ((instr & static_cast<int32_t>(kImm16Mask)) << 16) >> 14;
@@ -1057,7 +1055,7 @@ int32_t Assembler::branch_offset_helper(Label* L, OffsetSize bits) {
         next_buffer_check_ -= kTrampolineSlotsSize;
       }
       DEBUG_PRINTF("\tstarted link\n");
-      return kEndOfChain;
+      return kEndOfJumpChain;
     }
   }
 
@@ -1084,8 +1082,8 @@ void Assembler::label_at_put(Label* L, int at_offset) {
       DCHECK(is_int16(imm16));
       instr_at_put(at_offset, (imm16 & kImm16Mask));
     } else {
-      target_pos = kEndOfChain;
-      instr_at_put(at_offset, 0);
+      target_pos = kEndOfJumpChain;
+      instr_at_put(at_offset, target_pos);
       if (!trampoline_emitted_) {
         unbound_labels_count_++;
         next_buffer_check_ -= kTrampolineSlotsSize;
