@@ -631,9 +631,15 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
     }
   }
 
-  inline void Move(FPURegister dst, FPURegister src) {
+  inline void MoveDouble(FPURegister dst, FPURegister src) {
     if (dst != src) fmv_d(dst, src);
   }
+
+  inline void MoveFloat(FPURegister dst, FPURegister src) {
+    if (dst != src) fmv_s(dst, src);
+  }
+
+  inline void Move(FPURegister dst, FPURegister src) { MoveDouble(dst, src); }
 
   inline void Move(Register dst_low, Register dst_high, FPURegister src) {
     fmv_x_d(dst_high, src);
