@@ -2691,9 +2691,16 @@ void CodeGenerator::AssembleSwap(InstructionOperand* source,
       } else {
         DCHECK(destination->IsFPStackSlot());
         MemOperand dst = g.ToMemOperand(destination);
-        __ Move(temp, src);
-        __ LoadDouble(src, dst);
-        __ StoreDouble(temp, dst);
+        if (rep == MachineRepresentation::kFloat32) {
+          __ MoveFloat(temp, src);
+          __ LoadFloat(src, dst);
+          __ StoreFloat(temp, dst);
+        } else {
+          DCHECK_EQ(rep, MachineRepresentation::kFloat64);
+          __ MoveDouble(temp, src);
+          __ LoadDouble(src, dst);
+          __ StoreDouble(temp, dst);
+        }
       }
     }
   } else if (source->IsFPStackSlot()) {
@@ -2708,12 +2715,20 @@ void CodeGenerator::AssembleSwap(InstructionOperand* source,
       UNIMPLEMENTED();
     } else {
       FPURegister temp_1 = kScratchDoubleReg;
-      __ LoadDouble(temp_1, dst0);  // Save destination in temp_1.
-      __ Lw(temp_0, src0);  // Then use temp_0 to copy source to destination.
-      __ Sw(temp_0, dst0);
-      __ Lw(temp_0, src1);
-      __ Sw(temp_0, dst1);
-      __ StoreDouble(temp_1, src0);
+      if (rep == MachineRepresentation::kFloat32) {
+        __ LoadFloat(temp_1, dst0);  // Save destination in temp_1.
+        __ Lw(temp_0, src0);  // Then use temp_0 to copy source to destination.
+        __ Sw(temp_0, dst0);
+        __ StoreFloat(temp_1, src0);
+      } else {
+        DCHECK_EQ(rep, MachineRepresentation::kFloat64);
+        __ LoadDouble(temp_1, dst0);  // Save destination in temp_1.
+        __ Lw(temp_0, src0);  // Then use temp_0 to copy source to destination.
+        __ Sw(temp_0, dst0);
+        __ Lw(temp_0, src1);
+        __ Sw(temp_0, dst1);
+        __ StoreDouble(temp_1, src0);
+      }
     }
   } else {
     // No other combinations are possible.
