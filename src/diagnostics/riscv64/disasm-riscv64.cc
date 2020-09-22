@@ -85,6 +85,8 @@ class Decoder {
   void PrintRvcShamt(Instruction* instr);
   void PrintRvcImm6Ldsp(Instruction* instr);
   void PrintRvcImm6Lwsp(Instruction* instr);
+  void PrintRvcImm6Sdsp(Instruction* instr);
+  void PrintRvcImm6Swsp(Instruction* instr);
   void PrintAcquireRelease(Instruction* instr);
   void PrintBranchOffset(Instruction* instr);
   void PrintStoreOffset(Instruction* instr);
@@ -105,6 +107,7 @@ class Decoder {
   void DecodeCRType(Instruction* instr);
   void DecodeCAType(Instruction* instr);
   void DecodeCIType(Instruction* instr);
+  void DecodeCSSType(Instruction* instr);
 
   // Printing of instruction name.
   void PrintInstructionName(Instruction* instr);
@@ -263,6 +266,17 @@ void Decoder::PrintRvcImm6Lwsp(Instruction* instr) {
   int32_t imm = instr->RvcImm6LwspValue();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
 }
+
+void Decoder::PrintRvcImm6Swsp(Instruction* instr) {
+  int32_t imm = instr->RvcImm6SwspValue();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImm6Sdsp(Instruction* instr) {
+  int32_t imm = instr->RvcImm6SdspValue();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
 
 void Decoder::PrintAcquireRelease(Instruction* instr) {
   bool aq = instr->AqValue();
@@ -502,6 +516,17 @@ int Decoder::FormatRvcImm(Instruction* instr, const char* format) {
         PrintRvcImm6Lwsp(instr);
         return 9;
       }
+    }
+    UNREACHABLE();
+  } else if (format[5] == 'S') {
+    if (format[6] == 'w') {
+      DCHECK(STRING_STARTS_WITH(format, "Cimm6Swsp"));
+      PrintRvcImm6Swsp(instr);
+      return 9;
+    } else if (format[6] == 'd') {
+      DCHECK(STRING_STARTS_WITH(format, "Cimm6Sdsp"));
+      PrintRvcImm6Sdsp(instr);
+      return 9;
     }
     UNREACHABLE();
   }
@@ -1566,6 +1591,7 @@ void Decoder::DecodeCIType(Instruction* instr) {
       break;
     case RO_C_SLLI:
       Format(instr, "slli      'Crd, 'Crd, 'Cshamt");
+      break;
     case RO_C_FLDSP:
       Format(instr, "fld       'Cfd, 'Cimm6Ldsp(sp)");
       break;
@@ -1574,6 +1600,22 @@ void Decoder::DecodeCIType(Instruction* instr) {
       break;
     case RO_C_LDSP:
       Format(instr, "ld        'Crd, 'Cimm6Ldsp(sp)");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+
+void Decoder::DecodeCSSType(Instruction* instr) {
+  switch(instr->RvcOpcode()) {
+    case RO_C_SWSP:
+      Format(instr, "sw        'Crs2, 'Cimm6Swsp(sp)");
+      break;
+    case RO_C_SDSP:
+      Format(instr, "sd        'Crs2, 'Cimm6Sdsp(sp)");
+      break;
+    case RO_C_FSDSP:
+      Format(instr, "fsd       'Cfs2, 'Cimm6Sdsp(sp)");
       break;
     default:
       UNSUPPORTED_RISCV();
@@ -1619,6 +1661,9 @@ int Decoder::InstructionDecode(byte* instr_ptr) {
       break;
     case Instruction::kCIType:
       DecodeCIType(instr);
+      break;
+    case Instruction::kCSSType:
+      DecodeCSSType(instr);
       break;
     default:
       Format(instr, "UNSUPPORTED");
