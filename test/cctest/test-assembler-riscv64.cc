@@ -1289,6 +1289,38 @@ TEST(RVC_CA) {
     auto res = GenAndRunTest<int64_t>(LARGE_INT_UNDER_32_BIT, fn);
     CHECK_EQ(LARGE_INT_UNDER_32_BIT + MIN_VAL_IMM12, res);
   }
+}
+
+TEST(RVC_LOAD_STORE_SP) {
+  // Test RV64C extension fldsp/fsdsp, lwsp/swsp, ldsp/sdsp.
+  CcTest::InitializeVM();
+
+  {
+    auto fn = [](MacroAssembler& assm) { 
+      __ c_fsdsp(fa0, 80); 
+      __ c_fldsp(fa0, 80); 
+    };
+    auto res = GenAndRunTest<double>(-3456.678, fn);
+    CHECK_EQ(-3456.678, res);
+  }
+
+  {
+    auto fn = [](MacroAssembler& assm) { 
+      __ c_swsp(a0, 40); 
+      __ c_lwsp(a0, 40); 
+    };
+    auto res = GenAndRunTest<int32_t>(0x456AF894, fn);
+    CHECK_EQ(0x456AF894, res);
+  }
+
+  {
+    auto fn = [](MacroAssembler& assm) { 
+      __ c_sdsp(a0, 160); 
+      __ c_ldsp(a0, 160); 
+    };
+    auto res = GenAndRunTest<uint64_t>(0xFBB10A9C12345678, fn);
+    CHECK_EQ(0xFBB10A9C12345678, res);
+  }
 
 }
 
