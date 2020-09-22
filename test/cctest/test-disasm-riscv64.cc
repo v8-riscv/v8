@@ -481,6 +481,10 @@ TEST(RV64C) {
   COMPARE(c_sub(s1, a0), "00008c89       sub       s1, s1, a0");
   COMPARE(c_addw(a0, a1), "00009d2d       addw       a0, a0, a1");
 
+  COMPARE(c_fsdsp(fa4, 232), "0000b5ba       fsd       fa4, 232(sp)");
+  COMPARE(c_swsp(s6, 180), "0000db5a       sw        s6, 180(sp)");
+  COMPARE(c_sdsp(a4, 216), "0000edba       sd        a4, 216(sp)");
+
   VERIFY_RUN();
 }
 
