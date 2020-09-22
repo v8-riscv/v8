@@ -3168,7 +3168,7 @@ void Simulator::DecodeCIType() {
     case RO_C_LUI_ADD:
       if (instr_.RvcRdValue() == 2) {
         // c.addi16sp
-        int64_t value = get_register(sp) + rvc_imm6addi16sp();
+        int64_t value = get_register(sp) + rvc_imm6_addi16sp();
         set_register(sp, value);
       } else if (instr_.RvcRdValue() != 0 && instr_.RvcRdValue() != 2)
         // c.lui
@@ -3198,6 +3198,28 @@ void Simulator::DecodeCIType() {
       int64_t val = ReadMem<int64_t>(addr, instr_.instr());
       set_rvc_rd(sext_xlen(val), false);
       TraceMemRd(addr, val, get_register(rvc_rd_reg()));
+      break;
+    }
+    default:
+      UNSUPPORTED();
+  }
+}
+
+void Simulator::DecodeCSSType() {
+  switch (instr_.RvcOpcode()) {
+    case RO_C_FSDSP: {
+      int64_t addr = get_register(sp) + rvc_imm6_sdsp();
+      WriteMem<double>(addr, (double)rvc_drs2(), instr_.instr());
+      break;
+    }
+    case RO_C_SWSP: {
+      int64_t addr = get_register(sp) + rvc_imm6_swsp();
+      WriteMem<int32_t>(addr, (int32_t)rvc_rs2(), instr_.instr());
+      break;
+    }
+    case RO_C_SDSP: {
+      int64_t addr = get_register(sp) + rvc_imm6_sdsp();
+      WriteMem<int64_t>(addr, (int64_t)rvc_rs2(), instr_.instr());
       break;
     }
     default:
@@ -3256,6 +3278,9 @@ void Simulator::InstructionDecode(Instruction* instr) {
       break;
     case Instruction::kCIType:
       DecodeCIType();
+      break;
+    case Instruction::kCSSType:
+      DecodeCSSType();
       break;
     default:
       if (::v8::internal::FLAG_trace_sim) {
