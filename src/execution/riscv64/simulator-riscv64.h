@@ -473,6 +473,7 @@ class Simulator : public SimulatorBase {
   inline int64_t rvc_rs1() const { return get_register(rvc_rs1_reg()); }
   inline int32_t rvc_rs2_reg() const { return instr_.RvcRs2Value(); }
   inline int64_t rvc_rs2() const { return get_register(rvc_rs2_reg()); }
+  inline double rvc_drs2() const { return get_fpu_register_double(rvc_rs2_reg()); }
   inline int32_t rvc_rs1s_reg() const { return instr_.RvcRs1sValue(); }
   inline int64_t rvc_rs1s() const { return get_register(rvc_rs1s_reg()); }
   inline int32_t rvc_rs2s_reg() const { return instr_.RvcRs2sValue(); }
@@ -485,9 +486,11 @@ class Simulator : public SimulatorBase {
   inline int32_t imm5CSR() const { return instr_.Rs1Value(); }
   inline int16_t csr_reg() const { return instr_.CsrValue(); }
   inline int16_t rvc_imm6() const { return instr_.RvcImm6Value(); }
-  inline int16_t rvc_imm6addi16sp() const { return instr_.RvcImm6Addi16spValue(); }
+  inline int16_t rvc_imm6_addi16sp() const { return instr_.RvcImm6Addi16spValue(); }
   inline int16_t rvc_imm6_lwsp() const { return instr_.RvcImm6LwspValue(); }
   inline int16_t rvc_imm6_ldsp() const { return instr_.RvcImm6LdspValue(); }
+  inline int16_t rvc_imm6_swsp() const { return instr_.RvcImm6SwspValue(); }
+  inline int16_t rvc_imm6_sdsp() const { return instr_.RvcImm6SdspValue(); }
 
   inline void set_rd(int64_t value, bool trace = true) {
     set_register(rd_reg(), value);
@@ -602,6 +605,7 @@ class Simulator : public SimulatorBase {
   void DecodeCRType();
   void DecodeCAType();
   void DecodeCIType();
+  void DecodeCSSType();
 
   // Used for breakpoints and traps.
   void SoftwareInterrupt();
