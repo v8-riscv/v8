@@ -889,6 +889,22 @@ void Assembler::GenInstrCIU(uint8_t funct3, Opcode opcode, FPURegister rd,
   emit(instr);
 }
 
+void Assembler::GenInstrCSS(uint8_t funct3, Opcode opcode, Register rs2,
+                           uint8_t uimm6) {
+  DCHECK(is_uint3(funct3) && rs2.is_valid() && is_uint6(uimm6));
+  ShortInstr instr = opcode | (uimm6 << 7) | (rs2.code() << kRvcRs2Shift) |
+                   (funct3 << kRvcFunct3Shift);
+  emit(instr);
+}
+
+void Assembler::GenInstrCSS(uint8_t funct3, Opcode opcode, FPURegister rs2,
+                           uint8_t uimm6) {
+  DCHECK(is_uint3(funct3) && rs2.is_valid() && is_uint6(uimm6));
+  ShortInstr instr = opcode | (uimm6 << 7) | (rs2.code() << kRvcRs2Shift) |
+                   (funct3 << kRvcFunct3Shift);
+  emit(instr);
+}
+
 // ----- Instruction class templates match those in the compiler
 
 void Assembler::GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,
@@ -1858,21 +1874,21 @@ void Assembler::c_slli(Register rd, uint8_t uimm6) {
   GenInstrCIU(0b000, C2, rd, uimm6);
 }
 
-void Assembler::c_fldsp(FPURegister rd, int16_t imm9) {
-  DCHECK((imm9 & 0x7) == 0);
-  uint8_t uimm6 = (imm9 & 0x38) | ((imm9 & 0x1c0) >> 6);
+void Assembler::c_fldsp(FPURegister rd, uint16_t uimm9) {
+  DCHECK(is_uint9(uimm9) && (uimm9 & 0x7) == 0);
+  uint8_t uimm6 = (uimm9 & 0x38) | ((uimm9 & 0x1c0) >> 6);
   GenInstrCIU(0b001, C2, rd, uimm6);
 }
 
-void Assembler::c_lwsp(Register rd, int16_t imm8) {
-  DCHECK(rd != zero_reg && (imm8 & 0x3) == 0);
-  uint8_t uimm6 = (imm8 & 0x3c) | ((imm8 & 0xc0) >> 6);
+void Assembler::c_lwsp(Register rd, uint16_t uimm8) {
+  DCHECK(rd != zero_reg && is_uint8(uimm8) && (uimm8 & 0x3) == 0);
+  uint8_t uimm6 = (uimm8 & 0x3c) | ((uimm8 & 0xc0) >> 6);
   GenInstrCIU(0b010, C2, rd, uimm6);
 }
 
-void Assembler::c_ldsp(Register rd, int16_t imm9) {
-  DCHECK(rd != zero_reg && (imm9 & 0x7) == 0);
-  uint8_t uimm6 = (imm9 & 0x38) | ((imm9 & 0x1c0) >> 6);
+void Assembler::c_ldsp(Register rd, uint16_t uimm9) {
+  DCHECK(rd != zero_reg && is_uint9(uimm9) && (uimm9 & 0x7) == 0);
+  uint8_t uimm6 = (uimm9 & 0x38) | ((uimm9 & 0x1c0) >> 6);
   GenInstrCIU(0b011, C2, rd, uimm6);
 }
 
@@ -1911,6 +1927,24 @@ void Assembler::c_addw(Register rd, Register rs2) {
 void Assembler::c_sub(Register rd, Register rs2) {
   DCHECK(rd != ToRegister(0) && rs2 != ToRegister(0));
   GenInstrCA(0b100011, C1, rd, 0b00, rs2);
+}
+
+void Assembler::c_swsp(Register rs2, uint16_t uimm8) {
+  DCHECK(is_uint8(uimm8) && (uimm8 & 0x3) == 0);
+  uint8_t uimm6 = (uimm8 & 0x3c) | ((uimm8 & 0xc0) >> 6);
+  GenInstrCSS(0b110, C2, rs2, uimm6);
+}
+
+void Assembler::c_sdsp(Register rs2, uint16_t uimm9) {
+  DCHECK(is_uint9(uimm9) && (uimm9 & 0x7) == 0);
+  uint8_t uimm6 = (uimm9 & 0x38) | ((uimm9 & 0x1c0) >> 6);
+  GenInstrCSS(0b111, C2, rs2, uimm6);
+}
+
+void Assembler::c_fsdsp(FPURegister rs2, uint16_t uimm9) {
+  DCHECK(is_uint9(uimm9) && (uimm9 & 0x7) == 0);
+  uint8_t uimm6 = (uimm9 & 0x38) | ((uimm9 & 0x1c0) >> 6);
+  GenInstrCSS(0b101, C2, rs2, uimm6);
 }
 
 // Privileged
