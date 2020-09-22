@@ -585,9 +585,9 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_li(Register rd, int8_t imm6);
   void c_lui(Register rd, int8_t imm6);
   void c_slli(Register rd, uint8_t uimm6);
-  void c_fldsp(FPURegister rd, int16_t imm9);
-  void c_lwsp(Register rd, int16_t imm8);
-  void c_ldsp(Register rd, int16_t imm9);
+  void c_fldsp(FPURegister rd, uint16_t uimm9);
+  void c_lwsp(Register rd, uint16_t uimm8);
+  void c_ldsp(Register rd, uint16_t uimm9);
   void c_jr(Register rs1);
   void c_mv(Register rd, Register rs2);
   void c_ebreak();
@@ -595,6 +595,9 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_add(Register rd, Register rs2);
   void c_sub(Register rd, Register rs2);
   void c_addw(Register rd, Register rs2);
+  void c_swsp(Register rs2, uint16_t uimm8);
+  void c_sdsp(Register rs2, uint16_t uimm9);
+  void c_fsdsp(FPURegister rs2, uint16_t uimm9);
 
   // Privileged
   void uret();
@@ -1036,6 +1039,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void GenInstrCI(uint8_t funct3, Opcode opcode, Register rd, int8_t imm6);
   void GenInstrCIU(uint8_t funct3, Opcode opcode, Register rd, uint8_t uimm6);
   void GenInstrCIU(uint8_t funct3, Opcode opcode, FPURegister rd, uint8_t uimm6);
+  void GenInstrCSS(uint8_t funct3, Opcode opcode, FPURegister rs2, uint8_t uimm6);
+  void GenInstrCSS(uint8_t funct3, Opcode opcode, Register rs2, uint8_t uimm6);
 
   // ----- Instruction class templates match those in LLVM's RISCVInstrInfo.td
   void GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,
