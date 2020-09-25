@@ -1466,7 +1466,6 @@ void TurboAssembler::li(Register rd, Operand j, LiFlags mode) {
   } else if (mode == ADDRESS_LOAD) {
     // We always need the same number of instructions as we may need to patch
     // this code to load another value which may need all 8 instructions.
-    RecordRelocInfo(RelocInfo::INTERNAL_REFERENCE_ENCODED);
     li_constant(rd, j.immediate());
   } else {  // mode == CONSTANT_SIZE - always emit the same instruction
             // sequence.
