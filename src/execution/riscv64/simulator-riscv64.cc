@@ -3121,33 +3121,27 @@ void Simulator::DecodeCRType() {
 }
 
 void Simulator::DecodeCAType() {
-  switch (instr_.RvcFunct6Value()) {
-    case 0b100011:
-      switch (instr_.RvcFunctValue()) {
-       case 0b00: //c.sub
-         if (instr_.RvcRdValue() != 0 && instr_.RvcRs2Value() != 0)
-           set_rvc_rs1s(sext_xlen(rvc_rs1s() - rvc_rs2s()));
-         else
-           UNSUPPORTED_RISCV();
-         break;
-       default:
-         UNSUPPORTED_RISCV();
-      }
+  switch (instr_.InstructionBits() & kCATypeMask) {
+    case RO_C_SUB:
+      set_rvc_rs1s(sext_xlen(rvc_rs1s() - rvc_rs2s()));
       break;
-    case 0b100111:
-      switch (instr_.RvcFunctValue()) {
-       case 0b01: //c.addw
-         if (instr_.RvcRdValue() != 0 && instr_.RvcRs2Value() != 0)
-           set_rvc_rs1s(sext32(rvc_rs1s() + rvc_rs2s()));
-         else
-           UNSUPPORTED_RISCV();
-         break;
-       default:
-         UNSUPPORTED_RISCV();
-      }
+    case RO_C_XOR:
+      set_rvc_rs1s(sext_xlen(rvc_rs1s() ^ rvc_rs2s()));
+      break;
+    case RO_C_OR:
+      set_rvc_rs1s(sext_xlen(rvc_rs1s() | rvc_rs2s()));
+      break;
+    case RO_C_AND:
+      set_rvc_rs1s(sext_xlen(rvc_rs1s() & rvc_rs2s()));
+      break;
+    case RO_C_SUBW:
+      set_rvc_rs1s(sext32(rvc_rs1s() - rvc_rs2s()));
+      break;
+    case RO_C_ADDW:
+      set_rvc_rs1s(sext32(rvc_rs1s() + rvc_rs2s()));
       break;
     default:
-      UNSUPPORTED_RISCV();
+      UNSUPPORTED();
   }
 }
 
