@@ -1280,6 +1280,45 @@ TEST(RVC_CA) {
     CHECK_EQ(LARGE_INT_UNDER_32_BIT - MIN_VAL_IMM12, res);
   }
 
+  // Test c.xor
+  {
+    auto fn = [](MacroAssembler& assm) {
+      __ RV_li(a1, MIN_VAL_IMM12);
+      __ c_xor(a0, a1);
+    };
+    auto res = GenAndRunTest<int64_t>(LARGE_INT_UNDER_32_BIT, fn);
+    CHECK_EQ(LARGE_INT_UNDER_32_BIT ^ MIN_VAL_IMM12, res);
+  }
+
+  // Test c.or
+  {
+    auto fn = [](MacroAssembler& assm) {
+      __ RV_li(a1, MIN_VAL_IMM12);
+      __ c_or(a0, a1);
+    };
+    auto res = GenAndRunTest<int64_t>(LARGE_INT_UNDER_32_BIT, fn);
+    CHECK_EQ(LARGE_INT_UNDER_32_BIT | MIN_VAL_IMM12, res);
+  }
+
+  // Test c.and
+  {
+    auto fn = [](MacroAssembler& assm) {
+      __ RV_li(a1, MIN_VAL_IMM12);
+      __ c_and(a0, a1);
+    };
+    auto res = GenAndRunTest<int64_t>(LARGE_INT_UNDER_32_BIT, fn);
+    CHECK_EQ(LARGE_INT_UNDER_32_BIT & MIN_VAL_IMM12, res);
+  }
+
+  // Test c.subw
+  {
+    auto fn = [](MacroAssembler& assm) {
+      __ RV_li(a1, MIN_VAL_IMM12);
+      __ c_subw(a0, a1);
+    };
+    auto res = GenAndRunTest<int64_t>(LARGE_INT_UNDER_32_BIT, fn);
+    CHECK_EQ(LARGE_INT_UNDER_32_BIT - MIN_VAL_IMM12, res);
+  }
   // Test c.addw
   {
     auto fn = [](MacroAssembler& assm) {
