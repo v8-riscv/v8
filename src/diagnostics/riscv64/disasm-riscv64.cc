@@ -1537,30 +1537,24 @@ void Decoder::DecodeCRType(Instruction* instr) {
 }
 
 void Decoder::DecodeCAType(Instruction* instr) {
-  switch (instr->RvcFunct6Value()) {
-    case 0b100011:
-      switch (instr->RvcFunctValue()) {
-       case 0b00: //c.sub
-         if (instr->RvcRdValue() != 0 && instr->RvcRs2Value() != 0)
-           Format(instr, "sub       'Crs1s, 'Crs1s, 'Crs2s");
-         else
-           UNSUPPORTED_RISCV();
-         break;
-       default:
-         UNSUPPORTED_RISCV();
-      }
+  switch (instr->InstructionBits() & kCATypeMask) {
+    case RO_C_SUB:
+      Format(instr, "sub       'Crs1s, 'Crs1s, 'Crs2s");
       break;
-    case 0b100111:
-      switch (instr->RvcFunctValue()) {
-       case 0b01: //c.addw
-         if (instr->RvcRdValue() != 0 && instr->RvcRs2Value() != 0)
-           Format(instr, "addw       'Crs1s, 'Crs1s, 'Crs2s");
-         else
-           UNSUPPORTED_RISCV();
-         break;
-       default:
-         UNSUPPORTED_RISCV();
-      }
+    case RO_C_XOR:
+      Format(instr, "xor       'Crs1s, 'Crs1s, 'Crs2s");
+      break;
+    case RO_C_OR:
+      Format(instr, "or       'Crs1s, 'Crs1s, 'Crs2s");
+      break;
+    case RO_C_AND:
+      Format(instr, "and       'Crs1s, 'Crs1s, 'Crs2s");
+      break;
+    case RO_C_SUBW:
+      Format(instr, "subw       'Crs1s, 'Crs1s, 'Crs2s");
+      break;
+    case RO_C_ADDW:
+      Format(instr, "addw       'Crs1s, 'Crs1s, 'Crs2s");
       break;
     default:
       UNSUPPORTED_RISCV();
