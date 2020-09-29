@@ -861,7 +861,7 @@ void Assembler::GenInstrCA(uint8_t funct6, Opcode opcode,
   DCHECK(is_uint6(funct6) && rd.is_valid() && rs2.is_valid() && is_uint2(funct));
   ShortInstr instr = opcode | ((rs2.code() & kRvcRs2sBits) << kRvcRs2sShift) |
                             ((rd.code() & kRvcRs1sBits) << kRvcRs1sShift) |
-                            (funct6 << kRvcFunct6Shift) | (funct << kRvcFunctShift);
+                            (funct6 << kRvcFunct6Shift) | (funct << kRvcFunct2Shift);
   emit(instr);
 }
 
@@ -1919,14 +1919,34 @@ void Assembler::c_add(Register rd, Register rs2) {
 }
 
 // CA Instructions
-void Assembler::c_addw(Register rd, Register rs2) {
-  DCHECK(rd != zero_reg && rs2 != zero_reg);
-  GenInstrCA(0b100111, C1, rd, 0b01, rs2);
+void Assembler::c_sub(Register rd, Register rs2) {
+  DCHECK(((rd.code() & 0b11000) == 0b01000) && ((rs2.code() & 0b11000) == 0b01000));
+  GenInstrCA(0b100011, C1, rd, 0b00, rs2);
 }
 
-void Assembler::c_sub(Register rd, Register rs2) {
-  DCHECK(rd != ToRegister(0) && rs2 != ToRegister(0));
-  GenInstrCA(0b100011, C1, rd, 0b00, rs2);
+void Assembler::c_xor(Register rd, Register rs2) {
+  DCHECK(((rd.code() & 0b11000) == 0b01000) && ((rs2.code() & 0b11000) == 0b01000));
+  GenInstrCA(0b100011, C1, rd, 0b01, rs2);
+}
+
+void Assembler::c_or(Register rd, Register rs2) {
+  DCHECK(((rd.code() & 0b11000) == 0b01000) && ((rs2.code() & 0b11000) == 0b01000));
+  GenInstrCA(0b100011, C1, rd, 0b10, rs2);
+}
+
+void Assembler::c_and(Register rd, Register rs2) {
+  DCHECK(((rd.code() & 0b11000) == 0b01000) && ((rs2.code() & 0b11000) == 0b01000));
+  GenInstrCA(0b100011, C1, rd, 0b11, rs2);
+}
+
+void Assembler::c_subw(Register rd, Register rs2) {
+  DCHECK(((rd.code() & 0b11000) == 0b01000) && ((rs2.code() & 0b11000) == 0b01000));
+  GenInstrCA(0b100111, C1, rd, 0b00, rs2);
+}
+
+void Assembler::c_addw(Register rd, Register rs2) {
+  DCHECK(((rd.code() & 0b11000) == 0b01000) && ((rs2.code() & 0b11000) == 0b01000));
+  GenInstrCA(0b100111, C1, rd, 0b01, rs2);
 }
 
 void Assembler::c_swsp(Register rs2, uint16_t uimm8) {
