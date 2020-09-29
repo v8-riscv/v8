@@ -479,6 +479,10 @@ TEST(RV64C) {
   COMPARE(c_jalr(a1), "00009582       jalr      a1");
   COMPARE(c_add(s6, t0), "00009b16       add       s6, s6, t0");
   COMPARE(c_sub(s1, a0), "00008c89       sub       s1, s1, a0");
+  COMPARE(c_xor(s1, a0), "00008ca9       xor       s1, s1, a0");
+  COMPARE(c_or(s1, a0), "00008cc9       or       s1, s1, a0");
+  COMPARE(c_and(s1, a0), "00008ce9       and       s1, s1, a0");
+  COMPARE(c_subw(s1, a0), "00009c89       subw       s1, s1, a0");
   COMPARE(c_addw(a0, a1), "00009d2d       addw       a0, a0, a1");
 
   COMPARE(c_fsdsp(fa4, 232), "0000b5ba       fsd       fa4, 232(sp)");
