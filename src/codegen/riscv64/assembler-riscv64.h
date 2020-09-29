@@ -594,6 +594,10 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_jalr(Register rs1);
   void c_add(Register rd, Register rs2);
   void c_sub(Register rd, Register rs2);
+  void c_and(Register rd, Register rs2);
+  void c_xor(Register rd, Register rs2);
+  void c_or(Register rd, Register rs2);
+  void c_subw(Register rd, Register rs2);
   void c_addw(Register rd, Register rs2);
   void c_swsp(Register rs2, uint16_t uimm8);
   void c_sdsp(Register rs2, uint16_t uimm9);
