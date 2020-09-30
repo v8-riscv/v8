@@ -1067,6 +1067,25 @@ class InstructionGetters : public T {
     return imm9;
   }
 
+  inline int RvcImm5LwValue() const {
+    DCHECK(this->IsShortInstruction());
+    // | funct3 | imm[5:3] | rs1 | imm[2|6] | rd | opcode |
+    //  15       12       10     6          4     2
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm7 = ((Bits & 0x1c00) >> 7) | ((Bits & 0x40) >> 4) |
+                   ((Bits & 0x20) << 1);
+    return imm7;
+  }
+
+  inline int RvcImm5LdValue() const {
+    DCHECK(this->IsShortInstruction());
+    // | funct3 | imm[5:3] | rs1 | imm[7:6] | rd | opcode |
+    //  15       12        10    6          4     2
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm8 = ((Bits & 0x1c00) >> 7) | ((Bits & 0x60) << 1);
+    return imm8;
+  }
+
   inline bool AqValue() const { return this->Bits(kAqShift, kAqShift); }
 
   inline bool RlValue() const { return this->Bits(kRlShift, kRlShift); }
