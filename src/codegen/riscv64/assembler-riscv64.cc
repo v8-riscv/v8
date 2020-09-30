@@ -859,9 +859,9 @@ void Assembler::GenInstrCR(uint8_t funct4, Opcode opcode,
 void Assembler::GenInstrCA(uint8_t funct6, Opcode opcode,
                           Register rd, uint8_t funct, Register rs2) {
   DCHECK(is_uint6(funct6) && rd.is_valid() && rs2.is_valid() && is_uint2(funct));
-  ShortInstr instr = opcode | ((rs2.code() & kRvcRs2sBits) << kRvcRs2sShift) |
-                            ((rd.code() & kRvcRs1sBits) << kRvcRs1sShift) |
-                            (funct6 << kRvcFunct6Shift) | (funct << kRvcFunct2Shift);
+  ShortInstr instr = opcode | ((rs2.code() & 0x7) << kRvcRs2sShift) |
+                   ((rd.code() & 0x7) << kRvcRs1sShift) |
+                   (funct6 << kRvcFunct6Shift) | (funct << kRvcFunct2Shift);
   emit(instr);
 }
 
@@ -902,6 +902,26 @@ void Assembler::GenInstrCSS(uint8_t funct3, Opcode opcode, FPURegister rs2,
   DCHECK(is_uint3(funct3) && rs2.is_valid() && is_uint6(uimm6));
   ShortInstr instr = opcode | (uimm6 << 7) | (rs2.code() << kRvcRs2Shift) |
                    (funct3 << kRvcFunct3Shift);
+  emit(instr);
+}
+
+void Assembler::GenInstrCL(uint8_t funct3, Opcode opcode, Register rd,
+                           Register rs1, uint8_t uimm5) {
+  DCHECK(is_uint3(funct3) && rd.is_valid() && rs1.is_valid() && is_uint5(uimm5));
+  ShortInstr instr = opcode | ((uimm5 & 0x3) << 5) |
+                   ((rd.code() & 0x7) << kRvcRs2sShift) |
+                   ((uimm5 & 0x1c) << 8) | (funct3 << kRvcFunct3Shift) |
+                   ((rs1.code() & 0x7) << kRvcRs1sShift);
+  emit(instr);
+}
+
+void Assembler::GenInstrCL(uint8_t funct3, Opcode opcode, FPURegister rd,
+                           Register rs1, uint8_t uimm5) {
+  DCHECK(is_uint3(funct3) && rd.is_valid() && rs1.is_valid() && is_uint5(uimm5));
+  ShortInstr instr = opcode | ((uimm5 & 0x3) << 5) |
+	           ((rd.code() & 0x7) << kRvcRs2sShift) |
+                   ((uimm5 & 0x1c) << 8) | (funct3 << kRvcFunct3Shift) |
+                   ((rs1.code() & 0x7) << kRvcRs1sShift);
   emit(instr);
 }
 
@@ -1965,6 +1985,29 @@ void Assembler::c_fsdsp(FPURegister rs2, uint16_t uimm9) {
   DCHECK(is_uint9(uimm9) && (uimm9 & 0x7) == 0);
   uint8_t uimm6 = (uimm9 & 0x38) | ((uimm9 & 0x1c0) >> 6);
   GenInstrCSS(0b101, C2, rs2, uimm6);
+}
+
+// CL Instructions
+
+void Assembler::c_lw(Register rd, Register rs1, uint16_t uimm7) {
+  DCHECK(((rd.code() & 0b11000) == 0b01000) && ((rs1.code() & 0b11000) == 0b01000) &&
+         is_uint7(uimm7));
+  uint8_t uimm5 = ((uimm7 & 0x4) >> 1) | ((uimm7 & 0x40) >>  6) | ((uimm7 & 0x38) >> 1);
+  GenInstrCL(0b010, C0, rd, rs1, uimm5);
+}
+
+void Assembler::c_ld(Register rd, Register rs1, uint16_t uimm8) {
+  DCHECK(((rd.code() & 0b11000) == 0b01000) && ((rs1.code() & 0b11000) == 0b01000) &&
+        is_uint8(uimm8));
+  uint8_t uimm5 = ((uimm8 & 0x38) >>  1) | ((uimm8 & 0xc0) >> 6);
+  GenInstrCL(0b011, C0, rd, rs1, uimm5);
+}
+
+void Assembler::c_fld(FPURegister rd, Register rs1, uint16_t uimm8) {
+  DCHECK(((rd.code() & 0b11000) == 0b01000) && ((rs1.code() & 0b11000) == 0b01000) &&
+        is_uint8(uimm8));
+  uint8_t uimm5 = ((uimm8 & 0x38) >>  1) | ((uimm8 & 0xc0) >> 6);
+  GenInstrCL(0b001, C0, rd, rs1, uimm5);
 }
 
 // Privileged
