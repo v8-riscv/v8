@@ -1363,6 +1363,87 @@ TEST(RVC_LOAD_STORE_SP) {
 
 }
 
+TEST(RVC_CL) {
+  // Test RV64C extension fld,  lw, ld.
+  CcTest::InitializeVM();
+  Isolate* isolate = CcTest::i_isolate();
+  HandleScope scope(isolate);
+
+  struct T {
+    double a;
+    double b;
+    double c;
+  } t;
+
+  // c.fld
+  {
+    auto fn = [](MacroAssembler& assm) {
+      __ c_fld(fa0, a0, offsetof(T, a));
+      __ c_fld(fa1, a0, offsetof(T, b));
+      __ fadd_d(fa2, fa1, fa0);
+      __ fsd(fa2, a0, offsetof(T, c));  // c = a + b.
+    };
+    auto f = AssembleCode<F3>(fn);
+
+    t.a = 1.5e14;
+    t.b = 1.5e14;
+    t.c = 3.0e14;
+    f.Call(&t, 0, 0, 0, 0);
+    // Expected double results.
+    CHECK_EQ(1.5e14, t.a);
+    CHECK_EQ(1.5e14, t.b);
+    CHECK_EQ(3.0e14, t.c);
+  }
+
+  struct S {
+    int32_t a;
+    int32_t b;
+    int32_t c;
+  } s;
+  // c.lw
+  {
+    auto fn = [](MacroAssembler& assm) {
+      __ c_lw(a1, a0, offsetof(S, a));
+      __ c_lw(a2, a0, offsetof(S, b));
+      __ add(a3, a1, a2);
+      __ sw(a3, a0, offsetof(S, c));  // c = a + b.
+    };
+    auto f = AssembleCode<F3>(fn);
+
+    s.a = 1;
+    s.b = 2;
+    s.c = 3;
+    f.Call(&s, 0, 0, 0, 0);
+    CHECK_EQ(1, s.a);
+    CHECK_EQ(2, s.b);
+    CHECK_EQ(3, s.c);
+  }
+
+  struct U {
+    int64_t a;
+    int64_t b;
+    int64_t c;
+  } u;
+  // c.ld
+  {
+    auto fn = [](MacroAssembler& assm) {
+      __ c_ld(a1, a0, offsetof(U, a));
+      __ c_ld(a2, a0, offsetof(U, b));
+      __ add(a3, a1, a2);
+      __ sd(a3, a0, offsetof(U, c));  // c = a + b.
+    };
+    auto f = AssembleCode<F3>(fn);
+
+    u.a = 1;
+    u.b = 2;
+    u.c = 3;
+    f.Call(&u, 0, 0, 0, 0);
+    CHECK_EQ(1, u.a);
+    CHECK_EQ(2, u.b);
+    CHECK_EQ(3, u.c);
+  }
+}
+
 TEST(TARGET_ADDR) {
   CcTest::InitializeVM();
   Isolate* isolate = CcTest::i_isolate();
