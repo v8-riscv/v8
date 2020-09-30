@@ -87,6 +87,8 @@ class Decoder {
   void PrintRvcImm6Lwsp(Instruction* instr);
   void PrintRvcImm6Sdsp(Instruction* instr);
   void PrintRvcImm6Swsp(Instruction* instr);
+  void PrintRvcImm5Lw(Instruction* instr);
+  void PrintRvcImm5Ld(Instruction* instr);
   void PrintAcquireRelease(Instruction* instr);
   void PrintBranchOffset(Instruction* instr);
   void PrintStoreOffset(Instruction* instr);
@@ -108,6 +110,7 @@ class Decoder {
   void DecodeCAType(Instruction* instr);
   void DecodeCIType(Instruction* instr);
   void DecodeCSSType(Instruction* instr);
+  void DecodeCLType(Instruction* instr);
 
   // Printing of instruction name.
   void PrintInstructionName(Instruction* instr);
@@ -277,6 +280,15 @@ void Decoder::PrintRvcImm6Sdsp(Instruction* instr) {
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
 }
 
+void Decoder::PrintRvcImm5Lw(Instruction* instr) {
+  int32_t imm = instr->RvcImm5LwValue();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImm5Ld(Instruction* instr) {
+  int32_t imm = instr->RvcImm5LdValue();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
 
 void Decoder::PrintAcquireRelease(Instruction* instr) {
   bool aq = instr->AqValue();
@@ -491,47 +503,65 @@ int Decoder::FormatRvcRegister(Instruction* instr, const char* format) {
 // complexity of FormatOption.
 int Decoder::FormatRvcImm(Instruction* instr, const char* format) {
   // TODO: add other rvc imm format
-  DCHECK(STRING_STARTS_WITH(format, "Cimm6"));
-  if (format[5] == 'U') {
-    DCHECK(STRING_STARTS_WITH(format, "Cimm6U"));
-    PrintRvcImm6U(instr);
-    return 6;
-  } else if (format[5] == 'A') {
-    if (format[9] == '1' && format[10] == '6') {
-      DCHECK(STRING_STARTS_WITH(format, "Cimm6Addi16sp"));
-      PrintRvcImm6Addi16sp(instr);
-      return 13;
-    }
-    UNREACHABLE();
-  } else if (format[5] == 'L') {
-    if (format[6] == 'd') {
-      if (format[7] == 's') {
-        DCHECK(STRING_STARTS_WITH(format, "Cimm6Ldsp"));
-        PrintRvcImm6Ldsp(instr);
+  DCHECK(STRING_STARTS_WITH(format, "Cimm"));
+  if (format[4] == '6') {
+    if (format[5] == 'U') {
+      DCHECK(STRING_STARTS_WITH(format, "Cimm6U"));
+      PrintRvcImm6U(instr);
+      return 6;
+    } else if (format[5] == 'A') {
+      if (format[9] == '1' && format[10] == '6') {
+        DCHECK(STRING_STARTS_WITH(format, "Cimm6Addi16sp"));
+        PrintRvcImm6Addi16sp(instr);
+        return 13;
+      }
+      UNREACHABLE();
+    } else if (format[5] == 'L') {
+      if (format[6] == 'd') {
+        if (format[7] == 's') {
+          DCHECK(STRING_STARTS_WITH(format, "Cimm6Ldsp"));
+          PrintRvcImm6Ldsp(instr);
+          return 9;
+        }
+      } else if (format[6] == 'w') {
+        if (format[7] == 's') {
+          DCHECK(STRING_STARTS_WITH(format, "Cimm6Lwsp"));
+          PrintRvcImm6Lwsp(instr);
+          return 9;
+        }
+      }
+      UNREACHABLE();
+    } else if (format[5] == 'S') {
+      if (format[6] == 'w') {
+        DCHECK(STRING_STARTS_WITH(format, "Cimm6Swsp"));
+        PrintRvcImm6Swsp(instr);
+        return 9;
+      } else if (format[6] == 'd') {
+        DCHECK(STRING_STARTS_WITH(format, "Cimm6Sdsp"));
+        PrintRvcImm6Sdsp(instr);
         return 9;
       }
-    } else if (format[6] == 'w') {
-      if (format[7] == 's') {
-        DCHECK(STRING_STARTS_WITH(format, "Cimm6Lwsp"));
-        PrintRvcImm6Lwsp(instr);
-        return 9;
-      }
+      UNREACHABLE();
     }
-    UNREACHABLE();
-  } else if (format[5] == 'S') {
-    if (format[6] == 'w') {
-      DCHECK(STRING_STARTS_WITH(format, "Cimm6Swsp"));
-      PrintRvcImm6Swsp(instr);
-      return 9;
-    } else if (format[6] == 'd') {
-      DCHECK(STRING_STARTS_WITH(format, "Cimm6Sdsp"));
-      PrintRvcImm6Sdsp(instr);
-      return 9;
+    PrintRvcImm6(instr);
+    return 5;
+  }
+  else if (format[4] == '5') {
+    DCHECK(STRING_STARTS_WITH(format, "Cimm5"));
+    if (format[5] == 'L') {
+      if (format[6] == 'w'){
+        DCHECK(STRING_STARTS_WITH(format, "Cimm5Lw"));
+        PrintRvcImm5Lw(instr);
+        return 7;
+      } else if (format[6] =='d') {
+        DCHECK(STRING_STARTS_WITH(format, "Cimm5Ld"));
+        PrintRvcImm5Ld(instr);
+        return 7;
+      }
     }
     UNREACHABLE();
   }
-  PrintRvcImm6(instr);
-  return 5;
+  UNREACHABLE();
 }
 
 // FormatOption takes a formatting string and interprets it based on
@@ -1616,6 +1646,22 @@ void Decoder::DecodeCSSType(Instruction* instr) {
   }
 }
 
+void Decoder::DecodeCLType(Instruction* instr) {
+  switch(instr->RvcOpcode()) {
+    case RO_C_FLD:
+      Format(instr, "fld       'Cfs2s, 'Cimm5Ld('Crs1s)");
+      break;
+    case RO_C_LW:
+      Format(instr, "lw       'Crs2s, 'Cimm5Lw('Crs1s)");
+      break;
+    case RO_C_LD:
+      Format(instr, "ld       'Crs2s, 'Cimm5Ld('Crs1s)");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+
 // Disassemble the instruction at *instr_ptr into the output buffer.
 // All instructions are one word long, except for the simulator
 // pseudo-instruction stop(msg). For that one special case, we return
@@ -1658,6 +1704,9 @@ int Decoder::InstructionDecode(byte* instr_ptr) {
       break;
     case Instruction::kCSSType:
       DecodeCSSType(instr);
+      break;
+    case Instruction::kCLType:
+      DecodeCLType(instr);
       break;
     default:
       Format(instr, "UNSUPPORTED");
