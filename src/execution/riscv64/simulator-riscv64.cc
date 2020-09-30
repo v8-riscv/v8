@@ -3221,6 +3221,31 @@ void Simulator::DecodeCSSType() {
   }
 }
 
+void Simulator::DecodeCLType() {
+  switch (instr_.RvcOpcode()) {
+    case RO_C_LW: {
+      int64_t addr = rvc_rs1s() + rvc_imm5_lw();
+      auto val = ReadMem<int32_t>(addr, instr_.instr());
+      set_rvc_rs2s(sext_xlen(val), false);
+      break;
+    }
+    case RO_C_LD: {
+      int64_t addr = rvc_rs1s() + rvc_imm5_ld();
+      auto val = ReadMem<int64_t>(addr, instr_.instr());
+      set_rvc_rs2s(sext_xlen(val), false);
+      break;
+    }
+    case RO_C_FLD: {
+      int64_t addr = rvc_rs1s() + rvc_imm5_ld();
+      auto val = ReadMem<double>(addr, instr_.instr());
+      set_rvc_drs2s(sext_xlen(val), false);
+      break;
+    }
+    default:
+      UNSUPPORTED();
+  }
+}
+
 // Executes the current instruction.
 void Simulator::InstructionDecode(Instruction* instr) {
   if (v8::internal::FLAG_check_icache) {
@@ -3275,6 +3300,9 @@ void Simulator::InstructionDecode(Instruction* instr) {
       break;
     case Instruction::kCSSType:
       DecodeCSSType();
+      break;
+    case Instruction::kCLType:
+      DecodeCLType();
       break;
     default:
       if (::v8::internal::FLAG_trace_sim) {
