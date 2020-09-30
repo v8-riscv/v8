@@ -489,6 +489,9 @@ TEST(RV64C) {
   COMPARE(c_swsp(s6, 180), "0000db5a       sw        s6, 180(sp)");
   COMPARE(c_sdsp(a4, 216), "0000edba       sd        a4, 216(sp)");
 
+  COMPARE(c_lw(a2, s1, 24), "00004c90       lw       a2, 24(s1)");
+  COMPARE(c_ld(a2, s1, 24), "00006c90       ld       a2, 24(s1)");
+  COMPARE(c_fld(fa1, s1, 24), "00002c8c       fld       fa1, 24(s1)");
   VERIFY_RUN();
 }
 
