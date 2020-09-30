@@ -602,6 +602,9 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_swsp(Register rs2, uint16_t uimm8);
   void c_sdsp(Register rs2, uint16_t uimm9);
   void c_fsdsp(FPURegister rs2, uint16_t uimm9);
+  void c_lw(Register rd, Register rs1, uint16_t uimm7);
+  void c_ld(Register rd, Register rs1, uint16_t uimm8);
+  void c_fld(FPURegister rd, Register rs1, uint16_t uimm8);
 
   // Privileged
   void uret();
@@ -1045,6 +1048,10 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void GenInstrCIU(uint8_t funct3, Opcode opcode, FPURegister rd, uint8_t uimm6);
   void GenInstrCSS(uint8_t funct3, Opcode opcode, FPURegister rs2, uint8_t uimm6);
   void GenInstrCSS(uint8_t funct3, Opcode opcode, Register rs2, uint8_t uimm6);
+  void GenInstrCL(uint8_t funct3, Opcode opcode, Register rd,
+                  Register rs1, uint8_t uimm5);
+  void GenInstrCL(uint8_t funct3, Opcode opcode, FPURegister rd,
+                  Register rs1, uint8_t uimm5);
 
   // ----- Instruction class templates match those in LLVM's RISCVInstrInfo.td
   void GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,
