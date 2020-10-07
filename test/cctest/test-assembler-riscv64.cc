@@ -1363,7 +1363,7 @@ TEST(RVC_LOAD_STORE_SP) {
 
 }
 
-TEST(RVC_CL) {
+TEST(RVC_LOAD_STORE_COMPRESSED) {
   // Test RV64C extension fld,  lw, ld.
   CcTest::InitializeVM();
   Isolate* isolate = CcTest::i_isolate();
@@ -1381,7 +1381,7 @@ TEST(RVC_CL) {
       __ c_fld(fa0, a0, offsetof(T, a));
       __ c_fld(fa1, a0, offsetof(T, b));
       __ fadd_d(fa2, fa1, fa0);
-      __ fsd(fa2, a0, offsetof(T, c));  // c = a + b.
+      __ c_fsd(fa2, a0, offsetof(T, c));  // c = a + b.
     };
     auto f = AssembleCode<F3>(fn);
 
@@ -1406,7 +1406,7 @@ TEST(RVC_CL) {
       __ c_lw(a1, a0, offsetof(S, a));
       __ c_lw(a2, a0, offsetof(S, b));
       __ add(a3, a1, a2);
-      __ sw(a3, a0, offsetof(S, c));  // c = a + b.
+      __ c_sw(a3, a0, offsetof(S, c));  // c = a + b.
     };
     auto f = AssembleCode<F3>(fn);
 
@@ -1430,7 +1430,7 @@ TEST(RVC_CL) {
       __ c_ld(a1, a0, offsetof(U, a));
       __ c_ld(a2, a0, offsetof(U, b));
       __ add(a3, a1, a2);
-      __ sd(a3, a0, offsetof(U, c));  // c = a + b.
+      __ c_sd(a3, a0, offsetof(U, c));  // c = a + b.
     };
     auto f = AssembleCode<F3>(fn);
 

@@ -3224,21 +3224,43 @@ void Simulator::DecodeCSSType() {
 void Simulator::DecodeCLType() {
   switch (instr_.RvcOpcode()) {
     case RO_C_LW: {
-      int64_t addr = rvc_rs1s() + rvc_imm5_lw();
+      int64_t addr = rvc_rs1s() + rvc_imm5_w();
       auto val = ReadMem<int32_t>(addr, instr_.instr());
       set_rvc_rs2s(sext_xlen(val), false);
       break;
     }
     case RO_C_LD: {
-      int64_t addr = rvc_rs1s() + rvc_imm5_ld();
+      int64_t addr = rvc_rs1s() + rvc_imm5_d();
       auto val = ReadMem<int64_t>(addr, instr_.instr());
       set_rvc_rs2s(sext_xlen(val), false);
       break;
     }
     case RO_C_FLD: {
-      int64_t addr = rvc_rs1s() + rvc_imm5_ld();
+      int64_t addr = rvc_rs1s() + rvc_imm5_d();
       auto val = ReadMem<double>(addr, instr_.instr());
       set_rvc_drs2s(sext_xlen(val), false);
+      break;
+    }
+    default:
+      UNSUPPORTED();
+  }
+}
+
+void Simulator::DecodeCSType() {
+  switch (instr_.RvcOpcode()) {
+    case RO_C_SW: {
+      int64_t addr = rvc_rs1s() + rvc_imm5_w();
+      WriteMem<int32_t>(addr, (int32_t)rvc_rs2s(), instr_.instr());
+      break;
+    }
+    case RO_C_SD: {
+      int64_t addr = rvc_rs1s() + rvc_imm5_d();
+      WriteMem<int64_t>(addr, (int64_t)rvc_rs2s(), instr_.instr());
+      break;
+    }
+    case RO_C_FSD: {
+      int64_t addr = rvc_rs1s() + rvc_imm5_d();
+      WriteMem<double>(addr, (double)rvc_drs2s(), instr_.instr());
       break;
     }
     default:
@@ -3303,6 +3325,9 @@ void Simulator::InstructionDecode(Instruction* instr) {
       break;
     case Instruction::kCLType:
       DecodeCLType();
+      break;
+    case Instruction::kCSType:
+      DecodeCSType();
       break;
     default:
       if (::v8::internal::FLAG_trace_sim) {
