@@ -925,6 +925,26 @@ void Assembler::GenInstrCL(uint8_t funct3, Opcode opcode, FPURegister rd,
   emit(instr);
 }
 
+void Assembler::GenInstrCS(uint8_t funct3, Opcode opcode, Register rs2,
+                           Register rs1, uint8_t uimm5) {
+  DCHECK(is_uint3(funct3) && rs2.is_valid() && rs1.is_valid() && is_uint5(uimm5));
+  ShortInstr instr = opcode | ((uimm5 & 0x3) << 5) |
+                   ((rs2.code() & 0x7) << kRvcRs2sShift) |
+                   ((uimm5 & 0x1c) << 8) | (funct3 << kRvcFunct3Shift) |
+                   ((rs1.code() & 0x7) << kRvcRs1sShift);
+  emit(instr);
+}
+
+void Assembler::GenInstrCS(uint8_t funct3, Opcode opcode, FPURegister rs2,
+                           Register rs1, uint8_t uimm5) {
+  DCHECK(is_uint3(funct3) && rs2.is_valid() && rs1.is_valid() && is_uint5(uimm5));
+  ShortInstr instr = opcode | ((uimm5 & 0x3) << 5) |
+	           ((rs2.code() & 0x7) << kRvcRs2sShift) |
+                   ((uimm5 & 0x1c) << 8) | (funct3 << kRvcFunct3Shift) |
+                   ((rs1.code() & 0x7) << kRvcRs1sShift);
+  emit(instr);
+}
+
 // ----- Instruction class templates match those in the compiler
 
 void Assembler::GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,
@@ -2008,6 +2028,29 @@ void Assembler::c_fld(FPURegister rd, Register rs1, uint16_t uimm8) {
         is_uint8(uimm8));
   uint8_t uimm5 = ((uimm8 & 0x38) >>  1) | ((uimm8 & 0xc0) >> 6);
   GenInstrCL(0b001, C0, rd, rs1, uimm5);
+}
+
+// CS Instructions
+
+void Assembler::c_sw(Register rs2, Register rs1, uint16_t uimm7) {
+  DCHECK(((rs2.code() & 0b11000) == 0b01000) && ((rs1.code() & 0b11000) == 0b01000) &&
+         is_uint7(uimm7));
+  uint8_t uimm5 = ((uimm7 & 0x4) >> 1) | ((uimm7 & 0x40) >>  6) | ((uimm7 & 0x38) >> 1);
+  GenInstrCS(0b110, C0, rs2, rs1, uimm5);
+}
+
+void Assembler::c_sd(Register rs2, Register rs1, uint16_t uimm8) {
+  DCHECK(((rs2.code() & 0b11000) == 0b01000) && ((rs1.code() & 0b11000) == 0b01000) &&
+        is_uint8(uimm8));
+  uint8_t uimm5 = ((uimm8 & 0x38) >>  1) | ((uimm8 & 0xc0) >> 6);
+  GenInstrCS(0b111, C0, rs2, rs1, uimm5);
+}
+
+void Assembler::c_fsd(FPURegister rs2, Register rs1, uint16_t uimm8) {
+  DCHECK(((rs2.code() & 0b11000) == 0b01000) && ((rs1.code() & 0b11000) == 0b01000) &&
+        is_uint8(uimm8));
+  uint8_t uimm5 = ((uimm8 & 0x38) >>  1) | ((uimm8 & 0xc0) >> 6);
+  GenInstrCS(0b101, C0, rs2, rs1, uimm5);
 }
 
 // Privileged
