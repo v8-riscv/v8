@@ -87,8 +87,8 @@ class Decoder {
   void PrintRvcImm6Lwsp(Instruction* instr);
   void PrintRvcImm6Sdsp(Instruction* instr);
   void PrintRvcImm6Swsp(Instruction* instr);
-  void PrintRvcImm5Lw(Instruction* instr);
-  void PrintRvcImm5Ld(Instruction* instr);
+  void PrintRvcImm5W(Instruction* instr);
+  void PrintRvcImm5D(Instruction* instr);
   void PrintAcquireRelease(Instruction* instr);
   void PrintBranchOffset(Instruction* instr);
   void PrintStoreOffset(Instruction* instr);
@@ -111,6 +111,7 @@ class Decoder {
   void DecodeCIType(Instruction* instr);
   void DecodeCSSType(Instruction* instr);
   void DecodeCLType(Instruction* instr);
+  void DecodeCSType(Instruction* instr);
 
   // Printing of instruction name.
   void PrintInstructionName(Instruction* instr);
@@ -280,13 +281,13 @@ void Decoder::PrintRvcImm6Sdsp(Instruction* instr) {
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
 }
 
-void Decoder::PrintRvcImm5Lw(Instruction* instr) {
-  int32_t imm = instr->RvcImm5LwValue();
+void Decoder::PrintRvcImm5W(Instruction* instr) {
+  int32_t imm = instr->RvcImm5WValue();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
 }
 
-void Decoder::PrintRvcImm5Ld(Instruction* instr) {
-  int32_t imm = instr->RvcImm5LdValue();
+void Decoder::PrintRvcImm5D(Instruction* instr) {
+  int32_t imm = instr->RvcImm5DValue();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
 }
 
@@ -548,16 +549,14 @@ int Decoder::FormatRvcImm(Instruction* instr, const char* format) {
   }
   else if (format[4] == '5') {
     DCHECK(STRING_STARTS_WITH(format, "Cimm5"));
-    if (format[5] == 'L') {
-      if (format[6] == 'w'){
-        DCHECK(STRING_STARTS_WITH(format, "Cimm5Lw"));
-        PrintRvcImm5Lw(instr);
-        return 7;
-      } else if (format[6] =='d') {
-        DCHECK(STRING_STARTS_WITH(format, "Cimm5Ld"));
-        PrintRvcImm5Ld(instr);
-        return 7;
-      }
+    if (format[5] == 'W'){
+      DCHECK(STRING_STARTS_WITH(format, "Cimm5W"));
+      PrintRvcImm5W(instr);
+      return 6;
+    } else if (format[5] =='D') {
+      DCHECK(STRING_STARTS_WITH(format, "Cimm5D"));
+      PrintRvcImm5D(instr);
+      return 6;
     }
     UNREACHABLE();
   }
@@ -1649,13 +1648,29 @@ void Decoder::DecodeCSSType(Instruction* instr) {
 void Decoder::DecodeCLType(Instruction* instr) {
   switch(instr->RvcOpcode()) {
     case RO_C_FLD:
-      Format(instr, "fld       'Cfs2s, 'Cimm5Ld('Crs1s)");
+      Format(instr, "fld       'Cfs2s, 'Cimm5D('Crs1s)");
       break;
     case RO_C_LW:
-      Format(instr, "lw       'Crs2s, 'Cimm5Lw('Crs1s)");
+      Format(instr, "lw       'Crs2s, 'Cimm5W('Crs1s)");
       break;
     case RO_C_LD:
-      Format(instr, "ld       'Crs2s, 'Cimm5Ld('Crs1s)");
+      Format(instr, "ld       'Crs2s, 'Cimm5D('Crs1s)");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+
+void Decoder::DecodeCSType(Instruction* instr) {
+  switch(instr->RvcOpcode()) {
+    case RO_C_FSD:
+      Format(instr, "fsd       'Cfs2s, 'Cimm5D('Crs1s)");
+      break;
+    case RO_C_SW:
+      Format(instr, "sw       'Crs2s, 'Cimm5W('Crs1s)");
+      break;
+    case RO_C_SD:
+      Format(instr, "sd       'Crs2s, 'Cimm5D('Crs1s)");
       break;
     default:
       UNSUPPORTED_RISCV();
@@ -1707,6 +1722,9 @@ int Decoder::InstructionDecode(byte* instr_ptr) {
       break;
     case Instruction::kCLType:
       DecodeCLType(instr);
+      break;
+    case Instruction::kCSType:
+      DecodeCSType(instr);
       break;
     default:
       Format(instr, "UNSUPPORTED");
