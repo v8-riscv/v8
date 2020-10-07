@@ -492,6 +492,10 @@ TEST(RV64C) {
   COMPARE(c_lw(a2, s1, 24), "00004c90       lw       a2, 24(s1)");
   COMPARE(c_ld(a2, s1, 24), "00006c90       ld       a2, 24(s1)");
   COMPARE(c_fld(fa1, s1, 24), "00002c8c       fld       fa1, 24(s1)");
+
+  COMPARE(c_sw(a2, s1, 24), "0000cc90       sw       a2, 24(s1)");
+  COMPARE(c_sd(a2, s1, 24), "0000ec90       sd       a2, 24(s1)");
+  COMPARE(c_fsd(fa1, s1, 24), "0000ac8c       fsd       fa1, 24(s1)");
   VERIFY_RUN();
 }
 
