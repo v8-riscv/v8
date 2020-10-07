@@ -1067,7 +1067,7 @@ class InstructionGetters : public T {
     return imm9;
   }
 
-  inline int RvcImm5LwValue() const {
+  inline int RvcImm5WValue() const {
     DCHECK(this->IsShortInstruction());
     // | funct3 | imm[5:3] | rs1 | imm[2|6] | rd | opcode |
     //  15       12       10     6          4     2
@@ -1077,7 +1077,7 @@ class InstructionGetters : public T {
     return imm7;
   }
 
-  inline int RvcImm5LdValue() const {
+  inline int RvcImm5DValue() const {
     DCHECK(this->IsShortInstruction());
     // | funct3 | imm[5:3] | rs1 | imm[7:6] | rd | opcode |
     //  15       12        10    6          4     2
