@@ -180,6 +180,8 @@ const int kRlShift = 25;
 const int kAqShift = 26;
 const int kImm12Shift = 20;
 const int kImm12Bits = 12;
+const int kImm11Shift = 2;
+const int kImm11Bits = 11;
 const int kShamtShift = 20;
 const int kShamtBits = 5;
 const int kShamtWShift = 20;
@@ -234,6 +236,7 @@ const int kRdFieldMask = ((1 << kRdBits) - 1) << kRdShift;
 const int kBImm12Mask = kFunct7Mask | kRdFieldMask;
 const int kImm20Mask = ((1 << kImm20Bits) - 1) << kImm20Shift;
 const int kImm12Mask = ((1 << kImm12Bits) - 1) << kImm12Shift;
+const int kImm11Mask = ((1 << kImm11Bits) - 1) << kImm11Shift;
 const int kImm31_12Mask = ((1 << 20) - 1) << 12;
 const int kImm19_0Mask = ((1 << 20) - 1);
 const int kRvcOpcodeMask = 0b11 | (((1 << kRvcFunct3Bits) - 1) << kRvcFunct3Shift);
@@ -1095,6 +1098,17 @@ class InstructionGetters : public T {
     uint32_t Bits = this->InstructionBits();
     int32_t imm8 = ((Bits & 0x1c00) >> 7) | ((Bits & 0x60) << 1);
     return imm8;
+  }
+
+  inline int RvcImm11CJValue() const {
+    DCHECK(this->IsShortInstruction());
+    // | funct3 | [11|4|9:8|10|6|7|3:1|5] | opcode |
+    //  15      12                        2
+    uint32_t Bits = this->InstructionBits();
+    int32_t imm12 = ((Bits & 0x4) << 3) | ((Bits & 0x38) >> 2) | ((Bits & 0x40) << 1) |
+                  ((Bits & 0x80) >> 1) | ((Bits & 0x100) << 2) | ((Bits & 0x600) >> 1) |
+                  ((Bits & 0x800) >> 7) | ((Bits & 0x1000) >> 1);
+    return imm12 << 20 >> 20;
   }
 
   inline bool AqValue() const { return this->Bits(kAqShift, kAqShift); }
