@@ -654,8 +654,8 @@ int Assembler::CJumpOffset(Instr instr) {
   int32_t imm12 = ((instr & 0x4) << 3) | ((instr & 0x38) >> 2) | ((instr & 0x40) << 1) |
                 ((instr & 0x80) >> 1) | ((instr & 0x100) << 2) | ((instr & 0x600) >> 1) |
                 ((instr & 0x800) >> 7) | ((instr & 0x1000) >> 1);
+  imm12 = imm12 << 20 >> 20;
   return imm12;
-
 }
 
 
