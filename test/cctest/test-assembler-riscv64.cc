@@ -1460,6 +1460,30 @@ TEST(RVC_LOAD_STORE_COMPRESSED) {
   }
 }
 
+TEST(RVC_JUMP) {
+  CcTest::InitializeVM();
+
+  Label L, C;
+  auto fn = [&L, &C](MacroAssembler& assm) {
+    __ mv(a1, a0);
+    __ RV_li(a0, 0l);
+    __ c_j(&C);
+
+    __ bind(&L);
+    __ add(a0, a0, a1);
+    __ addi(a1, a1, -1);
+
+    __ bind(&C);
+    __ xori(a2, a1, 0);
+    __ bnez(a2, &L);
+  };
+
+  int64_t input = 50;
+  int64_t expected_res = 1275L;
+  auto res = GenAndRunTest<int64_t>(input, fn);
+  CHECK_EQ(expected_res, res);
+}
+
 TEST(TARGET_ADDR) {
   CcTest::InitializeVM();
   Isolate* isolate = CcTest::i_isolate();
