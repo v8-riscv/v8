@@ -193,7 +193,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     kOffset12 = 12,  // RISCV imm12
     kOffset20 = 20,  // RISCV imm20
     kOffset13 = 13,   // RISCV branch
-    kOffset32 = 32   // RISCV auipc + instr_I
+    kOffset32 = 32,   // RISCV auipc + instr_I
+    kOffset11 = 11   // RISCV C_J
   };
 
   // Determines if Label is bound and near enough so that branch instruction
@@ -206,6 +207,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   int BranchOffset(Instr instr);
   int BrachlongOffset(Instr auipc, Instr jalr);
   int JumpOffset(Instr instr);
+  int CJumpOffset(Instr instr);
   static int LdOffset(Instr instr);
   static int AuipcOffset(Instr instr);
 
@@ -218,6 +220,9 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   }
   inline int32_t jump_offset(Label* L) {
     return branch_offset_helper(L, OffsetSize::kOffset21);
+  }
+  inline int16_t cjump_offset(Label* L) {
+    return (int16_t) branch_offset_helper(L, OffsetSize::kOffset11);
   }
 
   uint64_t jump_address(Label* L);
@@ -306,6 +311,9 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
   // Bits available for offset field in jump
   static constexpr int kJumpOffsetBits = 21;
+
+  // Bits available for offset field in compresed jump
+  static constexpr int kCJalOffsetBits = 12;
 
   // Max offset for b instructions with 12-bit offset field (multiple of 2)
   static constexpr int kMaxBranchOffset = (1 << (13 - 1)) - 1;
@@ -594,6 +602,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_mv(Register rd, Register rs2);
   void c_ebreak();
   void c_jalr(Register rs1);
+  void c_j(int16_t imm12);
+  inline void c_j(Label* L) { c_j(cjump_offset(L)); }
   void c_add(Register rd, Register rs2);
   void c_sub(Register rd, Register rs2);
   void c_and(Register rd, Register rs2);
@@ -833,6 +843,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   static bool IsBranch(Instr instr);
   static bool IsJump(Instr instr);
   static bool IsJal(Instr instr);
+  static bool IsCJal(Instr instr);
   static bool IsJalr(Instr instr);
   static bool IsLui(Instr instr);
   static bool IsAuipc(Instr instr);
@@ -1064,6 +1075,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
                   Register rs1, uint8_t uimm5);
   void GenInstrCS(uint8_t funct3, Opcode opcode, FPURegister rs2,
                   Register rs1, uint8_t uimm5);
+  void GenInstrCJ(uint8_t funct3, Opcode opcode, uint16_t uint11);
 
   // ----- Instruction class templates match those in LLVM's RISCVInstrInfo.td
   void GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,
