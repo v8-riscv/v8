@@ -1085,7 +1085,8 @@ T Simulator::FMaxMinHelper(T a, T b, MaxMinKind kind) {
 void Simulator::set_pc(int64_t value) {
   pc_modified_ = true;
   registers_[pc] = value;
-  DCHECK(has_bad_pc() || ((value % kInstrSize) == 0));
+  DCHECK(has_bad_pc() || ((value % kInstrSize) == 0) ||
+        ((value % kShortInstrSize) == 0));
 }
 
 bool Simulator::has_bad_pc() const {
@@ -3279,6 +3280,17 @@ void Simulator::DecodeCSType() {
   }
 }
 
+void Simulator::DecodeCJType() {
+  switch (instr_.RvcOpcode()) {
+    case RO_C_J: {
+      set_pc(get_pc() + instr_.RvcImm11CJValue());
+      break;
+    }
+    default:
+      UNSUPPORTED();
+  }
+}
+
 // Executes the current instruction.
 void Simulator::InstructionDecode(Instruction* instr) {
   if (v8::internal::FLAG_check_icache) {
@@ -3327,6 +3339,9 @@ void Simulator::InstructionDecode(Instruction* instr) {
       break;
     case Instruction::kCAType:
       DecodeCAType();
+      break;
+    case Instruction::kCJType:
+      DecodeCJType();
       break;
     case Instruction::kCIType:
       DecodeCIType();
