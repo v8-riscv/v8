@@ -90,6 +90,7 @@ class Decoder {
   void PrintRvcImm5W(Instruction* instr);
   void PrintRvcImm5D(Instruction* instr);
   void PrintRvcImm8Addi4spn(Instruction* instr);
+  void PrintRvcImm11CJ(Instruction* instr);
   void PrintAcquireRelease(Instruction* instr);
   void PrintBranchOffset(Instruction* instr);
   void PrintStoreOffset(Instruction* instr);
@@ -114,6 +115,7 @@ class Decoder {
   void DecodeCSSType(Instruction* instr);
   void DecodeCLType(Instruction* instr);
   void DecodeCSType(Instruction* instr);
+  void DecodeCJType(Instruction* instr);
 
   // Printing of instruction name.
   void PrintInstructionName(Instruction* instr);
@@ -295,6 +297,11 @@ void Decoder::PrintRvcImm5D(Instruction* instr) {
 
 void Decoder::PrintRvcImm8Addi4spn(Instruction* instr) {
   int32_t imm = instr->RvcImm8Addi4spnValue();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImm11CJ(Instruction* instr) {
+  int32_t imm = instr->RvcImm11CJValue();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
 }
 
@@ -573,6 +580,15 @@ int Decoder::FormatRvcImm(Instruction* instr, const char* format) {
       DCHECK(STRING_STARTS_WITH(format, "Cimm8Addi4spn"));
       PrintRvcImm8Addi4spn(instr);
       return 13;
+    }
+    UNREACHABLE();
+  }
+  else if (format[4] == '1') {
+    DCHECK(STRING_STARTS_WITH(format, "Cimm1"));
+    if (format[5] == '1') {
+      DCHECK(STRING_STARTS_WITH(format, "Cimm11CJ"));
+      PrintRvcImm11CJ(instr);
+      return 8;
     }
     UNREACHABLE();
   }
@@ -1703,6 +1719,16 @@ void Decoder::DecodeCSType(Instruction* instr) {
   }
 }
 
+void Decoder::DecodeCJType(Instruction* instr) {
+  switch(instr->RvcOpcode()) {
+    case RO_C_J:
+      Format(instr, "jal       x0, 'Cimm11CJ");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+
 // Disassemble the instruction at *instr_ptr into the output buffer.
 // All instructions are one word long, except for the simulator
 // pseudo-instruction stop(msg). For that one special case, we return
@@ -1739,6 +1765,9 @@ int Decoder::InstructionDecode(byte* instr_ptr) {
       break;
     case Instruction::kCAType:
       DecodeCAType(instr);
+      break;
+    case Instruction::kCJType:
+      DecodeCJType(instr);
       break;
     case Instruction::kCIType:
       DecodeCIType(instr);
