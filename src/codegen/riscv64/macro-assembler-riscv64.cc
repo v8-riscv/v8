@@ -938,11 +938,11 @@ void TurboAssembler::ByteSwap(Register rd, Register rs, int operand_size) {
     li(x1, 0x00FF00FF);
     slliw(x0, rs, 16);
     srliw(rd, rs, 16);
-    or_(x0, rd, x0);     // x0 <- x0 << 16 | x0 >> 16
-    and_(x2, x0, x1);   // x2 <- x0 & 0x00FF00FF
+    or_(x0, rd, x0);   // x0 <- x0 << 16 | x0 >> 16
+    and_(x2, x0, x1);  // x2 <- x0 & 0x00FF00FF
     slliw(x2, x2, 8);  // x2 <- (x0 & x1) << 8
     slliw(x1, x1, 8);  // x1 <- 0xFF00FF00
-    and_(rd, x0, x1);   // x0 & 0xFF00FF00
+    and_(rd, x0, x1);  // x0 & 0xFF00FF00
     srliw(rd, rd, 8);
     or_(rd, rd, x2);  // (((x0 & x1) << 8)  | ((x0 & (x1 << 8)) >> 8))
   } else {
@@ -959,17 +959,17 @@ void TurboAssembler::ByteSwap(Register rd, Register rs, int operand_size) {
     li(x1, 0x0000FFFF0000FFFFl);
     slli(x0, rs, 32);
     srli(rd, rs, 32);
-    or_(x0, rd, x0);     // x0 <- x0 << 32 | x0 >> 32
-    and_(x2, x0, x1);   // x2 <- x0 & 0x0000FFFF0000FFFF
+    or_(x0, rd, x0);   // x0 <- x0 << 32 | x0 >> 32
+    and_(x2, x0, x1);  // x2 <- x0 & 0x0000FFFF0000FFFF
     slli(x2, x2, 16);  // x2 <- (x0 & 0x0000FFFF0000FFFF) << 16
     slli(x1, x1, 16);  // x1 <- 0xFFFF0000FFFF0000
-    and_(rd, x0, x1);   // rd <- x0 & 0xFFFF0000FFFF0000
+    and_(rd, x0, x1);  // rd <- x0 & 0xFFFF0000FFFF0000
     srli(rd, rd, 16);  // rd <- x0 & (x1 << 16)) >> 16
-    or_(x0, rd, x2);    // (x0 & x1) << 16 | (x0 & (x1 << 16)) >> 16;
+    or_(x0, rd, x2);   // (x0 & x1) << 16 | (x0 & (x1 << 16)) >> 16;
     li(x1, 0x00FF00FF00FF00FFl);
     and_(x2, x0, x1);  // x2 <- x0 & 0x00FF00FF00FF00FF
-    slli(x2, x2, 8);  // x2 <- (x0 & x1) << 8
-    slli(x1, x1, 8);  // x1 <- 0xFF00FF00FF00FF00
+    slli(x2, x2, 8);   // x2 <- (x0 & x1) << 8
+    slli(x1, x1, 8);   // x1 <- 0xFF00FF00FF00FF00
     and_(rd, x0, x1);
     srli(rd, rd, 8);  // rd <- (x0 & (x1 << 8)) >> 8
     or_(rd, rd, x2);  // (((x0 & x1) << 8)  | ((x0 & (x1 << 8)) >> 8))
@@ -1058,7 +1058,8 @@ void TurboAssembler::UnalignedLoadHelper(Register rd, const MemOperand& rs) {
 }
 
 template <int NBYTES>
-void TurboAssembler::UnalignedFLoadHelper(FPURegister frd, const MemOperand& rs) {
+void TurboAssembler::UnalignedFLoadHelper(FPURegister frd,
+                                          const MemOperand& rs) {
   DCHECK(NBYTES == 4 || NBYTES == 8);
 
   BlockTrampolinePoolScope block_trampoline_pool(this);
@@ -1074,7 +1075,8 @@ void TurboAssembler::UnalignedFLoadHelper(FPURegister frd, const MemOperand& rs)
 
   Register scratch_other = temps.Acquire();
   Register scratch = temps.Acquire();
-  DCHECK(scratch != rs.rm() && scratch_other != scratch && scratch_other != rs.rm());
+  DCHECK(scratch != rs.rm() && scratch_other != scratch &&
+         scratch_other != rs.rm());
   LoadNBytes<NBYTES, true>(scratch, source, scratch_other);
   if (NBYTES == 4)
     fmv_w_x(frd, scratch);
@@ -1099,8 +1101,7 @@ void TurboAssembler::UnalignedStoreHelper(Register rd, const MemOperand& rs,
   }
 
   BlockTrampolinePoolScope block_trampoline_pool(this);
-  if (scratch_other == no_reg)
-    scratch_other = temps.Acquire();
+  if (scratch_other == no_reg) scratch_other = temps.Acquire();
 
   DCHECK(scratch_other != rd && scratch_other != rs.rm() &&
          scratch_other != source.rm());
@@ -2302,7 +2303,7 @@ void TurboAssembler::Clz64(Register rd, Register xx) {
 void TurboAssembler::Ctz32(Register rd, Register rs) {
   // Convert trailing zeroes to trailing ones, and bits to their left
   // to zeroes.
-  
+
   BlockTrampolinePoolScope block_trampoline_pool(this);
   {
     UseScratchRegisterScope temps(this);
@@ -2601,7 +2602,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
   if (!rt.is_reg()) {
     scratch = temps.Acquire();
     li(scratch, rt);
-  }else {
+  } else {
     scratch = rt.rm();
   }
   {
@@ -2618,8 +2619,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset21)) return false;
           j(offset);
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
-            return false;
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13)) return false;
           beq(rs, scratch, offset);
         }
         break;
@@ -2628,8 +2628,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         if (rt.is_reg() && rs == rt.rm()) {
           break;  // No code needs to be emitted
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
-            return false;
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13)) return false;
           bne(rs, scratch, offset);
         }
         break;
@@ -2640,8 +2639,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         if (rt.is_reg() && rs == rt.rm()) {
           break;  // No code needs to be emitted.
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
-            return false;
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13)) return false;
           bgt(rs, scratch, offset);
         }
         break;
@@ -2651,8 +2649,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset21)) return false;
           j(offset);
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
-            return false;
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13)) return false;
           bge(rs, scratch, offset);
         }
         break;
@@ -2661,8 +2658,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         if (rt.is_reg() && rs == rt.rm()) {
           break;  // No code needs to be emitted.
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
-            return false;
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13)) return false;
           blt(rs, scratch, offset);
         }
         break;
@@ -2672,8 +2668,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset21)) return false;
           j(offset);
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
-            return false;
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13)) return false;
           ble(rs, scratch, offset);
         }
         break;
@@ -2684,8 +2679,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         if (rt.is_reg() && rs == rt.rm()) {
           break;  // No code needs to be emitted.
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
-            return false;
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13)) return false;
           bgtu(rs, scratch, offset);
         }
         break;
@@ -2695,8 +2689,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset21)) return false;
           j(offset);
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
-            return false;
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13)) return false;
           bgeu(rs, scratch, offset);
         }
         break;
@@ -2705,8 +2698,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
         if (rt.is_reg() && rs == rt.rm()) {
           break;  // No code needs to be emitted.
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
-            return false;
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13)) return false;
           bltu(rs, scratch, offset);
         }
         break;
@@ -2716,8 +2708,7 @@ bool TurboAssembler::BranchShortHelper(int32_t offset, Label* L, Condition cond,
           if (!CalculateOffset(L, &offset, OffsetSize::kOffset21)) return false;
           j(offset);
         } else {
-          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13))
-            return false;
+          if (!CalculateOffset(L, &offset, OffsetSize::kOffset13)) return false;
           bleu(rs, scratch, offset);
         }
         break;
@@ -3008,7 +2999,7 @@ void TurboAssembler::Call(Handle<Code> code, RelocInfo::Mode rmode,
       isolate()->builtins()->IsBuiltinHandle(code, &builtin_index) &&
       Builtins::IsIsolateIndependent(builtin_index);
   if (root_array_available_ && options().isolate_independent_code &&
-     target_is_isolate_independent_builtin) {
+      target_is_isolate_independent_builtin) {
     int offset = code->builtin_index() * kSystemPointerSize +
                  IsolateData::builtin_entry_table_offset();
     LoadRootRelative(scratch, offset);
@@ -3094,7 +3085,8 @@ void TurboAssembler::StoreReturnAddressAndCall(Register target) {
   // Stack is still aligned.
 
   // Call the C routine.
-  mv(scratch, target);  // Function pointer to scratch to conform to ABI for PIC.
+  mv(scratch,
+     target);  // Function pointer to scratch to conform to ABI for PIC.
   jalr(scratch);
   // Make sure the stored 'ra' points to this position.
   DCHECK_EQ(kNumInstructionsToJump, InstructionsGeneratedSince(&find_ra));
@@ -3830,7 +3822,7 @@ void MacroAssembler::EnterExitFrame(bool save_doubles, int stack_space,
     BlockTrampolinePoolScope block_trampoline_pool(this);
     // Save the frame pointer and the context in top.
     li(scratch, ExternalReference::Create(IsolateAddressId::kCEntryFPAddress,
-                                     isolate()));
+                                          isolate()));
     Sd(fp, MemOperand(scratch));
     li(scratch,
        ExternalReference::Create(IsolateAddressId::kContextAddress, isolate()));
@@ -4016,7 +4008,8 @@ void MacroAssembler::AssertConstructor(Register object) {
     LoadMap(scratch, object);
     Lbu(scratch, FieldMemOperand(scratch, Map::kBitFieldOffset));
     And(scratch, scratch, Operand(Map::Bits1::IsConstructorBit::kMask));
-    Check(ne, AbortReason::kOperandIsNotAConstructor, scratch, Operand(zero_reg));
+    Check(ne, AbortReason::kOperandIsNotAConstructor, scratch,
+          Operand(zero_reg));
   }
 }
 
@@ -4401,7 +4394,7 @@ void TurboAssembler::LoadCodeObjectEntry(Register destination,
   //   targets are usually generated code and not builtin Code objects.
   if (options().isolate_independent_code) {
     DCHECK(root_array_available());
-    Label if_code_is_off_heap,no_builtin_index, out;
+    Label if_code_is_off_heap, no_builtin_index, out;
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
 
@@ -4413,7 +4406,7 @@ void TurboAssembler::LoadCodeObjectEntry(Register destination,
     // trampoline.  Otherwise, just call the Code object as always.
     Lw(scratch, FieldMemOperand(code_object, Code::kFlagsOffset));
     Branch(&if_code_is_off_heap, ne, scratch,
-         Operand(Code::IsOffHeapTrampoline::kMask));
+           Operand(Code::IsOffHeapTrampoline::kMask));
     // Not an off-heap trampoline object, the entry point is at
     // Code::raw_instruction_start().
     bind(&no_builtin_index);
@@ -4424,19 +4417,18 @@ void TurboAssembler::LoadCodeObjectEntry(Register destination,
     // table.
     bind(&if_code_is_off_heap);
     Lw(scratch, FieldMemOperand(code_object, Code::kBuiltinIndexOffset));
-    //FIXME(RISCV64):on other arch, don't need no_builtin_index.
+    // FIXME(RISCV64):on other arch, don't need no_builtin_index.
     Branch(&no_builtin_index, eq, scratch, Operand(Builtins::kNoBuiltinId));
     slli(destination, scratch, kSystemPointerSizeLog2);
     Add64(destination, destination, kRootRegister);
     Ld(destination,
-        MemOperand(destination, IsolateData::builtin_entry_table_offset()));
+       MemOperand(destination, IsolateData::builtin_entry_table_offset()));
 
     bind(&out);
   } else {
     Add64(destination, code_object, Code::kHeaderSize - kHeapObjectTag);
   }
 }
-
 
 void TurboAssembler::CallCodeObject(Register code_object) {
   LoadCodeObjectEntry(code_object, code_object);

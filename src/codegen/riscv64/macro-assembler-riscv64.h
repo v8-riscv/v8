@@ -217,11 +217,10 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void LoadEntryFromBuiltinIndex(Register builtin_index);
   void CallBuiltinByIndex(Register builtin_index) override;
 
-  void LoadCodeObjectEntry(Register destination,
-                           Register code_object) override;
+  void LoadCodeObjectEntry(Register destination, Register code_object) override;
   void CallCodeObject(Register code_object) override;
   void JumpCodeObject(Register code_object) override;
-  
+
   // Generates an instruction sequence s.t. the return address points to the
   // instruction following the call.
   // The return address on the stack is used by frame iteration.
@@ -1159,13 +1158,16 @@ void TurboAssembler::GenerateSwitchTable(Register index, size_t case_count,
 
   Align(8);
   // Load the address from the jump table at index and jump to it
-  auipc(scratch, 0);                  // Load the current PC into scratch
-  slli(scratch2, index, kPointerSizeLog2);  // scratch2 = offset of indexth entry
-  add(scratch2, scratch2, scratch);        // scratch2 = (saved PC) + (offset of indexth entry)
-  ld(scratch2, scratch2, 6 * kInstrSize);  // Add the size of these 6 instructions to the
-                               // offset, then load
-  jr(scratch2);                      // Jump to the address loaded from the table
-  nop();                       // For 16-byte alignment
+  auipc(scratch, 0);  // Load the current PC into scratch
+  slli(scratch2, index,
+       kPointerSizeLog2);  // scratch2 = offset of indexth entry
+  add(scratch2, scratch2,
+      scratch);  // scratch2 = (saved PC) + (offset of indexth entry)
+  ld(scratch2, scratch2,
+     6 * kInstrSize);  // Add the size of these 6 instructions to the
+                       // offset, then load
+  jr(scratch2);        // Jump to the address loaded from the table
+  nop();               // For 16-byte alignment
   for (size_t index = 0; index < case_count; ++index) {
     dd(GetLabelFunction(index));
   }
