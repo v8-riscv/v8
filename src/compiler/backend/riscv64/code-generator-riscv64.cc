@@ -743,7 +743,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
           linkage()->GetIncomingDescriptor()->IsWasmCapiFunction();
       if (isWasmCapiFunction) {
         // Put the return address in a stack slot.
-        __ LoadAddress(kScratchReg, &after_call);
+        __ LoadAddress(kScratchReg, &after_call, RelocInfo::EXTERNAL_REFERENCE);
         __ Sd(kScratchReg,
               MemOperand(fp, WasmExitFrameConstants::kCallingPCOffset));
       }
