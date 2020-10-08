@@ -301,6 +301,10 @@ bool Assembler::IsJalr(Instr instr) {
   return (instr & kBaseOpcodeMask) == JALR;
 }
 
+bool Assembler::IsCJal(Instr instr) {
+  return (instr & kRvcOpcodeMask) == RO_C_J;
+}
+
 bool Assembler::IsLui(Instr instr) { return (instr & kBaseOpcodeMask) == LUI; }
 bool Assembler::IsAuipc(Instr instr) { return (instr & kBaseOpcodeMask) == AUIPC; }
 bool Assembler::IsAddiw(Instr instr) {
@@ -383,6 +387,14 @@ int Assembler::target_at(int pos, bool is_internal) {
     if(offset == kEndOfJumpChain) 
       return kEndOfChain;
     return offset + pos;
+  } else if (IsCJal(instr)) {
+    int32_t imm12 = CJumpOffset(instr);
+    if (imm12 == kEndOfJumpChain) {
+      // EndOfChain sentinel is returned directly, not relative to pc or pos.
+      return kEndOfChain;
+    } else {
+      return pos + imm12;
+    }
   } else {
     // Emitted label constant, not part of a branch.
     if (instr == kEndOfJumpChain) {
@@ -439,6 +451,21 @@ static inline Instr SetJalOffset(int32_t pos, int32_t target_pos, Instr instr) {
   return instr | (imm20 & kImm20Mask);
 }
 
+static inline Instr SetCJalOffset(int32_t pos, int32_t target_pos, Instr instr) {
+  DCHECK(Assembler::IsCJal(instr));
+  int32_t imm = target_pos - pos;
+  DCHECK_EQ(imm & 1, 0);
+  DCHECK(is_intn(imm, Assembler::kCJalOffsetBits));
+
+  instr &= ~kImm11Mask;
+  int16_t uimm11 = ((imm & 0x800) >> 1) | ((imm & 0x400) >> 4) |
+                    ((imm & 0x300) >> 1) | ((imm & 0x80) >> 3) |
+                    ((imm & 0x40) >> 1) | ((imm & 0x20) >> 5) |
+                    ((imm & 0x10) << 5) | (imm & 0xe);
+  uimm11 = uimm11 << 2;
+  return (instr | (uimm11 & kImm11Mask));
+}
+
 void Assembler::target_at_put(int pos, int target_pos, bool is_internal) {
   if (is_internal) {
     uint64_t imm = reinterpret_cast<uint64_t>(buffer_start_) + target_pos;
@@ -480,6 +507,9 @@ void Assembler::target_at_put(int pos, int target_pos, bool is_internal) {
     instr_I = (instr_I & ~kImm31_20Mask) |
                  ((Lo12 & kImm11_0Mask) << 20);
     instr_at_put(pos + 4, instr_I);
+  } else if (IsCJal(instr)) {
+    instr = SetCJalOffset(pos, target_pos, instr);
+    instr_at_put(pos, instr);
   } else {
     // Emitted label constant, not part of a branch.
     // Make label relative to Code pointer of generated Code object.
@@ -619,6 +649,15 @@ int Assembler::JumpOffset(Instr instr) {
   imm21 = imm21 << 11 >> 11;
   return imm21;
 }
+
+int Assembler::CJumpOffset(Instr instr) {
+  int32_t imm12 = ((instr & 0x4) << 3) | ((instr & 0x38) >> 2) | ((instr & 0x40) << 1) |
+                ((instr & 0x80) >> 1) | ((instr & 0x100) << 2) | ((instr & 0x600) >> 1) |
+                ((instr & 0x800) >> 7) | ((instr & 0x1000) >> 1);
+  imm12 = imm12 << 20 >> 20;
+  return imm12;
+}
+
 
 int Assembler::BrachlongOffset(Instr auipc, Instr instr_I) {
   DCHECK(reinterpret_cast<Instruction*>(&instr_I)->InstructionType() ==
@@ -935,6 +974,11 @@ void Assembler::GenInstrCL(uint8_t funct3, Opcode opcode, FPURegister rd,
 	           ((rd.code() & 0x7) << kRvcRs2sShift) |
                    ((uimm5 & 0x1c) << 8) | (funct3 << kRvcFunct3Shift) |
                    ((rs1.code() & 0x7) << kRvcRs1sShift);
+  emit(instr);
+}
+void Assembler::GenInstrCJ(uint8_t funct3, Opcode opcode, uint16_t uint11) {
+  DCHECK(is_uint11(uint11));
+  ShortInstr instr = opcode | (funct3 << kRvcFunct3Shift) | (uint11 << 2);
   emit(instr);
 }
 
@@ -2071,6 +2115,18 @@ void Assembler::c_fsd(FPURegister rs2, Register rs1, uint16_t uimm8) {
         is_uint8(uimm8));
   uint8_t uimm5 = ((uimm8 & 0x38) >>  1) | ((uimm8 & 0xc0) >> 6);
   GenInstrCS(0b101, C0, rs2, rs1, uimm5);
+}
+
+// CJ Instructions
+
+void Assembler::c_j(int16_t imm12) {
+  DCHECK(is_int12(imm12));
+  int16_t uimm11 = ((imm12 & 0x800) >> 1) | ((imm12 & 0x400) >> 4) |
+                    ((imm12 & 0x300) >> 1) | ((imm12 & 0x80) >> 3) |
+                    ((imm12 & 0x40) >> 1) | ((imm12 & 0x20) >> 5) |
+                    ((imm12 & 0x10) << 5) | (imm12 & 0xe);
+  GenInstrCJ(0b101, C1, uimm11);
+  BlockTrampolinePoolFor(1);
 }
 
 // Privileged
