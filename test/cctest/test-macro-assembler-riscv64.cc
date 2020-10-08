@@ -153,7 +153,10 @@ TEST(LoadAddress) {
   __ jr(ra);
   __ nop();
   __ bind(&skip);
-  __ li(a4, Operand(masm.jump_address(&to_jump)), ADDRESS_LOAD);
+  __ li(a4,
+        Operand(masm.jump_address(&to_jump),
+                RelocInfo::INTERNAL_REFERENCE_ENCODED),
+        ADDRESS_LOAD);
   int check_size = masm.InstructionsGeneratedSince(&skip);
   // NOTE (RISCV): current li generates 8 instructions, if the sequence is
   // changed, need to adjust the CHECK_EQ value too
