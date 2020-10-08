@@ -208,7 +208,9 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void Call(Handle<Code> code, RelocInfo::Mode rmode = RelocInfo::CODE_TARGET,
             COND_ARGS);
   void Call(Label* target);
-  void LoadAddress(Register dst, Label* target);
+  void LoadAddress(
+      Register dst, Label* target,
+      RelocInfo::Mode rmode = RelocInfo::INTERNAL_REFERENCE_ENCODED);
 
   // Load the builtin given by the Smi in |builtin_index| into the same
   // register.
