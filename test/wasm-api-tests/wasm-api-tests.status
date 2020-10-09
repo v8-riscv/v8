@@ -10,12 +10,6 @@
 }], # lite_mode or variant == jitless
 
 ################################################################################
-['arch == riscv64 or arch == riscv', {
-  'WasmCapiTest.MultiReturn': [SKIP],            # issue 204
-  'WasmCapiTest.DirectCallCapiFunction': [SKIP], # issue 204
-}],  # 'arch == riscv64 or arch == riscv'
-
-################################################################################
 ['variant == stress_snapshot', {
   '*': [SKIP],  # only relevant for mjsunit tests.
 }],
