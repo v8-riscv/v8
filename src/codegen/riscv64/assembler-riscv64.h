@@ -192,7 +192,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     kOffset21 = 21,  // RISCV jal
     kOffset12 = 12,  // RISCV imm12
     kOffset20 = 20,  // RISCV imm20
-    kOffset13 = 13   // RISCV branch
+    kOffset13 = 13,   // RISCV branch
+    kOffset32 = 32   // RISCV auipc + instr_I
   };
 
   // Determines if Label is bound and near enough so that branch instruction
