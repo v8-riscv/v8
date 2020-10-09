@@ -374,9 +374,9 @@ int Assembler::target_at(int pos, bool is_internal) {
     }
   } else if (IsAuipc(instr)) {
     Instr instr_auipc = instr;
-    Instr instr_jalr = instr_at(pos + 4);
-    DCHECK(IsJalr(instr_jalr));
-    int32_t offset = BrachlongOffset(instr_auipc, instr_jalr);
+    Instr instr_I = instr_at(pos + 4);
+    DCHECK(IsJalr(instr_I) || IsAddi(instr_I));
+    int32_t offset = BrachlongOffset(instr_auipc, instr_I);
     if(offset == kEndOfJumpChain) 
       return kEndOfChain;
     return offset + pos;
@@ -459,8 +459,8 @@ void Assembler::target_at_put(int pos, int target_pos, bool is_internal) {
     set_target_value_at(pc, reinterpret_cast<uint64_t>(buffer_start_ + target_pos));
   } else if (IsAuipc(instr)) {
     Instr instr_auipc = instr;
-    Instr instr_jalr = instr_at(pos + 4);
-    DCHECK(IsJalr(instr_jalr));
+    Instr instr_I = instr_at(pos + 4);
+    DCHECK(IsJalr(instr_I) || IsAddi(instr_I));
 
     int64_t offset = target_pos - pos;
     DCHECK(is_int32(offset));
@@ -474,9 +474,9 @@ void Assembler::target_at_put(int pos, int target_pos, bool is_internal) {
 
     const int kImm31_20Mask = ((1 << 12) - 1) << 20;
     const int kImm11_0Mask = ((1 << 12) - 1);
-    instr_jalr = (instr_jalr & ~kImm31_20Mask) |
+    instr_I = (instr_I & ~kImm31_20Mask) |
                  ((Lo12 & kImm11_0Mask) << 20);
-    instr_at_put(pos + 4, instr_jalr);
+    instr_at_put(pos + 4, instr_I);
   } else {
     // Emitted label constant, not part of a branch.
     // Make label relative to Code pointer of generated Code object.
@@ -617,11 +617,13 @@ int Assembler::JumpOffset(Instr instr) {
   return imm21;
 }
 
-int Assembler::BrachlongOffset(Instr auipc, Instr jalr) {
+int Assembler::BrachlongOffset(Instr auipc, Instr instr_I) {
+  DCHECK(reinterpret_cast<Instruction*>(&instr_I)->InstructionType() ==
+         InstructionBase::kIType);
   const int kImm19_0Mask = ((1 << 20) - 1);
   int32_t imm_auipc = auipc & (kImm19_0Mask << 12);
-  int32_t imm_jalr = jalr >> 20;
-  int32_t offset = imm_jalr + imm_auipc;
+  int32_t imm_12 = instr_I >> 20;
+  int32_t offset = imm_12 + imm_auipc;
   return offset;
 }
 
