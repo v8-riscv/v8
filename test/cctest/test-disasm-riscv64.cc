@@ -466,6 +466,7 @@ TEST(RV64C) {
   COMPARE(c_addi(s3, -25), "0000199d       addi      s3, s3, -25");
   COMPARE(c_addiw(gp, -30), "00003189       addiw     gp, gp, -30");
   COMPARE(c_addi16sp(-432), "00007161       addi      sp, sp, -432");
+  COMPARE(c_addi4spn(a1, 924), "00000f6c       addi       a1, sp, 924");
   COMPARE(c_li(t6, -15), "00005fc5       li        t6, -15");
   COMPARE(c_lui(s1, 0xf4), "000074d1       lui       s1, 0xffff4");
   COMPARE(c_slli(s9, 60), "00001cf2       slli      s9, s9, 60");
