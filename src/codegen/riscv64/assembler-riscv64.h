@@ -583,6 +583,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_addi(Register rd, int8_t imm6);
   void c_addiw(Register rd, int8_t imm6);
   void c_addi16sp(int16_t imm10);
+  void c_addi4spn(Register rd, int16_t uimm10);
   void c_li(Register rd, int8_t imm6);
   void c_lui(Register rd, int8_t imm6);
   void c_slli(Register rd, uint8_t uimm6);
@@ -1050,6 +1051,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void GenInstrCI(uint8_t funct3, Opcode opcode, Register rd, int8_t imm6);
   void GenInstrCIU(uint8_t funct3, Opcode opcode, Register rd, uint8_t uimm6);
   void GenInstrCIU(uint8_t funct3, Opcode opcode, FPURegister rd, uint8_t uimm6);
+  void GenInstrCIW(uint8_t funct3, Opcode opcode, Register rd, uint8_t uimm8);
   void GenInstrCSS(uint8_t funct3, Opcode opcode, FPURegister rs2, uint8_t uimm6);
   void GenInstrCSS(uint8_t funct3, Opcode opcode, Register rs2, uint8_t uimm6);
   void GenInstrCL(uint8_t funct3, Opcode opcode, Register rd,

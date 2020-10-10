@@ -488,6 +488,7 @@ class Simulator : public SimulatorBase {
   inline int16_t csr_reg() const { return instr_.CsrValue(); }
   inline int16_t rvc_imm6() const { return instr_.RvcImm6Value(); }
   inline int16_t rvc_imm6_addi16sp() const { return instr_.RvcImm6Addi16spValue(); }
+  inline int16_t rvc_imm8_addi4spn() const { return instr_.RvcImm8Addi4spnValue(); }
   inline int16_t rvc_imm6_lwsp() const { return instr_.RvcImm6LwspValue(); }
   inline int16_t rvc_imm6_ldsp() const { return instr_.RvcImm6LdspValue(); }
   inline int16_t rvc_imm6_swsp() const { return instr_.RvcImm6SwspValue(); }
@@ -616,6 +617,7 @@ class Simulator : public SimulatorBase {
   void DecodeCRType();
   void DecodeCAType();
   void DecodeCIType();
+  void DecodeCIWType();
   void DecodeCSSType();
   void DecodeCLType();
   void DecodeCSType();
