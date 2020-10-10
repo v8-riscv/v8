@@ -89,6 +89,7 @@ class Decoder {
   void PrintRvcImm6Swsp(Instruction* instr);
   void PrintRvcImm5W(Instruction* instr);
   void PrintRvcImm5D(Instruction* instr);
+  void PrintRvcImm8Addi4spn(Instruction* instr);
   void PrintAcquireRelease(Instruction* instr);
   void PrintBranchOffset(Instruction* instr);
   void PrintStoreOffset(Instruction* instr);
@@ -109,6 +110,7 @@ class Decoder {
   void DecodeCRType(Instruction* instr);
   void DecodeCAType(Instruction* instr);
   void DecodeCIType(Instruction* instr);
+  void DecodeCIWType(Instruction* instr);
   void DecodeCSSType(Instruction* instr);
   void DecodeCLType(Instruction* instr);
   void DecodeCSType(Instruction* instr);
@@ -288,6 +290,11 @@ void Decoder::PrintRvcImm5W(Instruction* instr) {
 
 void Decoder::PrintRvcImm5D(Instruction* instr) {
   int32_t imm = instr->RvcImm5DValue();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImm8Addi4spn(Instruction* instr) {
+  int32_t imm = instr->RvcImm8Addi4spnValue();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
 }
 
@@ -557,6 +564,15 @@ int Decoder::FormatRvcImm(Instruction* instr, const char* format) {
       DCHECK(STRING_STARTS_WITH(format, "Cimm5D"));
       PrintRvcImm5D(instr);
       return 6;
+    }
+    UNREACHABLE();
+  }
+  else if (format[4] == '8') {
+    DCHECK(STRING_STARTS_WITH(format, "Cimm8"));
+    if (format[5] == 'A'){
+      DCHECK(STRING_STARTS_WITH(format, "Cimm8Addi4spn"));
+      PrintRvcImm8Addi4spn(instr);
+      return 13;
     }
     UNREACHABLE();
   }
@@ -1629,6 +1645,16 @@ void Decoder::DecodeCIType(Instruction* instr) {
   }
 }
 
+void Decoder::DecodeCIWType(Instruction* instr) {
+  switch(instr->RvcOpcode()) {
+    case RO_C_ADDI4SPN:
+      Format(instr, "addi       'Crs2s, sp, 'Cimm8Addi4spn");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+
 void Decoder::DecodeCSSType(Instruction* instr) {
   switch(instr->RvcOpcode()) {
     case RO_C_SWSP:
@@ -1716,6 +1742,9 @@ int Decoder::InstructionDecode(byte* instr_ptr) {
       break;
     case Instruction::kCIType:
       DecodeCIType(instr);
+      break;
+    case Instruction::kCIWType:
+      DecodeCIWType(instr);
       break;
     case Instruction::kCSSType:
       DecodeCSSType(instr);
