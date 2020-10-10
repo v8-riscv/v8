@@ -1251,6 +1251,21 @@ TEST(RVC_CI) {
 
 }
 
+TEST(RVC_CIW) {
+
+  CcTest::InitializeVM();
+
+  // Test c.addi4spn
+  {
+    auto fn = [](MacroAssembler& assm) {
+      __ mv(sp, a0);
+      __ c_addi4spn(a0, 924);
+    };
+    auto res = GenAndRunTest<int64_t>(66666, fn);
+    CHECK_EQ(66666 + 924, res);
+  }
+}
+
 TEST(RVC_CR) {
   // Test RV64C extension CR type instructions.
   CcTest::InitializeVM();
