@@ -891,6 +891,14 @@ void Assembler::GenInstrCIU(uint8_t funct3, Opcode opcode, FPURegister rd,
   emit(instr);
 }
 
+void Assembler::GenInstrCIW(uint8_t funct3, Opcode opcode, Register rd,
+                           uint8_t uimm8) {
+  DCHECK(is_uint3(funct3) && rd.is_valid() && is_uint8(uimm8));
+  ShortInstr instr = opcode | ((uimm8) << 5) | ((rd.code() & 0x7) << kRvcRs2sShift) |
+                     (funct3 << kRvcFunct3Shift);
+  emit(instr);
+}
+
 void Assembler::GenInstrCSS(uint8_t funct3, Opcode opcode, Register rs2,
                            uint8_t uimm6) {
   DCHECK(is_uint3(funct3) && rs2.is_valid() && is_uint6(uimm6));
@@ -1899,6 +1907,13 @@ void Assembler::c_addi16sp(int16_t imm10) {
                 | ((imm10 & 0x40) >> 3) | ((imm10 & 0x180) >> 6)
                 | ((imm10 & 0x20) >> 5);
   GenInstrCIU(0b011, C1, sp, uimm6);
+}
+
+void Assembler::c_addi4spn(Register rd, int16_t uimm10) {
+  DCHECK(is_uint10(uimm10) && (uimm10 != 0));
+  uint8_t uimm8 = ((uimm10 & 0x4) >> 1) | ((uimm10 & 0x8) >> 3) |
+                  ((uimm10 & 0x30) << 2) | ((uimm10 & 0x3c0) >> 4);
+  GenInstrCIW(0b000, C0, rd, uimm8);
 }
 
 void Assembler::c_li(Register rd, int8_t imm6) {
