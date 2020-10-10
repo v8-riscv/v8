@@ -3199,6 +3199,17 @@ void Simulator::DecodeCIType() {
   }
 }
 
+void Simulator::DecodeCIWType() {
+  switch (instr_.RvcOpcode()) {
+    case RO_C_ADDI4SPN: {
+      set_rvc_rs2s(get_register(sp) + rvc_imm8_addi4spn());
+      break;
+    default:
+      UNSUPPORTED();
+    }
+  }
+}
+
 void Simulator::DecodeCSSType() {
   switch (instr_.RvcOpcode()) {
     case RO_C_FSDSP: {
@@ -3319,6 +3330,9 @@ void Simulator::InstructionDecode(Instruction* instr) {
       break;
     case Instruction::kCIType:
       DecodeCIType();
+      break;
+    case Instruction::kCIWType:
+      DecodeCIWType();
       break;
     case Instruction::kCSSType:
       DecodeCSSType();
