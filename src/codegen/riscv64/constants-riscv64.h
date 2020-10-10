@@ -1021,6 +1021,17 @@ class InstructionGetters : public T {
     return imm10 << 22 >> 22;
   }
 
+  inline int RvcImm8Addi4spnValue() const {
+    DCHECK(this->IsShortInstruction());
+    // | funct3 | nzimm[11]  | rd' | opcode |
+    //  15      13           5     2
+    uint32_t Bits = this->InstructionBits();
+    int32_t uimm10 = ((Bits & 0x20) >> 2) | ((Bits & 0x40) >> 4)
+                  | ((Bits & 0x780) >> 1) | ((Bits & 0x1800) >> 7);
+    DCHECK(uimm10 != 0);
+    return uimm10;
+  }
+
   inline int RvcShamt6() const {
     DCHECK(this->IsShortInstruction());
     // | funct3 | nzuimm[5] | rs1/rd | nzuimm[4:0] | opcode |
