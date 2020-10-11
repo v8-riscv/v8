@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <atomic>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -45,6 +46,7 @@ class BigInt;
 class BigIntObject;
 class Boolean;
 class BooleanObject;
+class CFunction;
 class Context;
 class Data;
 class Date;
@@ -127,7 +129,6 @@ template <ArgumentsType>
 class Arguments;
 template <typename T>
 class CustomArguments;
-class DeferredHandles;
 class FunctionCallbackArguments;
 class GlobalHandles;
 class Heap;
@@ -1318,6 +1319,32 @@ class V8_EXPORT SealHandleScope {
  * The superclass of objects that can reside on V8's heap.
  */
 class V8_EXPORT Data {
+ public:
+  /**
+   * Returns true if this data is a |v8::Value|.
+   */
+  bool IsValue() const;
+
+  /**
+   * Returns true if this data is a |v8::Module|.
+   */
+  bool IsModule() const;
+
+  /**
+   * Returns true if this data is a |v8::Private|.
+   */
+  bool IsPrivate() const;
+
+  /**
+   * Returns true if this data is a |v8::ObjectTemplate|.
+   */
+  bool IsObjectTemplate() const;
+
+  /**
+   * Returns true if this data is a |v8::FunctionTemplate|.
+   */
+  bool IsFunctionTemplate() const;
+
  private:
   Data();
 };
@@ -1582,6 +1609,14 @@ class V8_EXPORT Module : public Data {
   int ScriptId();
 
   /**
+   * Returns whether this module or any of its requested modules is async,
+   * i.e. contains top-level await.
+   *
+   * The module's status must be at least kInstantiated.
+   */
+  bool IsGraphAsync() const;
+
+  /**
    * Returns whether the module is a SourceTextModule.
    */
   bool IsSourceTextModule() const;
@@ -1629,6 +1664,11 @@ class V8_EXPORT Module : public Data {
       "the latter will crash with a failed CHECK().")
   void SetSyntheticModuleExport(Local<String> export_name,
                                 Local<Value> export_value);
+
+  V8_INLINE static Module* Cast(Data* data);
+
+ private:
+  static void CheckCast(Data* obj);
 };
 
 /**
@@ -2258,14 +2298,6 @@ struct MemoryRange {
 
 struct JSEntryStub {
   MemoryRange code;
-};
-
-struct UnwindState {
-  MemoryRange code_range;
-  MemoryRange embedded_code_range;
-  JSEntryStub js_entry_stub;
-  JSEntryStub js_construct_entry_stub;
-  JSEntryStub js_run_microtasks_entry_stub;
 };
 
 struct JSEntryStubs {
@@ -2932,6 +2964,8 @@ class V8_EXPORT Value : public Data {
   bool FullIsUndefined() const;
   bool FullIsNull() const;
   bool FullIsString() const;
+
+  static void CheckCast(Data* that);
 };
 
 
@@ -3087,9 +3121,17 @@ class V8_EXPORT String : public Name {
   V8_INLINE static Local<String> Empty(Isolate* isolate);
 
   /**
-   * Returns true if the string is external
+   * Returns true if the string is external two-byte.
+   *
    */
+  V8_DEPRECATED(
+      "Use String::IsExternalTwoByte() or String::IsExternalOneByte()")
   bool IsExternal() const;
+
+  /**
+   * Returns true if the string is both external and two-byte.
+   */
+  bool IsExternalTwoByte() const;
 
   /**
    * Returns true if the string is both external and one-byte.
@@ -6357,7 +6399,6 @@ typedef bool (*AccessCheckCallback)(Local<Context> accessing_context,
                                     Local<Object> accessed_object,
                                     Local<Value> data);
 
-class CFunction;
 /**
  * A FunctionTemplate is used to create functions at runtime. There
  * can only be one function created from a FunctionTemplate in a
@@ -7138,25 +7179,25 @@ class V8_EXPORT ResourceConstraints {
   /**
    * Deprecated functions. Do not use in new code.
    */
-  V8_DEPRECATE_SOON("Use code_range_size_in_bytes.")
+  V8_DEPRECATED("Use code_range_size_in_bytes.")
   size_t code_range_size() const { return code_range_size_ / kMB; }
-  V8_DEPRECATE_SOON("Use set_code_range_size_in_bytes.")
+  V8_DEPRECATED("Use set_code_range_size_in_bytes.")
   void set_code_range_size(size_t limit_in_mb) {
     code_range_size_ = limit_in_mb * kMB;
   }
-  V8_DEPRECATE_SOON("Use max_young_generation_size_in_bytes.")
+  V8_DEPRECATED("Use max_young_generation_size_in_bytes.")
   size_t max_semi_space_size_in_kb() const;
-  V8_DEPRECATE_SOON("Use set_max_young_generation_size_in_bytes.")
+  V8_DEPRECATED("Use set_max_young_generation_size_in_bytes.")
   void set_max_semi_space_size_in_kb(size_t limit_in_kb);
-  V8_DEPRECATE_SOON("Use max_old_generation_size_in_bytes.")
+  V8_DEPRECATED("Use max_old_generation_size_in_bytes.")
   size_t max_old_space_size() const { return max_old_generation_size_ / kMB; }
-  V8_DEPRECATE_SOON("Use set_max_old_generation_size_in_bytes.")
+  V8_DEPRECATED("Use set_max_old_generation_size_in_bytes.")
   void set_max_old_space_size(size_t limit_in_mb) {
     max_old_generation_size_ = limit_in_mb * kMB;
   }
-  V8_DEPRECATE_SOON("Zone does not pool memory any more.")
+  V8_DEPRECATED("Zone does not pool memory any more.")
   size_t max_zone_pool_size() const { return max_zone_pool_size_; }
-  V8_DEPRECATE_SOON("Zone does not pool memory any more.")
+  V8_DEPRECATED("Zone does not pool memory any more.")
   void set_max_zone_pool_size(size_t bytes) { max_zone_pool_size_ = bytes; }
 
  private:
@@ -7340,7 +7381,7 @@ class PromiseRejectMessage {
 typedef void (*PromiseRejectCallback)(PromiseRejectMessage message);
 
 // --- Microtasks Callbacks ---
-V8_DEPRECATE_SOON("Use *WithData version.")
+V8_DEPRECATED("Use *WithData version.")
 typedef void (*MicrotasksCompletedCallback)(Isolate*);
 typedef void (*MicrotasksCompletedCallbackWithData)(Isolate*, void*);
 typedef void (*MicrotaskCallback)(void* data);
@@ -8439,8 +8480,8 @@ class V8_EXPORT Isolate {
     kFunctionTokenOffsetTooLongForToString = 49,
     kWasmSharedMemory = 50,
     kWasmThreadOpcodes = 51,
-    kAtomicsNotify = 52,
-    kAtomicsWake = 53,
+    kAtomicsNotify = 52,  // Unused.
+    kAtomicsWake = 53,    // Unused.
     kCollator = 54,
     kNumberFormat = 55,
     kDateTimeFormat = 56,
@@ -8778,8 +8819,7 @@ class V8_EXPORT Isolate {
    *   kept alive by JavaScript objects.
    * \returns the adjusted value.
    */
-  V8_INLINE int64_t
-      AdjustAmountOfExternalAllocatedMemory(int64_t change_in_bytes);
+  int64_t AdjustAmountOfExternalAllocatedMemory(int64_t change_in_bytes);
 
   /**
    * Returns the number of phantom handles without callbacks that were reset
@@ -9030,6 +9070,13 @@ class V8_EXPORT Isolate {
   void RequestInterrupt(InterruptCallback callback, void* data);
 
   /**
+   * Returns true if there is ongoing background work within V8 that will
+   * eventually post a foreground task, like asynchronous WebAssembly
+   * compilation.
+   */
+  bool HasPendingBackgroundTasks();
+
+  /**
    * Request garbage collection in this Isolate. It is only valid to call this
    * function if --expose_gc was specified.
    *
@@ -9088,7 +9135,7 @@ class V8_EXPORT Isolate {
   /**
    * An alias for PerformMicrotaskCheckpoint.
    */
-  V8_DEPRECATE_SOON("Use PerformMicrotaskCheckpoint.")
+  V8_DEPRECATED("Use PerformMicrotaskCheckpoint.")
   void RunMicrotasks() { PerformMicrotaskCheckpoint(); }
 
   /**
@@ -9132,7 +9179,7 @@ class V8_EXPORT Isolate {
    * Executing scripts inside the callback will not re-trigger microtasks and
    * the callback.
    */
-  V8_DEPRECATE_SOON("Use *WithData version.")
+  V8_DEPRECATED("Use *WithData version.")
   void AddMicrotasksCompletedCallback(MicrotasksCompletedCallback callback);
   void AddMicrotasksCompletedCallback(
       MicrotasksCompletedCallbackWithData callback, void* data = nullptr);
@@ -9140,7 +9187,7 @@ class V8_EXPORT Isolate {
   /**
    * Removes callback that was installed by AddMicrotasksCompletedCallback.
    */
-  V8_DEPRECATE_SOON("Use *WithData version.")
+  V8_DEPRECATED("Use *WithData version.")
   void RemoveMicrotasksCompletedCallback(MicrotasksCompletedCallback callback);
   void RemoveMicrotasksCompletedCallback(
       MicrotasksCompletedCallbackWithData callback, void* data = nullptr);
@@ -9321,11 +9368,10 @@ class V8_EXPORT Isolate {
   void GetCodeRange(void** start, size_t* length_in_bytes);
 
   /**
-   * Returns the UnwindState necessary for use with the Unwinder API.
+   * As GetCodeRange, but for embedded builtins (these live in a distinct
+   * memory region from other V8 Code objects).
    */
-  // TODO(petermarshall): Remove this API.
-  V8_DEPRECATED("Use entry_stubs + code_pages version.")
-  UnwindState GetUnwindState();
+  void GetEmbeddedCodeRange(const void** start, size_t* length_in_bytes);
 
   /**
    * Returns the JSEntryStubs necessary for use with the Unwinder API.
@@ -10684,12 +10730,14 @@ class V8_EXPORT Unwinder {
    *
    * The unwinder also needs the virtual memory range of all possible V8 code
    * objects. There are two ranges required - the heap code range and the range
-   * for code embedded in the binary. The V8 API provides all required inputs
-   * via an UnwindState object through the Isolate::GetUnwindState() API. These
-   * values will not change after Isolate initialization, so the same
-   * |unwind_state| can be used for multiple calls.
+   * for code embedded in the binary.
    *
-   * \param unwind_state Input state for the Isolate that the stack comes from.
+   * Available on x64, ARM64 and ARM32.
+   *
+   * \param code_pages A list of all of the ranges in which V8 has allocated
+   * executable code. The caller should obtain this list by calling
+   * Isolate::CopyCodePages() during the same interrupt/thread suspension that
+   * captures the stack.
    * \param register_state The current registers. This is an in-out param that
    * will be overwritten with the register values after unwinding, on success.
    * \param stack_base The resulting stack pointer and frame pointer values are
@@ -10700,20 +10748,6 @@ class V8_EXPORT Unwinder {
    *
    * \return True on success.
    */
-  // TODO(petermarshall): Remove this API
-  V8_DEPRECATED("Use entry_stubs + code_pages version.")
-  static bool TryUnwindV8Frames(const UnwindState& unwind_state,
-                                RegisterState* register_state,
-                                const void* stack_base);
-
-  /**
-   * The same as above, but is available on x64, ARM64 and ARM32.
-   *
-   * \param code_pages A list of all of the ranges in which V8 has allocated
-   * executable code. The caller should obtain this list by calling
-   * Isolate::CopyCodePages() during the same interrupt/thread suspension that
-   * captures the stack.
-   */
   static bool TryUnwindV8Frames(const JSEntryStubs& entry_stubs,
                                 size_t code_pages_length,
                                 const MemoryRange* code_pages,
@@ -10721,20 +10755,13 @@ class V8_EXPORT Unwinder {
                                 const void* stack_base);
 
   /**
-   * Whether the PC is within the V8 code range represented by code_range or
-   * embedded_code_range in |unwind_state|.
+   * Whether the PC is within the V8 code range represented by code_pages.
    *
    * If this returns false, then calling UnwindV8Frames() with the same PC
    * and unwind_state will always fail. If it returns true, then unwinding may
    * (but not necessarily) be successful.
-   */
-  // TODO(petermarshall): Remove this API
-  V8_DEPRECATED("Use code_pages version.")
-  static bool PCIsInV8(const UnwindState& unwind_state, void* pc);
-
-  /**
-   * The same as above, but is available on x64, ARM64 and ARM32. See the
-   * comment on TryUnwindV8Frames.
+   *
+   * Available on x64, ARM64 and ARM32
    */
   static bool PCIsInV8(size_t code_pages_length, const MemoryRange* code_pages,
                        void* pc);
@@ -11219,22 +11246,14 @@ template<typename T>
 Local<Value> FunctionCallbackInfo<T>::operator[](int i) const {
   // values_ points to the first argument (not the receiver).
   if (i < 0 || length_ <= i) return Local<Value>(*Undefined(GetIsolate()));
-#ifdef V8_REVERSE_JSARGS
   return Local<Value>(reinterpret_cast<Value*>(values_ + i));
-#else
-  return Local<Value>(reinterpret_cast<Value*>(values_ - i));
-#endif
 }
 
 
 template<typename T>
 Local<Object> FunctionCallbackInfo<T>::This() const {
   // values_ points to the first argument (not the receiver).
-#ifdef V8_REVERSE_JSARGS
   return Local<Object>(reinterpret_cast<Object*>(values_ - 1));
-#else
-  return Local<Object>(reinterpret_cast<Object*>(values_ + 1));
-#endif
 }
 
 
@@ -11429,8 +11448,12 @@ void* Object::GetAlignedPointerFromInternalField(int index) {
                 instance_type == I::kJSApiObjectType ||
                 instance_type == I::kJSSpecialApiObjectType)) {
     int offset = I::kJSObjectHeaderSize + (I::kEmbedderDataSlotSize * index);
+#ifdef V8_HEAP_SANDBOX
+    offset += I::kEmbedderDataSlotRawPayloadOffset;
+#endif
     internal::Isolate* isolate = I::GetIsolateForHeapSandbox(obj);
-    A value = I::ReadExternalPointerField(isolate, obj, offset);
+    A value = I::ReadExternalPointerField(
+        isolate, obj, offset, internal::kEmbedderDataSlotPayloadTag);
     return reinterpret_cast<void*>(value);
   }
 #endif
@@ -11463,7 +11486,8 @@ String::ExternalStringResource* String::GetExternalStringResource() const {
   if (I::IsExternalTwoByteString(I::GetInstanceType(obj))) {
     internal::Isolate* isolate = I::GetIsolateForHeapSandbox(obj);
     A value =
-        I::ReadExternalPointerField(isolate, obj, I::kStringResourceOffset);
+        I::ReadExternalPointerField(isolate, obj, I::kStringResourceOffset,
+                                    internal::kExternalStringResourceTag);
     result = reinterpret_cast<String::ExternalStringResource*>(value);
   } else {
     result = GetExternalStringResourceSlow();
@@ -11487,7 +11511,8 @@ String::ExternalStringResourceBase* String::GetExternalStringResourceBase(
       type == I::kExternalTwoByteRepresentationTag) {
     internal::Isolate* isolate = I::GetIsolateForHeapSandbox(obj);
     A value =
-        I::ReadExternalPointerField(isolate, obj, I::kStringResourceOffset);
+        I::ReadExternalPointerField(isolate, obj, I::kStringResourceOffset,
+                                    internal::kExternalStringResourceTag);
     resource = reinterpret_cast<ExternalStringResourceBase*>(value);
   } else {
     resource = GetExternalStringResourceBaseSlow(encoding_out);
@@ -11573,6 +11598,13 @@ template <class T> Value* Value::Cast(T* value) {
   return static_cast<Value*>(value);
 }
 
+template <>
+V8_INLINE Value* Value::Cast(Data* value) {
+#ifdef V8_ENABLE_CHECKS
+  CheckCast(value);
+#endif
+  return static_cast<Value*>(value);
+}
 
 Boolean* Boolean::Cast(v8::Value* value) {
 #ifdef V8_ENABLE_CHECKS
@@ -11605,6 +11637,12 @@ Private* Private::Cast(Data* data) {
   return reinterpret_cast<Private*>(data);
 }
 
+Module* Module::Cast(Data* data) {
+#ifdef V8_ENABLE_CHECKS
+  CheckCast(data);
+#endif
+  return reinterpret_cast<Module*>(data);
+}
 
 Number* Number::Cast(v8::Value* value) {
 #ifdef V8_ENABLE_CHECKS
@@ -12001,37 +12039,6 @@ MaybeLocal<T> Isolate::GetDataFromSnapshotOnce(size_t index) {
   return Local<T>(data);
 }
 
-int64_t Isolate::AdjustAmountOfExternalAllocatedMemory(
-    int64_t change_in_bytes) {
-  typedef internal::Internals I;
-  int64_t* external_memory = reinterpret_cast<int64_t*>(
-      reinterpret_cast<uint8_t*>(this) + I::kExternalMemoryOffset);
-  int64_t* external_memory_limit = reinterpret_cast<int64_t*>(
-      reinterpret_cast<uint8_t*>(this) + I::kExternalMemoryLimitOffset);
-  int64_t* external_memory_low_since_mc =
-      reinterpret_cast<int64_t*>(reinterpret_cast<uint8_t*>(this) +
-                                 I::kExternalMemoryLowSinceMarkCompactOffset);
-
-  // Embedders are weird: we see both over- and underflows here. Perform the
-  // addition with unsigned types to avoid undefined behavior.
-  const int64_t amount =
-      static_cast<int64_t>(static_cast<uint64_t>(change_in_bytes) +
-                           static_cast<uint64_t>(*external_memory));
-  *external_memory = amount;
-
-  if (amount < *external_memory_low_since_mc) {
-    *external_memory_low_since_mc = amount;
-    *external_memory_limit = amount + I::kExternalAllocationSoftLimit;
-  }
-
-  if (change_in_bytes <= 0) return *external_memory;
-
-  if (amount > *external_memory_limit) {
-    ReportExternalAllocationLimitReached();
-  }
-  return *external_memory;
-}
-
 Local<Value> Context::GetEmbedderData(int index) {
 #ifndef V8_ENABLE_CHECKS
   typedef internal::Address A;
@@ -12067,9 +12074,13 @@ void* Context::GetAlignedPointerFromEmbedderData(int index) {
       I::ReadTaggedPointerField(ctx, I::kNativeContextEmbedderDataOffset);
   int value_offset =
       I::kEmbedderDataArrayHeaderSize + (I::kEmbedderDataSlotSize * index);
+#ifdef V8_HEAP_SANDBOX
+  value_offset += I::kEmbedderDataSlotRawPayloadOffset;
+#endif
   internal::Isolate* isolate = I::GetIsolateForHeapSandbox(ctx);
   return reinterpret_cast<void*>(
-      I::ReadExternalPointerField(isolate, embedder_data, value_offset));
+      I::ReadExternalPointerField(isolate, embedder_data, value_offset,
+                                  internal::kEmbedderDataSlotPayloadTag));
 #else
   return SlowGetAlignedPointerFromEmbedderData(index);
 #endif

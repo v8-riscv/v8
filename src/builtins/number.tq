@@ -61,6 +61,61 @@ transitioning macro ThisNumberValue(implicit context: Context)(
       ToThisValue(receiver, PrimitiveType::kNumber, method));
 }
 
+macro ToCharCode(input: int32): char8 {
+  assert(0 <= input && input < 36);
+  return input < 10 ? %RawDownCast<char8>(input + kAsciiZero) :
+                      %RawDownCast<char8>(input - 10 + kAsciiLowerCaseA);
+}
+
+@export
+macro NumberToStringSmi(x: int32, radix: int32): String labels Slow {
+  const isNegative: bool = x < 0;
+  let n: int32 = x;
+  if (!isNegative) {
+    // Fast case where the result is a one character string.
+    if (x < radix) {
+      return StringFromSingleCharCode(ToCharCode(n));
+    }
+  } else {
+    assert(isNegative);
+    if (n == kMinInt32) {
+      goto Slow;
+    }
+    n = 0 - n;
+  }
+
+  // Calculate length and pre-allocate the result string.
+  let temp: int32 = n;
+  let length: int32 = isNegative ? 1 : 0;
+  while (temp > 0) {
+    temp = temp / radix;
+    length = length + 1;
+  }
+  assert(length > 0);
+  const strSeq: SeqOneByteString = AllocateSeqOneByteString(Unsigned(length));
+  let cursor: intptr = Convert<intptr>(length) - 1;
+  while (n > 0) {
+    const digit: int32 = n % radix;
+    n = n / radix;
+    strSeq.chars[cursor] = ToCharCode(digit);
+    cursor = cursor - 1;
+  }
+  if (isNegative) {
+    assert(cursor == 0);
+    // Insert '-' to result.
+    strSeq.chars[0] = 45;
+  } else {
+    assert(cursor == -1);
+    // In sync with Factory::SmiToString: If radix = 10 and positive number,
+    // update hash for string.
+    if (radix == 10) {
+      assert(strSeq.hash_field == kNameEmptyHashField);
+      strSeq.hash_field = MakeArrayIndexHash(Unsigned(x), Unsigned(length));
+    }
+  }
+  return strSeq;
+}
+
 // https://tc39.github.io/ecma262/#sec-number.prototype.tostring
 transitioning javascript builtin NumberPrototypeToString(
     js-implicit context: NativeContext, receiver: JSAny)(...arguments): String {
@@ -86,15 +141,9 @@ transitioning javascript builtin NumberPrototypeToString(
   // 7. Return the String representation of this Number
   //    value using the radix specified by radixNumber.
 
-  // Fast case where the result is a one character string.
-  if (TaggedIsPositiveSmi(x) && x < radixNumber) {
-    let charCode = Convert<int32>(UnsafeCast<Smi>(x));
-    if (charCode < 10) {
-      charCode += kAsciiZero;
-    } else {
-      charCode = charCode - 10 + kAsciiLowerCaseA;
-    }
-    return StringFromSingleCharCode(charCode);
+  if (TaggedIsSmi(x)) {
+    return NumberToStringSmi(Convert<int32>(x), Convert<int32>(radixNumber))
+        otherwise return runtime::DoubleToStringWithRadix(x, radixNumber);
   }
 
   if (x == -0) {
@@ -106,6 +155,7 @@ transitioning javascript builtin NumberPrototypeToString(
   } else if (x == MINUS_V8_INFINITY) {
     return MinusInfinityStringConstant();
   }
+
   return runtime::DoubleToStringWithRadix(x, radixNumber);
 }
 

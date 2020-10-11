@@ -12,7 +12,6 @@
 #include "src/ast/scopes.h"
 #include "src/codegen/compiler.h"
 #include "src/codegen/unoptimized-compilation-info.h"
-#include "src/heap/off-thread-factory-inl.h"
 #include "src/init/bootstrapper.h"
 #include "src/init/setup-isolate.h"
 #include "src/interpreter/bytecode-generator.h"
@@ -42,7 +41,7 @@ class InterpreterCompilationJob final : public UnoptimizedCompilationJob {
   Status FinalizeJobImpl(Handle<SharedFunctionInfo> shared_info,
                          Isolate* isolate) final;
   Status FinalizeJobImpl(Handle<SharedFunctionInfo> shared_info,
-                         OffThreadIsolate* isolate) final;
+                         LocalIsolate* isolate) final;
 
  private:
   BytecodeGenerator* generator() { return &generator_; }
@@ -225,7 +224,7 @@ InterpreterCompilationJob::Status InterpreterCompilationJob::FinalizeJobImpl(
 }
 
 InterpreterCompilationJob::Status InterpreterCompilationJob::FinalizeJobImpl(
-    Handle<SharedFunctionInfo> shared_info, OffThreadIsolate* isolate) {
+    Handle<SharedFunctionInfo> shared_info, LocalIsolate* isolate) {
   RuntimeCallTimerScope runtimeTimerScope(
       parse_info()->runtime_call_stats(),
       RuntimeCallCounterId::kCompileBackgroundIgnitionFinalization);
@@ -251,7 +250,7 @@ InterpreterCompilationJob::Status InterpreterCompilationJob::DoFinalizeJobImpl(
       SourcePositionTableBuilder::RecordingMode::RECORD_SOURCE_POSITIONS) {
     Handle<ByteArray> source_position_table =
         generator()->FinalizeSourcePositionTable(isolate);
-    bytecodes->set_source_position_table(*source_position_table);
+    bytecodes->set_source_position_table(*source_position_table, kReleaseStore);
   }
 
   if (ShouldPrintBytecode(shared_info)) {

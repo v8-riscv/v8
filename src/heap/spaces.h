@@ -38,7 +38,6 @@ class Isolate;
 class LargeObjectSpace;
 class LargePage;
 class LinearAllocationArea;
-class LocalArrayBufferTracker;
 class Page;
 class PagedSpace;
 class SemiSpace;
@@ -266,10 +265,6 @@ class Page : public MemoryChunk {
       callback(categories_[i]);
     }
   }
-
-  void AllocateLocalTracker();
-  inline LocalArrayBufferTracker* local_tracker() { return local_tracker_; }
-  bool contains_array_buffers();
 
   size_t AvailableInFreeList();
 
@@ -515,6 +510,8 @@ class SpaceWithLinearArea : public Space {
                                                    size_t size_in_bytes,
                                                    size_t aligned_size_in_bytes,
                                                    size_t allocation_size);
+
+  void MarkLabStartInitialized();
 
   // When allocation observers are active we may use a lower limit to allow the
   // observers to 'interrupt' earlier than the natural limit. Given a linear

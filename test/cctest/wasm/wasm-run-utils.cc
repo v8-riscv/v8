@@ -19,8 +19,9 @@ namespace internal {
 namespace wasm {
 
 TestingModuleBuilder::TestingModuleBuilder(
-    Zone* zone, ManuallyImportedJSFunction* maybe_import, ExecutionTier tier,
-    RuntimeExceptionSupport exception_support, LowerSimd lower_simd)
+    Zone* zone, ManuallyImportedJSFunction* maybe_import,
+    TestExecutionTier tier, RuntimeExceptionSupport exception_support,
+    LowerSimd lower_simd)
     : test_module_(std::make_shared<WasmModule>()),
       test_module_ptr_(test_module_.get()),
       isolate_(CcTest::InitIsolateOnce()),
@@ -49,7 +50,8 @@ TestingModuleBuilder::TestingModuleBuilder(
     // Manually compile an import wrapper and insert it into the instance.
     CodeSpaceMemoryModificationScope modification_scope(isolate_->heap());
     auto resolved = compiler::ResolveWasmImportCall(
-        maybe_import->js_function, maybe_import->sig, enabled_features_);
+        maybe_import->js_function, maybe_import->sig,
+        instance_object_->module(), enabled_features_);
     compiler::WasmImportCallKind kind = resolved.first;
     Handle<JSReceiver> callable = resolved.second;
     WasmImportWrapperCache::ModificationScope cache_scope(
@@ -69,7 +71,7 @@ TestingModuleBuilder::TestingModuleBuilder(
         .SetWasmToJs(isolate_, callable, import_wrapper);
   }
 
-  if (tier == ExecutionTier::kInterpreter) {
+  if (tier == TestExecutionTier::kInterpreter) {
     interpreter_ = std::make_unique<WasmInterpreter>(
         isolate_, test_module_ptr_,
         ModuleWireBytes{native_module_->wire_bytes()}, instance_object_);
@@ -168,15 +170,16 @@ Handle<JSFunction> TestingModuleBuilder::WrapCode(uint32_t index) {
 }
 
 void TestingModuleBuilder::AddIndirectFunctionTable(
-    const uint16_t* function_indexes, uint32_t table_size) {
-  auto instance = instance_object();
+    const uint16_t* function_indexes, uint32_t table_size,
+    ValueType table_type) {
+  Handle<WasmInstanceObject> instance = instance_object();
   uint32_t table_index = static_cast<uint32_t>(test_module_->tables.size());
   test_module_->tables.emplace_back();
   WasmTable& table = test_module_->tables.back();
   table.initial_size = table_size;
   table.maximum_size = table_size;
   table.has_maximum_size = true;
-  table.type = kWasmFuncRef;
+  table.type = table_type;
 
   {
     // Allocate the indirect function table.
@@ -195,7 +198,7 @@ void TestingModuleBuilder::AddIndirectFunctionTable(
   WasmInstanceObject::EnsureIndirectFunctionTableWithMinimumSize(
       instance_object(), table_index, table_size);
   Handle<WasmTableObject> table_obj =
-      WasmTableObject::New(isolate_, table.type, table.initial_size,
+      WasmTableObject::New(isolate_, instance, table.type, table.initial_size,
                            table.has_maximum_size, table.maximum_size, nullptr);
 
   WasmTableObject::AddDispatchTable(isolate_, table_obj, instance_object_,

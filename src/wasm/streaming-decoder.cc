@@ -214,6 +214,7 @@ class V8_EXPORT_PRIVATE AsyncStreamingDecoder : public StreamingDecoder {
   bool code_section_processed_ = false;
   uint32_t module_offset_ = 0;
   size_t total_size_ = 0;
+  bool stream_finished_ = false;
 
   // We need wire bytes in an array for deserializing cached modules.
   std::vector<uint8_t> wire_bytes_for_deserializing_;
@@ -258,6 +259,8 @@ size_t AsyncStreamingDecoder::DecodingState::ReadBytes(
 
 void AsyncStreamingDecoder::Finish() {
   TRACE_STREAMING("Finish\n");
+  DCHECK(!stream_finished_);
+  stream_finished_ = true;
   if (!ok()) return;
 
   if (deserializing()) {
@@ -298,6 +301,8 @@ void AsyncStreamingDecoder::Finish() {
 
 void AsyncStreamingDecoder::Abort() {
   TRACE_STREAMING("Abort\n");
+  if (stream_finished_) return;
+  stream_finished_ = true;
   if (!ok()) return;  // Failed already.
   processor_->OnAbort();
   Fail();
@@ -512,10 +517,6 @@ size_t AsyncStreamingDecoder::DecodeVarInt32::ReadBytes(
   Decoder decoder(buf,
                   streaming->module_offset() - static_cast<uint32_t>(offset()));
   value_ = decoder.consume_u32v(field_name_);
-  // The number of bytes we actually needed to read.
-  DCHECK_GT(decoder.pc(), buffer().begin());
-  bytes_consumed_ = static_cast<size_t>(decoder.pc() - buf.begin());
-  TRACE_STREAMING("  ==> %zu bytes consumed\n", bytes_consumed_);
 
   if (decoder.failed()) {
     if (new_bytes == remaining_buf.size()) {
@@ -525,6 +526,11 @@ size_t AsyncStreamingDecoder::DecodeVarInt32::ReadBytes(
     set_offset(offset() + new_bytes);
     return new_bytes;
   }
+
+  // The number of bytes we actually needed to read.
+  DCHECK_GT(decoder.pc(), buffer().begin());
+  bytes_consumed_ = static_cast<size_t>(decoder.pc() - buf.begin());
+  TRACE_STREAMING("  ==> %zu bytes consumed\n", bytes_consumed_);
 
   // We read all the bytes we needed.
   DCHECK_GT(bytes_consumed_, offset());

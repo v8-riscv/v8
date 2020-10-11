@@ -14,6 +14,7 @@
 #include "src/wasm/wasm-js.h"
 #include "src/wasm/wasm-module.h"
 #include "src/wasm/wasm-objects.h"
+#include "src/wasm/wasm-opcodes.h"
 #include "src/wasm/wasm-result.h"
 #include "test/common/wasm/wasm-interpreter.h"
 
@@ -41,32 +42,13 @@ MaybeHandle<WasmInstanceObject> CompileAndInstantiateForTesting(
       isolate, thrower, module.ToHandleChecked(), {}, {});
 }
 
-bool InterpretWasmModuleForTesting(Isolate* isolate,
-                                   Handle<WasmInstanceObject> instance,
-                                   const char* name, size_t argc,
-                                   WasmValue* args) {
-  HandleScope handle_scope(isolate);  // Avoid leaking handles.
-  WasmCodeRefScope code_ref_scope;
-  MaybeHandle<WasmExportedFunction> maybe_function =
-      GetExportedFunction(isolate, instance, "main");
-  Handle<WasmExportedFunction> function;
-  if (!maybe_function.ToHandle(&function)) {
-    return false;
-  }
-  int function_index = function->function_index();
-  const FunctionSig* signature =
-      instance->module()->functions[function_index].sig;
-  size_t param_count = signature->parameter_count();
-  std::unique_ptr<WasmValue[]> arguments(new WasmValue[param_count]);
+OwnedVector<WasmValue> MakeDefaultInterpreterArguments(Isolate* isolate,
+                                                       const FunctionSig* sig) {
+  size_t param_count = sig->parameter_count();
+  auto arguments = OwnedVector<WasmValue>::New(param_count);
 
-  size_t arg_count = std::min(param_count, argc);
-  if (arg_count > 0) {
-    memcpy(arguments.get(), args, arg_count);
-  }
-
-  // Fill the parameters up with default values.
-  for (size_t i = argc; i < param_count; ++i) {
-    switch (signature->GetParam(i).kind()) {
+  for (size_t i = 0; i < param_count; ++i) {
+    switch (sig->GetParam(i).kind()) {
       case ValueType::kI32:
         arguments[i] = WasmValue(int32_t{0});
         break;
@@ -79,6 +61,9 @@ bool InterpretWasmModuleForTesting(Isolate* isolate,
       case ValueType::kF64:
         arguments[i] = WasmValue(0.0);
         break;
+      case ValueType::kS128:
+        arguments[i] = WasmValue(Simd128{});
+        break;
       case ValueType::kOptRef:
         arguments[i] =
             WasmValue(Handle<Object>::cast(isolate->factory()->null_value()));
@@ -89,39 +74,45 @@ bool InterpretWasmModuleForTesting(Isolate* isolate,
       case ValueType::kI16:
       case ValueType::kStmt:
       case ValueType::kBottom:
-      case ValueType::kS128:
         UNREACHABLE();
     }
   }
 
-  // Don't execute more than 16k steps.
-  constexpr int kMaxNumSteps = 16 * 1024;
-
-  Zone zone(isolate->allocator(), ZONE_NAME);
-
-  WasmInterpreter interpreter{
-      isolate, instance->module(),
-      ModuleWireBytes{instance->module_object().native_module()->wire_bytes()},
-      instance};
-  interpreter.InitFrame(&instance->module()->functions[function_index],
-                        arguments.get());
-  WasmInterpreter::State interpreter_result = interpreter.Run(kMaxNumSteps);
-
-  if (isolate->has_pending_exception()) {
-    // Stack overflow during interpretation.
-    isolate->clear_pending_exception();
-    return false;
-  }
-
-  return interpreter_result != WasmInterpreter::PAUSED;
+  return arguments;
 }
 
-int32_t RunWasmModuleForTesting(Isolate* isolate,
-                                Handle<WasmInstanceObject> instance, int argc,
-                                Handle<Object> argv[]) {
-  ErrorThrower thrower(isolate, "RunWasmModule");
-  return CallWasmFunctionForTesting(isolate, instance, &thrower, "main", argc,
-                                    argv);
+OwnedVector<Handle<Object>> MakeDefaultArguments(Isolate* isolate,
+                                                 const FunctionSig* sig) {
+  size_t param_count = sig->parameter_count();
+  auto arguments = OwnedVector<Handle<Object>>::New(param_count);
+
+  for (size_t i = 0; i < param_count; ++i) {
+    switch (sig->GetParam(i).kind()) {
+      case ValueType::kI32:
+      case ValueType::kF32:
+      case ValueType::kF64:
+      case ValueType::kS128:
+        // Argument here for kS128 does not matter as we should error out before
+        // hitting this case.
+        arguments[i] = handle(Smi::zero(), isolate);
+        break;
+      case ValueType::kI64:
+        arguments[i] = BigInt::FromInt64(isolate, 0);
+        break;
+      case ValueType::kOptRef:
+        arguments[i] = isolate->factory()->null_value();
+        break;
+      case ValueType::kRef:
+      case ValueType::kRtt:
+      case ValueType::kI8:
+      case ValueType::kI16:
+      case ValueType::kStmt:
+      case ValueType::kBottom:
+        UNREACHABLE();
+    }
+  }
+
+  return arguments;
 }
 
 int32_t CompileAndRunWasmModule(Isolate* isolate, const byte* module_start,
@@ -133,8 +124,8 @@ int32_t CompileAndRunWasmModule(Isolate* isolate, const byte* module_start,
   if (instance.is_null()) {
     return -1;
   }
-  return RunWasmModuleForTesting(isolate, instance.ToHandleChecked(), 0,
-                                 nullptr);
+  return CallWasmFunctionForTesting(isolate, instance.ToHandleChecked(), "main",
+                                    0, nullptr);
 }
 
 WasmInterpretationResult InterpretWasmModule(
@@ -145,18 +136,26 @@ WasmInterpretationResult InterpretWasmModule(
 
   Zone zone(isolate->allocator(), ZONE_NAME);
   v8::internal::HandleScope scope(isolate);
+  const WasmFunction* func = &instance->module()->functions[function_index];
+
+  CHECK(func->exported);
+  // This would normally be handled by export wrappers.
+  if (!IsJSCompatibleSignature(func->sig, instance->module(),
+                               WasmFeatures::FromIsolate(isolate))) {
+    return WasmInterpretationResult::Trapped(false);
+  }
 
   WasmInterpreter interpreter{
       isolate, instance->module(),
       ModuleWireBytes{instance->module_object().native_module()->wire_bytes()},
       instance};
-  interpreter.InitFrame(&instance->module()->functions[function_index], args);
+  interpreter.InitFrame(func, args);
   WasmInterpreter::State interpreter_result = interpreter.Run(kMaxNumSteps);
 
   bool stack_overflow = isolate->has_pending_exception();
   isolate->clear_pending_exception();
 
-  if (stack_overflow) return WasmInterpretationResult::Stopped();
+  if (stack_overflow) return WasmInterpretationResult::Failed();
 
   if (interpreter.state() == WasmInterpreter::TRAPPED) {
     return WasmInterpretationResult::Trapped(
@@ -164,12 +163,36 @@ WasmInterpretationResult InterpretWasmModule(
   }
 
   if (interpreter_result == WasmInterpreter::FINISHED) {
+    // Get the result as an {int32_t}. Keep this in sync with
+    // {CallWasmFunctionForTesting}, because fuzzers will compare the results.
+    int32_t result = -1;
+    if (func->sig->return_count() > 0) {
+      WasmValue return_value = interpreter.GetReturnValue();
+      switch (func->sig->GetReturn(0).kind()) {
+        case ValueType::kI32:
+          result = return_value.to<int32_t>();
+          break;
+        case ValueType::kI64:
+          result = static_cast<int32_t>(return_value.to<int64_t>());
+          break;
+        case ValueType::kF32:
+          result = static_cast<int32_t>(return_value.to<float>());
+          break;
+        case ValueType::kF64:
+          result = static_cast<int32_t>(return_value.to<double>());
+          break;
+        default:
+          break;
+      }
+    }
     return WasmInterpretationResult::Finished(
-        interpreter.GetReturnValue().to<int32_t>(),
-        interpreter.PossibleNondeterminism());
+        result, interpreter.PossibleNondeterminism());
   }
 
-  return WasmInterpretationResult::Stopped();
+  // The interpreter did not finish within the limited number of steps, so it
+  // might execute an infinite loop or infinite recursion. Return "failed"
+  // status in that case.
+  return WasmInterpretationResult::Failed();
 }
 
 MaybeHandle<WasmExportedFunction> GetExportedFunction(
@@ -191,8 +214,9 @@ MaybeHandle<WasmExportedFunction> GetExportedFunction(
 
 int32_t CallWasmFunctionForTesting(Isolate* isolate,
                                    Handle<WasmInstanceObject> instance,
-                                   ErrorThrower* thrower, const char* name,
-                                   int argc, Handle<Object> argv[]) {
+                                   const char* name, int argc,
+                                   Handle<Object> argv[], bool* exception) {
+  if (exception) *exception = false;
   MaybeHandle<WasmExportedFunction> maybe_export =
       GetExportedFunction(isolate, instance, name);
   Handle<WasmExportedFunction> main_export;
@@ -209,7 +233,7 @@ int32_t CallWasmFunctionForTesting(Isolate* isolate,
   if (retval.is_null()) {
     DCHECK(isolate->has_pending_exception());
     isolate->clear_pending_exception();
-    thrower->RuntimeError("Calling exported wasm function failed.");
+    if (exception) *exception = true;
     return -1;
   }
   Handle<Object> result = retval.ToHandleChecked();
@@ -219,8 +243,9 @@ int32_t CallWasmFunctionForTesting(Isolate* isolate,
   if (result->IsHeapNumber()) {
     return static_cast<int32_t>(HeapNumber::cast(*result).value());
   }
-  thrower->RuntimeError(
-      "Calling exported wasm function failed: Return value should be number");
+  if (result->IsBigInt()) {
+    return static_cast<int32_t>(BigInt::cast(*result).AsInt64());
+  }
   return -1;
 }
 

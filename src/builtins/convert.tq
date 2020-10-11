@@ -57,6 +57,12 @@ FromConstexpr<int8, constexpr int31>(i: constexpr int31): int8 {
   static_assert(-128 <= i && i <= 127);
   return %RawDownCast<int8>(i);
 }
+FromConstexpr<char8, constexpr int31>(i: constexpr int31): char8 {
+  const i: int32 = i;
+  static_assert(i <= 255);
+  static_assert(0 <= i);
+  return %RawDownCast<char8>(i);
+}
 FromConstexpr<Number, constexpr Smi>(s: constexpr Smi): Number {
   return SmiConstant(s);
 }
@@ -128,6 +134,9 @@ Convert<Number, int32>(i: int32): Number {
   return ChangeInt32ToTagged(i);
 }
 Convert<intptr, int32>(i: int32): intptr {
+  return ChangeInt32ToIntPtr(i);
+}
+Convert<intptr, int31>(i: int31): intptr {
   return ChangeInt32ToIntPtr(i);
 }
 Convert<intptr, uint32>(i: uint32): intptr {

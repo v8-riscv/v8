@@ -65,6 +65,12 @@ class PersistentHandlesThread final : public v8::base::Thread {
     ph_ = local_heap.DetachPersistentHandles();
   }
 
+  std::unique_ptr<PersistentHandles> DetachPersistentHandles() {
+    CHECK(ph_);
+    return std::move(ph_);
+  }
+
+ private:
   Heap* heap_;
   std::vector<Handle<HeapNumber>> handles_;
   std::unique_ptr<PersistentHandles> ph_;
@@ -74,8 +80,8 @@ class PersistentHandlesThread final : public v8::base::Thread {
 };
 
 TEST(CreatePersistentHandles) {
+  heap::EnsureFlagLocalHeapsEnabled();
   CcTest::InitializeVM();
-  FLAG_local_heaps = true;
   Isolate* isolate = CcTest::i_isolate();
 
   std::unique_ptr<PersistentHandles> ph = isolate->NewPersistentHandles();
@@ -105,13 +111,13 @@ TEST(CreatePersistentHandles) {
   thread->Join();
 
   // get persistent handles back to main thread
-  ph = std::move(thread->ph_);
+  ph = thread->DetachPersistentHandles();
   ph->NewHandle(number);
 }
 
 TEST(DereferencePersistentHandle) {
+  heap::EnsureFlagLocalHeapsEnabled();
   CcTest::InitializeVM();
-  FLAG_local_heaps = true;
   Isolate* isolate = CcTest::i_isolate();
 
   std::unique_ptr<PersistentHandles> phs = isolate->NewPersistentHandles();

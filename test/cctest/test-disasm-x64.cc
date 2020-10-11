@@ -400,6 +400,7 @@ TEST(DisasmX64) {
     __ movdqa(Operand(rsp, 12), xmm0);
     __ movdqu(xmm0, Operand(rsp, 12));
     __ movdqu(Operand(rsp, 12), xmm0);
+    __ movdqu(xmm1, xmm0);
     __ shufps(xmm0, xmm9, 0x0);
 
     __ ucomiss(xmm0, xmm1);
@@ -817,6 +818,7 @@ TEST(DisasmX64) {
       __ vpblendw(xmm1, xmm2, xmm3, 23);
       __ vpblendw(xmm1, xmm2, Operand(rbx, rcx, times_4, 10000), 23);
       __ vpalignr(xmm1, xmm2, xmm3, 4);
+      __ vpalignr(xmm1, xmm2, Operand(rbx, rcx, times_4, 10000), 4);
 
       __ vblendvpd(xmm1, xmm2, xmm3, xmm4);
 
@@ -982,8 +984,9 @@ TEST(DisasmX64) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code =
-      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
   USE(code);
 #ifdef OBJECT_PRINT
   StdoutStream os;

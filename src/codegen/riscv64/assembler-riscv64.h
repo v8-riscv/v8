@@ -192,7 +192,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     kOffset20 = 20,  // RISCV imm20
     kOffset13 = 13,  // RISCV branch
     kOffset32 = 32,  // RISCV auipc + instr_I
-    kOffset11 = 11   // RISCV C_J
+    kOffset11 = 11,  // RISCV C_J
+    kOffset8 = 8     // RISCV compressed branch
   };
 
   // Determines if Label is bound and near enough so that branch instruction
@@ -206,6 +207,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   int BrachlongOffset(Instr auipc, Instr jalr);
   int JumpOffset(Instr instr);
   int CJumpOffset(Instr instr);
+  int CBranchOffset(Instr instr);
   static int LdOffset(Instr instr);
   static int AuipcOffset(Instr instr);
 
@@ -221,6 +223,9 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   }
   inline int16_t cjump_offset(Label* L) {
     return (int16_t)branch_offset_helper(L, OffsetSize::kOffset11);
+  }
+  inline int32_t cbranch_offset(Label* L) {
+    return branch_offset_helper(L, OffsetSize::kOffset8);
   }
 
   uint64_t jump_address(Label* L);
@@ -312,6 +317,9 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
   // Bits available for offset field in compresed jump
   static constexpr int kCJalOffsetBits = 12;
+
+  // Bits available for offset field in compressed branch
+  static constexpr int kCBranchOffsetBits = 9;
 
   // Max offset for b instructions with 12-bit offset field (multiple of 2)
   static constexpr int kMaxBranchOffset = (1 << (13 - 1)) - 1;
@@ -618,6 +626,13 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_sw(Register rs2, Register rs1, uint16_t uimm7);
   void c_sd(Register rs2, Register rs1, uint16_t uimm8);
   void c_fsd(FPURegister rs2, Register rs1, uint16_t uimm8);
+  void c_bnez(Register rs1, int16_t imm9);
+  inline void c_bnez(Register rs1, Label* L) { c_bnez(rs1, branch_offset(L)); }
+  void c_beqz(Register rs1, int16_t imm9);
+  inline void c_beqz(Register rs1, Label* L) { c_beqz(rs1, branch_offset(L)); }
+  void c_srli(Register rs1, uint8_t uimm6);
+  void c_srai(Register rs1, uint8_t uimm6);
+  void c_andi(Register rs1, uint8_t uimm6);
 
   // Privileged
   void uret();
@@ -687,20 +702,19 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     bleu(rs1, rs2, branch_offset(L));
   }
 
-  // TODO: Replace uses of ToRegister with names once they are properly defined
   void j(int32_t imm21) { jal(zero_reg, imm21); }
   inline void j(Label* L) { j(jump_offset(L)); }
   inline void b(Label* L) { j(L); }
-  void jal(int32_t imm21) { jal(ToRegister(1), imm21); }
+  void jal(int32_t imm21) { jal(ra, imm21); }
   inline void jal(Label* L) { jal(jump_offset(L)); }
   void jr(Register rs) { jalr(zero_reg, rs, 0); }
   void jr(Register rs, int32_t imm12) { jalr(zero_reg, rs, imm12); }
-  void jalr(Register rs, int32_t imm12) { jalr(ToRegister(1), rs, imm12); }
-  void jalr(Register rs) { jalr(ToRegister(1), rs, 0); }
-  void ret() { jalr(zero_reg, ToRegister(1), 0); }
+  void jalr(Register rs, int32_t imm12) { jalr(ra, rs, imm12); }
+  void jalr(Register rs) { jalr(ra, rs, 0); }
+  void ret() { jalr(zero_reg, ra, 0); }
   void call(int32_t offset) {
-    auipc(ToRegister(1), (offset >> 12) + ((offset & 0x800) >> 11));
-    jalr(ToRegister(1), ToRegister(1), offset << 20 >> 20);
+    auipc(ra, (offset >> 12) + ((offset & 0x800) >> 11));
+    jalr(ra, ra, offset << 20 >> 20);
   }
 
   // Read instructions-retired counter
@@ -843,6 +857,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
   // Check if an instruction is a branch of some kind.
   static bool IsBranch(Instr instr);
+  static bool IsCBranch(Instr instr);
   static bool IsJump(Instr instr);
   static bool IsJal(Instr instr);
   static bool IsCJal(Instr instr);
@@ -1080,6 +1095,9 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void GenInstrCS(uint8_t funct3, Opcode opcode, FPURegister rs2, Register rs1,
                   uint8_t uimm5);
   void GenInstrCJ(uint8_t funct3, Opcode opcode, uint16_t uint11);
+  void GenInstrCB(uint8_t funct3, Opcode opcode, Register rs1, uint8_t uimm8);
+  void GenInstrCBA(uint8_t funct3, uint8_t funct2, Opcode opcode, Register rs1,
+                  uint8_t uimm6);
 
   // ----- Instruction class templates match those in LLVM's RISCVInstrInfo.td
   void GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,

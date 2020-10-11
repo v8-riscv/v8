@@ -10,6 +10,7 @@
 #include "src/common/globals.h"
 #include "src/compiler/access-info.h"
 #include "src/compiler/feedback-source.h"
+#include "src/compiler/globals.h"
 #include "src/compiler/processed-feedback.h"
 #include "src/compiler/refs-map.h"
 #include "src/compiler/serializer-hints.h"
@@ -17,10 +18,12 @@
 #include "src/handles/persistent-handles.h"
 #include "src/heap/local-heap.h"
 #include "src/interpreter/bytecode-array-accessor.h"
+#include "src/objects/code-kind.h"
 #include "src/objects/feedback-vector.h"
 #include "src/objects/function-kind.h"
 #include "src/objects/objects.h"
 #include "src/utils/address-map.h"
+#include "src/utils/identity-map.h"
 #include "src/utils/ostreams.h"
 #include "src/zone/zone-containers.h"
 
@@ -76,15 +79,13 @@ struct PropertyAccessTarget {
 class V8_EXPORT_PRIVATE JSHeapBroker {
  public:
   JSHeapBroker(Isolate* isolate, Zone* broker_zone, bool tracing_enabled,
-               bool is_concurrent_inlining, bool is_native_context_independent,
-               std::unique_ptr<PersistentHandles> persistent_handles);
+               bool is_concurrent_inlining, CodeKind code_kind);
 
   // For use only in tests, sets default values for some arguments. Avoids
   // churn when new flags are added.
-  JSHeapBroker(Isolate* isolate, Zone* broker_zone,
-               std::unique_ptr<PersistentHandles> persistent_handles)
-      : JSHeapBroker(isolate, broker_zone, FLAG_trace_heap_broker, false, false,
-                     std::move(persistent_handles)) {}
+  JSHeapBroker(Isolate* isolate, Zone* broker_zone)
+      : JSHeapBroker(isolate, broker_zone, FLAG_trace_heap_broker, false,
+                     CodeKind::TURBOFAN) {}
 
   ~JSHeapBroker();
 
@@ -102,13 +103,24 @@ class V8_EXPORT_PRIVATE JSHeapBroker {
   bool tracing_enabled() const { return tracing_enabled_; }
   bool is_concurrent_inlining() const { return is_concurrent_inlining_; }
   bool is_native_context_independent() const {
-    return is_native_context_independent_;
+    return code_kind_ == CodeKind::NATIVE_CONTEXT_INDEPENDENT;
   }
+  bool generate_full_feedback_collection() const {
+    // NCI code currently collects full feedback.
+    DCHECK_IMPLIES(is_native_context_independent(),
+                   CollectFeedbackInGenericLowering());
+    return is_native_context_independent();
+  }
+  bool is_turboprop() const { return code_kind_ == CodeKind::TURBOPROP; }
 
   enum BrokerMode { kDisabled, kSerializing, kSerialized, kRetired };
   BrokerMode mode() const { return mode_; }
-  void InitializeLocalHeap();
-  void TearDownLocalHeap();
+  // Initialize the local heap with the persistent and canonical handles
+  // provided by {info}.
+  void InitializeLocalHeap(OptimizedCompilationInfo* info);
+  // Tear down the local heap and pass the persistent and canonical handles
+  // provided back to {info}. {info} is responsible for disposing of them.
+  void TearDownLocalHeap(OptimizedCompilationInfo* info);
   void StopSerializing();
   void Retire();
   bool SerializingAllowed() const;
@@ -215,20 +227,59 @@ class V8_EXPORT_PRIVATE JSHeapBroker {
   bool IsSerializedForCompilation(const SharedFunctionInfoRef& shared,
                                   const FeedbackVectorRef& feedback) const;
 
-  template <typename T>
-  Handle<T> NewPersistentHandle(T obj) {
-    return ph_->NewHandle(obj);
-  }
-
-  template <typename T>
-  Handle<T> NewPersistentHandle(Handle<T> obj) {
-    return ph_->NewHandle(*obj);
-  }
-
   LocalHeap* local_heap() {
     return local_heap_.has_value() ? &(*local_heap_) : nullptr;
   }
 
+  // Return the corresponding canonical persistent handle for {object}. Create
+  // one if it does not exist.
+  // If we have the canonical map, we can create the canonical & persistent
+  // handle through it. This commonly happens during the Execute phase.
+  // If we don't, that means we are calling this method from serialization. If
+  // that happens, we should be inside a canonical and a persistent handle
+  // scope. Then, we would just use the regular handle creation.
+  template <typename T>
+  Handle<T> CanonicalPersistentHandle(T object) {
+    if (canonical_handles_) {
+      Address address = object.ptr();
+      if (Internals::HasHeapObjectTag(address)) {
+        RootIndex root_index;
+        if (root_index_map_.Lookup(address, &root_index)) {
+          return Handle<T>(isolate_->root_handle(root_index).location());
+        }
+      }
+
+      Object obj(address);
+      auto find_result = canonical_handles_->FindOrInsert(obj);
+      if (!find_result.already_exists) {
+        // Allocate new PersistentHandle if one wasn't created before.
+        DCHECK(local_heap_);
+        *find_result.entry = local_heap_->NewPersistentHandle(obj).location();
+      }
+      return Handle<T>(*find_result.entry);
+    } else {
+      return Handle<T>(object, isolate());
+    }
+  }
+
+  template <typename T>
+  Handle<T> CanonicalPersistentHandle(Handle<T> object) {
+    return CanonicalPersistentHandle<T>(*object);
+  }
+
+  // Find the corresponding handle in the CanonicalHandlesMap. The entry must be
+  // found.
+  template <typename T>
+  Handle<T> FindCanonicalPersistentHandleForTesting(Object object) {
+    Address** entry = canonical_handles_->Find(object);
+    return Handle<T>(*entry);
+  }
+
+  // Set the persistent handles and copy the canonical handles over to the
+  // JSHeapBroker.
+  void SetPersistentAndCopyCanonicalHandlesForTesting(
+      std::unique_ptr<PersistentHandles> persistent_handles,
+      std::unique_ptr<CanonicalHandlesMap> canonical_handles);
   std::string Trace() const;
   void IncrementTracingIndentation();
   void DecrementTracingIndentation();
@@ -270,6 +321,33 @@ class V8_EXPORT_PRIVATE JSHeapBroker {
 
   PerIsolateCompilerCache* compiler_cache() const { return compiler_cache_; }
 
+  void set_persistent_handles(
+      std::unique_ptr<PersistentHandles> persistent_handles) {
+    DCHECK_NULL(ph_);
+    ph_ = std::move(persistent_handles);
+    DCHECK_NOT_NULL(ph_);
+  }
+  std::unique_ptr<PersistentHandles> DetachPersistentHandles() {
+    DCHECK_NOT_NULL(ph_);
+    return std::move(ph_);
+  }
+
+  void set_canonical_handles(
+      std::unique_ptr<CanonicalHandlesMap> canonical_handles) {
+    DCHECK_NULL(canonical_handles_);
+    canonical_handles_ = std::move(canonical_handles);
+    DCHECK_NOT_NULL(canonical_handles_);
+  }
+
+  std::unique_ptr<CanonicalHandlesMap> DetachCanonicalHandles() {
+    DCHECK_NOT_NULL(canonical_handles_);
+    return std::move(canonical_handles_);
+  }
+
+  // Copy the canonical handles over to the JSHeapBroker.
+  void CopyCanonicalHandlesForTesting(
+      std::unique_ptr<CanonicalHandlesMap> canonical_handles);
+
   Isolate* const isolate_;
   Zone* const zone_ = nullptr;
   base::Optional<NativeContextRef> target_native_context_;
@@ -281,9 +359,10 @@ class V8_EXPORT_PRIVATE JSHeapBroker {
   BrokerMode mode_ = kDisabled;
   bool const tracing_enabled_;
   bool const is_concurrent_inlining_;
-  bool const is_native_context_independent_;
+  CodeKind const code_kind_;
   std::unique_ptr<PersistentHandles> ph_;
   base::Optional<LocalHeap> local_heap_;
+  std::unique_ptr<CanonicalHandlesMap> canonical_handles_;
   unsigned trace_indentation_ = 0;
   PerIsolateCompilerCache* compiler_cache_ = nullptr;
   ZoneUnorderedMap<FeedbackSource, ProcessedFeedback const*,
@@ -293,7 +372,8 @@ class V8_EXPORT_PRIVATE JSHeapBroker {
   ZoneUnorderedMap<PropertyAccessTarget, PropertyAccessInfo,
                    PropertyAccessTarget::Hash, PropertyAccessTarget::Equal>
       property_access_infos_;
-  ZoneUnorderedMap<int, MinimorphicLoadPropertyAccessInfo>
+  ZoneUnorderedMap<FeedbackSource, MinimorphicLoadPropertyAccessInfo,
+                   FeedbackSource::Hash, FeedbackSource::Equal>
       minimorphic_property_access_infos_;
 
   ZoneVector<ObjectData*> typed_array_string_tags_;
@@ -369,6 +449,27 @@ class OffHeapBytecodeArray final : public interpreter::AbstractBytecodeArray {
 
  private:
   BytecodeArrayRef array_;
+};
+
+// Scope that unparks the LocalHeap, if:
+//   a) We have a JSHeapBroker,
+//   b) Said JSHeapBroker has a LocalHeap, and
+//   c) Said LocalHeap has been parked.
+// Used, for example, when printing the graph with --trace-turbo with a
+// previously parked LocalHeap.
+class UnparkedScopeIfNeeded {
+ public:
+  explicit UnparkedScopeIfNeeded(JSHeapBroker* broker) {
+    if (broker != nullptr) {
+      LocalHeap* local_heap = broker->local_heap();
+      if (local_heap != nullptr && local_heap->IsParked()) {
+        unparked_scope.emplace(local_heap);
+      }
+    }
+  }
+
+ private:
+  base::Optional<UnparkedScope> unparked_scope;
 };
 
 }  // namespace compiler

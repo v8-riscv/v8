@@ -183,10 +183,16 @@ void ReplaceEffectControlUses(Node* node, Node* effect, Node* control) {
 }
 
 bool CanOverflowSigned32(const Operator* op, Type left, Type right,
-                         Zone* type_zone) {
-  // We assume the inputs are checked Signed32 (or known statically
-  // to be Signed32). Technically, the inputs could also be minus zero, but
-  // that cannot cause overflow.
+                         TypeCache const* type_cache, Zone* type_zone) {
+  // We assume the inputs are checked Signed32 (or known statically to be
+  // Signed32). Technically, the inputs could also be minus zero, which we treat
+  // as 0 for the purpose of this function.
+  if (left.Maybe(Type::MinusZero())) {
+    left = Type::Union(left, type_cache->kSingletonZero, type_zone);
+  }
+  if (right.Maybe(Type::MinusZero())) {
+    right = Type::Union(right, type_cache->kSingletonZero, type_zone);
+  }
   left = Type::Intersect(left, Type::Signed32(), type_zone);
   right = Type::Intersect(right, Type::Signed32(), type_zone);
   if (left.IsNone() || right.IsNone()) return false;
@@ -1484,7 +1490,8 @@ class RepresentationSelector {
     if (lower<T>()) {
       if (truncation.IsUsedAsWord32() ||
           !CanOverflowSigned32(node->op(), left_feedback_type,
-                               right_feedback_type, graph_zone())) {
+                               right_feedback_type, type_cache_,
+                               graph_zone())) {
         ChangeToPureOp(node, Int32Op(node));
 
       } else {
@@ -1738,19 +1745,15 @@ class RepresentationSelector {
         return UseInfo::Bool();
       case CTypeInfo::Type::kInt32:
       case CTypeInfo::Type::kUint32:
-      case CTypeInfo::Type::kFloat32:
         return UseInfo::CheckedNumberAsWord32(feedback);
+      // TODO(mslekova): We deopt for unsafe integers, but ultimately we want
+      // to make this less restrictive in order to stay on the fast path.
       case CTypeInfo::Type::kInt64:
-        return UseInfo::CheckedSigned64AsWord64(kIdentifyZeros, feedback);
-      case CTypeInfo::Type::kFloat64:
-        return UseInfo::CheckedNumberAsFloat64(kIdentifyZeros, feedback);
-      // UseInfo::Word64 does not propagate any TypeCheckKind, so it relies
-      // on the implicit assumption that Word64 representation only holds
-      // Numbers, which is already no longer true with BigInts. By now,
-      // BigInts are handled in a very conservative way to make sure they don't
-      // fall into that pit, but future changes may break this here.
       case CTypeInfo::Type::kUint64:
-        return UseInfo::Word64();
+        return UseInfo::CheckedSigned64AsWord64(kIdentifyZeros, feedback);
+      case CTypeInfo::Type::kFloat32:
+      case CTypeInfo::Type::kFloat64:
+        return UseInfo::CheckedNumberAsFloat64(kDistinguishZeros, feedback);
       case CTypeInfo::Type::kV8Value:
         return UseInfo::AnyTagged();
     }
@@ -2825,6 +2828,7 @@ class RepresentationSelector {
         return VisitUnop<T>(node, UseInfo::AnyTagged(),
                             MachineRepresentation::kTaggedPointer);
       }
+      case IrOpcode::kTierUpCheck:
       case IrOpcode::kUpdateInterruptBudget: {
         ProcessInput<T>(node, 0, UseInfo::AnyTagged());
         ProcessRemainingInputs<T>(node, 1);

@@ -31,20 +31,13 @@ MaybeHandle<WasmExportedFunction> GetExportedFunction(
 
 // Call an exported wasm function by name. Returns -1 if the export does not
 // exist or throws an error. Errors are cleared from the isolate before
-// returning.
+// returning. {exception} is set to to true if an exception happened during
+// execution of the wasm function.
 int32_t CallWasmFunctionForTesting(Isolate* isolate,
                                    Handle<WasmInstanceObject> instance,
-                                   ErrorThrower* thrower, const char* name,
-                                   int argc, Handle<Object> argv[]);
-
-// Interprets an exported wasm function by name. Returns false if it was not
-// possible to execute the function (e.g. because it does not exist), or if the
-// interpretation does not finish after kMaxNumSteps. Otherwise returns true.
-// The arguments array is extended with default values if necessary.
-bool InterpretWasmModuleForTesting(Isolate* isolate,
-                                   Handle<WasmInstanceObject> instance,
-                                   const char* name, size_t argc,
-                                   WasmValue* args);
+                                   const char* name, int argc,
+                                   Handle<Object> argv[],
+                                   bool* exception = nullptr);
 
 // Decode, verify, and run the function labeled "main" in the
 // given encoded module. The module should have no imports.
@@ -62,7 +55,7 @@ MaybeHandle<WasmInstanceObject> CompileAndInstantiateForTesting(
 
 class WasmInterpretationResult {
  public:
-  static WasmInterpretationResult Stopped() { return {kStopped, 0, false}; }
+  static WasmInterpretationResult Failed() { return {kFailed, 0, false}; }
   static WasmInterpretationResult Trapped(bool possible_nondeterminism) {
     return {kTrapped, 0, possible_nondeterminism};
   }
@@ -71,7 +64,10 @@ class WasmInterpretationResult {
     return {kFinished, result, possible_nondeterminism};
   }
 
-  bool stopped() const { return status_ == kStopped; }
+  // {failed()} captures different reasons: The module was invalid, no function
+  // to call was found in the module, the function did not termine within a
+  // limited number of steps, or a stack overflow happened.
+  bool failed() const { return status_ == kFailed; }
   bool trapped() const { return status_ == kTrapped; }
   bool finished() const { return status_ == kFinished; }
 
@@ -83,7 +79,7 @@ class WasmInterpretationResult {
   bool possible_nondeterminism() const { return possible_nondeterminism_; }
 
  private:
-  enum Status { kFinished, kTrapped, kStopped };
+  enum Status { kFinished, kTrapped, kFailed };
 
   const Status status_;
   const int32_t result_;
@@ -103,10 +99,17 @@ WasmInterpretationResult InterpretWasmModule(
     Isolate* isolate, Handle<WasmInstanceObject> instance,
     int32_t function_index, WasmValue* args);
 
-// Runs the module instance with arguments.
-int32_t RunWasmModuleForTesting(Isolate* isolate,
-                                Handle<WasmInstanceObject> instance, int argc,
-                                Handle<Object> argv[]);
+// Generate an array of default arguments for the given signature, to be used in
+// the interpreter.
+OwnedVector<WasmValue> MakeDefaultInterpreterArguments(Isolate* isolate,
+                                                       const FunctionSig* sig);
+
+// Generate an array of default arguments for the given signature, to be used
+// when calling compiled code. Make sure that the arguments match the ones
+// returned by {MakeDefaultInterpreterArguments}, otherwise fuzzers will report
+// differences between interpreter and compiled code.
+OwnedVector<Handle<Object>> MakeDefaultArguments(Isolate* isolate,
+                                                 const FunctionSig* sig);
 
 // Install function map, module symbol for testing
 void SetupIsolateForWasmModule(Isolate* isolate);

@@ -5,13 +5,14 @@
 #include "src/heap/new-spaces.h"
 
 #include "src/heap/array-buffer-sweeper.h"
-#include "src/heap/array-buffer-tracker-inl.h"
 #include "src/heap/heap-inl.h"
 #include "src/heap/incremental-marking.h"
 #include "src/heap/mark-compact.h"
 #include "src/heap/memory-allocator.h"
 #include "src/heap/paged-spaces.h"
+#include "src/heap/safepoint.h"
 #include "src/heap/spaces-inl.h"
+#include "src/heap/spaces.h"
 
 namespace v8 {
 namespace internal {
@@ -21,7 +22,6 @@ Page* SemiSpace::InitializePage(MemoryChunk* chunk) {
   chunk->SetFlag(in_to_space ? MemoryChunk::TO_PAGE : MemoryChunk::FROM_PAGE);
   Page* page = static_cast<Page*>(chunk);
   page->SetYoungGenerationPageFlags(heap()->incremental_marking()->IsMarking());
-  page->AllocateLocalTracker();
   page->list_node().Initialize();
 #ifdef ENABLE_MINOR_MC
   if (FLAG_minor_mc) {
@@ -418,6 +418,7 @@ void NewSpace::TearDown() {
 void NewSpace::Flip() { SemiSpace::Swap(&from_space_, &to_space_); }
 
 void NewSpace::Grow() {
+  DCHECK_IMPLIES(FLAG_local_heaps, heap()->safepoint()->IsActive());
   // Double the semispace size but only up to maximum capacity.
   DCHECK(TotalCapacity() < MaximumCapacity());
   size_t new_capacity =
@@ -498,6 +499,10 @@ void NewSpace::UpdateInlineAllocationLimit(size_t min_size) {
   DCHECK_LE(new_limit, to_space_.page_high());
   allocation_info_.set_limit(new_limit);
   DCHECK_SEMISPACE_ALLOCATION_INFO(allocation_info_, to_space_);
+
+#if DEBUG
+  VerifyTop();
+#endif
 }
 
 bool NewSpace::AddFreshPage() {
@@ -550,6 +555,19 @@ bool NewSpace::EnsureAllocation(int size_in_bytes,
   DCHECK(old_top + aligned_size_in_bytes <= high);
   UpdateInlineAllocationLimit(aligned_size_in_bytes);
   return true;
+}
+
+void NewSpace::MaybeFreeUnusedLab(LinearAllocationArea info) {
+  if (info.limit() != kNullAddress && info.limit() == top()) {
+    DCHECK_NE(info.top(), kNullAddress);
+    allocation_info_.set_top(info.top());
+    allocation_info_.MoveStartToTop();
+    original_top_.store(info.top(), std::memory_order_release);
+  }
+
+#if DEBUG
+  VerifyTop();
+#endif
 }
 
 std::unique_ptr<ObjectIterator> NewSpace::GetObjectIterator(Heap* heap) {
@@ -612,6 +630,20 @@ AllocationResult NewSpace::AllocateRawAligned(int size_in_bytes,
   return result;
 }
 
+void NewSpace::VerifyTop() {
+  // Ensure validity of LAB: start <= top <= limit
+  DCHECK_LE(allocation_info_.start(), allocation_info_.top());
+  DCHECK_LE(allocation_info_.top(), allocation_info_.limit());
+
+  // Ensure that original_top_ always equals LAB start.
+  DCHECK_EQ(original_top_, allocation_info_.start());
+
+  // Ensure that limit() is <= original_limit_, original_limit_ always needs
+  // to be end of curent to space page.
+  DCHECK_LE(allocation_info_.limit(), original_limit_);
+  DCHECK_EQ(original_limit_, to_space_.page_high());
+}
+
 #ifdef VERIFY_HEAP
 // We do not use the SemiSpaceObjectIterator because verification doesn't assume
 // that it works (it depends on the invariants we are checking).
@@ -659,13 +691,6 @@ void NewSpace::Verify(Isolate* isolate) {
         ExternalString external_string = ExternalString::cast(object);
         size_t size = external_string.ExternalPayloadSize();
         external_space_bytes[ExternalBackingStoreType::kExternalString] += size;
-      } else if (object.IsJSArrayBuffer()) {
-        JSArrayBuffer array_buffer = JSArrayBuffer::cast(object);
-        if (ArrayBufferTracker::IsTracked(array_buffer)) {
-          size_t size = ArrayBufferTracker::Lookup(heap(), array_buffer)
-                            ->PerIsolateAccountingLength();
-          external_space_bytes[ExternalBackingStoreType::kArrayBuffer] += size;
-        }
       }
 
       current += size;
@@ -677,18 +702,14 @@ void NewSpace::Verify(Isolate* isolate) {
   }
 
   for (int i = 0; i < kNumTypes; i++) {
-    if (V8_ARRAY_BUFFER_EXTENSION_BOOL &&
-        i == ExternalBackingStoreType::kArrayBuffer)
-      continue;
+    if (i == ExternalBackingStoreType::kArrayBuffer) continue;
     ExternalBackingStoreType t = static_cast<ExternalBackingStoreType>(i);
     CHECK_EQ(external_space_bytes[t], ExternalBackingStoreBytes(t));
   }
 
-  if (V8_ARRAY_BUFFER_EXTENSION_BOOL) {
     size_t bytes = heap()->array_buffer_sweeper()->young().BytesSlow();
     CHECK_EQ(bytes,
              ExternalBackingStoreBytes(ExternalBackingStoreType::kArrayBuffer));
-  }
 
   // Check semi-spaces.
   CHECK_EQ(from_space_.id(), kFromSpace);

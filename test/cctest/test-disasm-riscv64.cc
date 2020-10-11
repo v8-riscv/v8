@@ -28,13 +28,12 @@
 
 #include <stdlib.h>
 
-#include "src/init/v8.h"
-
 #include "src/codegen/macro-assembler.h"
 #include "src/debug/debug.h"
 #include "src/diagnostics/disasm.h"
 #include "src/diagnostics/disassembler.h"
 #include "src/execution/frames-inl.h"
+#include "src/init/v8.h"
 #include "test/cctest/cctest.h"
 
 namespace v8 {
@@ -93,10 +92,10 @@ bool DisassembleAndCompare(byte* pc, const char* compare_string) {
 #define COMPARE_PC_REL(asm_, compare_string, offset)                           \
   {                                                                            \
     int pc_offset = assm.pc_offset();                                          \
-    byte *progcounter = &buffer[pc_offset];                                    \
+    byte* progcounter = &buffer[pc_offset];                                    \
     char str_with_address[100];                                                \
     snprintf(str_with_address, sizeof(str_with_address), "%s -> %p",           \
-             compare_string, static_cast<void *>(progcounter + (offset)));     \
+             compare_string, static_cast<void*>(progcounter + (offset)));      \
     assm.asm_;                                                                 \
     if (!DisassembleAndCompare(progcounter, str_with_address)) failure = true; \
   }
@@ -169,12 +168,18 @@ TEST(MISC) {
           "06400267       jalr      tp, 100(zero_reg)");
 
   // Branches
-  COMPARE_PC_REL(beq(fp, a4, -268), "eee40ae3       beq       fp, a4, -268", -268);
-  COMPARE_PC_REL(bne(t1, s4, -268), "ef431ae3       bne       t1, s4, -268", -268);
-  COMPARE_PC_REL(blt(s3, t4, -268), "efd9cae3       blt       s3, t4, -268", -268);
-  COMPARE_PC_REL(bge(t2, sp, -268), "ee23dae3       bge       t2, sp, -268", -268);
-  COMPARE_PC_REL(bltu(s6, a1, -268), "eebb6ae3       bltu      s6, a1, -268", -268);
-  COMPARE_PC_REL(bgeu(a1, s3, -268), "ef35fae3       bgeu      a1, s3, -268", -268);
+  COMPARE_PC_REL(beq(fp, a4, -268), "eee40ae3       beq       fp, a4, -268",
+                 -268);
+  COMPARE_PC_REL(bne(t1, s4, -268), "ef431ae3       bne       t1, s4, -268",
+                 -268);
+  COMPARE_PC_REL(blt(s3, t4, -268), "efd9cae3       blt       s3, t4, -268",
+                 -268);
+  COMPARE_PC_REL(bge(t2, sp, -268), "ee23dae3       bge       t2, sp, -268",
+                 -268);
+  COMPARE_PC_REL(bltu(s6, a1, -268), "eebb6ae3       bltu      s6, a1, -268",
+                 -268);
+  COMPARE_PC_REL(bgeu(a1, s3, -268), "ef35fae3       bgeu      a1, s3, -268",
+                 -268);
 
   // Memory fences
   COMPARE(fence(PSO | PSR, PSW | PSI), "0690000f       fence or, iw");
@@ -499,6 +504,12 @@ TEST(RV64C) {
   COMPARE(c_fsd(fa1, s1, 24), "0000ac8c       fsd       fa1, 24(s1)");
 
   COMPARE(c_j(-12), "0000bfd5       j       -12");
+
+  COMPARE(c_beqz(a0, -12), "0000d975       beqz       a0, x0, -12");
+  COMPARE(c_bnez(a0, -12), "0000f975       bnez       a0, x0, -12");
+  COMPARE(c_srli(a1, 24), "000081e1       srli       a1, a1, 24");
+  COMPARE(c_andi(a1, 24), "000089e1       andi       a1, a1, 24");
+  COMPARE(c_srai(a1, 24), "000085e1       srai       a1, a1, 24");
   VERIFY_RUN();
 }
 

@@ -84,8 +84,17 @@ class StatsCounter;
   V(re_check_stack_guard_state,                                                \
     "RegExpMacroAssembler*::CheckStackGuardState()")                           \
   V(re_grow_stack, "NativeRegExpMacroAssembler::GrowStack()")                  \
-  V(re_match_for_call_from_js, "IrregexpInterpreter::MatchForCallFromJs")      \
-  V(re_word_character_map, "NativeRegExpMacroAssembler::word_character_map")
+  V(re_word_character_map, "NativeRegExpMacroAssembler::word_character_map")   \
+  EXTERNAL_REFERENCE_LIST_WITH_ISOLATE_HEAP_SANDBOX(V)
+
+#ifdef V8_HEAP_SANDBOX
+#define EXTERNAL_REFERENCE_LIST_WITH_ISOLATE_HEAP_SANDBOX(V) \
+  V(external_pointer_table_address,                          \
+    "Isolate::external_pointer_table_address("               \
+    ")")
+#else
+#define EXTERNAL_REFERENCE_LIST_WITH_ISOLATE_HEAP_SANDBOX(V)
+#endif  // V8_HEAP_SANDBOX
 
 #define EXTERNAL_REFERENCE_LIST(V)                                             \
   V(abort_with_reason, "abort_with_reason")                                    \
@@ -168,7 +177,8 @@ class StatsCounter;
   V(search_string_raw_two_two, "search_string_raw_two_two")                    \
   V(smi_lexicographic_compare_function, "smi_lexicographic_compare_function")  \
   V(string_to_array_index_function, "String::ToArrayIndex")                    \
-  V(try_internalize_string_function, "try_internalize_string_function")        \
+  V(try_string_to_index_or_lookup_existing,                                    \
+    "try_string_to_index_or_lookup_existing")                                  \
   V(wasm_call_trap_callback_for_testing,                                       \
     "wasm::call_trap_callback_for_testing")                                    \
   V(wasm_f32_ceil, "wasm::f32_ceil_wrapper")                                   \
@@ -230,7 +240,11 @@ class StatsCounter;
     "atomic_pair_compare_exchange_function")                                   \
   V(js_finalization_registry_remove_cell_from_unregister_token_map,            \
     "JSFinalizationRegistry::RemoveCellFromUnregisterTokenMap")                \
-  EXTERNAL_REFERENCE_LIST_INTL(V)
+  V(re_match_for_call_from_js, "IrregexpInterpreter::MatchForCallFromJs")      \
+  V(re_experimental_match_for_call_from_js,                                    \
+    "ExperimentalRegExp::MatchForCallFromJs")                                  \
+  EXTERNAL_REFERENCE_LIST_INTL(V)                                              \
+  EXTERNAL_REFERENCE_LIST_HEAP_SANDBOX(V)
 
 #ifdef V8_INTL_SUPPORT
 #define EXTERNAL_REFERENCE_LIST_INTL(V)                               \
@@ -239,6 +253,14 @@ class StatsCounter;
 #else
 #define EXTERNAL_REFERENCE_LIST_INTL(V)
 #endif  // V8_INTL_SUPPORT
+
+#ifdef V8_HEAP_SANDBOX
+#define EXTERNAL_REFERENCE_LIST_HEAP_SANDBOX(V) \
+  V(external_pointer_table_grow_table_function, \
+    "ExternalPointerTable::GrowTable")
+#else
+#define EXTERNAL_REFERENCE_LIST_HEAP_SANDBOX(V)
+#endif  // V8_HEAP_SANDBOX
 
 // An ExternalReference represents a C++ address used in the generated
 // code. All references to C++ functions and variables must be encapsulated
@@ -300,7 +322,8 @@ class ExternalReference {
   ExternalReference() : address_(kNullAddress) {}
   static ExternalReference Create(const SCTableReference& table_ref);
   static ExternalReference Create(StatsCounter* counter);
-  static ExternalReference Create(ApiFunction* ptr, Type type);
+  static V8_EXPORT_PRIVATE ExternalReference Create(ApiFunction* ptr,
+                                                    Type type);
   static ExternalReference Create(const Runtime::Function* f);
   static ExternalReference Create(IsolateAddressId id, Isolate* isolate);
   static ExternalReference Create(Runtime::FunctionId id);

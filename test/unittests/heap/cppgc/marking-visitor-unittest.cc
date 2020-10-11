@@ -23,7 +23,8 @@ namespace {
 class MarkingVisitorTest : public testing::TestWithHeap {
  public:
   MarkingVisitorTest()
-      : marker_(std::make_unique<Marker>(Heap::From(GetHeap())->AsBase())) {}
+      : marker_(MarkerFactory::CreateAndStartMarking<Marker>(
+            *Heap::From(GetHeap()), GetPlatformHandle().get())) {}
   ~MarkingVisitorTest() override { marker_->ClearAllWorklistsForTesting(); }
 
   Marker* GetMarker() { return marker_.get(); }
@@ -43,16 +44,20 @@ class GCedWithMixin : public GarbageCollected<GCedWithMixin>, public Mixin {
   void Trace(cppgc::Visitor*) const override {}
 };
 
-class TestMarkingVisitor : public MarkingVisitor {
+class TestMarkingVisitor : public MutatorMarkingVisitor {
  public:
   explicit TestMarkingVisitor(Marker* marker)
-      : MarkingVisitor(marker->heap(), marker->MarkingStateForTesting()) {}
+      : MutatorMarkingVisitor(marker->heap(),
+                              marker->MutatorMarkingStateForTesting()) {}
+  ~TestMarkingVisitor() { marking_state_.Publish(); }
+
+  MarkingStateBase& marking_state() { return marking_state_; }
 };
 
 }  // namespace
 
 TEST_F(MarkingVisitorTest, MarkedBytesAreInitiallyZero) {
-  EXPECT_EQ(0u, GetMarker()->MarkingStateForTesting().marked_bytes());
+  EXPECT_EQ(0u, GetMarker()->MutatorMarkingStateForTesting().marked_bytes());
 }
 
 // Strong references are marked.
@@ -205,7 +210,7 @@ class GCedWithMixinWithInConstructionCallback
 
 }  // namespace
 
-TEST_F(MarkingVisitorTest, DontMarkMemberInConstruction) {
+TEST_F(MarkingVisitorTest, MarkMemberInConstruction) {
   TestMarkingVisitor visitor(GetMarker());
   GCedWithInConstructionCallback* gced =
       MakeGarbageCollected<GCedWithInConstructionCallback>(
@@ -214,10 +219,14 @@ TEST_F(MarkingVisitorTest, DontMarkMemberInConstruction) {
             Member<GCedWithInConstructionCallback> object(obj);
             visitor.Trace(object);
           });
-  EXPECT_FALSE(HeapObjectHeader::FromPayload(gced).IsMarked());
+  HeapObjectHeader& header = HeapObjectHeader::FromPayload(gced);
+  EXPECT_TRUE(visitor.marking_state()
+                  .not_fully_constructed_worklist()
+                  .ContainsForTesting(&header));
+  EXPECT_FALSE(header.IsMarked());
 }
 
-TEST_F(MarkingVisitorTest, DontMarkMemberMixinInConstruction) {
+TEST_F(MarkingVisitorTest, MarkMemberMixinInConstruction) {
   TestMarkingVisitor visitor(GetMarker());
   GCedWithMixinWithInConstructionCallback* gced =
       MakeGarbageCollected<GCedWithMixinWithInConstructionCallback>(
@@ -226,7 +235,11 @@ TEST_F(MarkingVisitorTest, DontMarkMemberMixinInConstruction) {
             Member<MixinWithInConstructionCallback> mixin(obj);
             visitor.Trace(mixin);
           });
-  EXPECT_FALSE(HeapObjectHeader::FromPayload(gced).IsMarked());
+  HeapObjectHeader& header = HeapObjectHeader::FromPayload(gced);
+  EXPECT_TRUE(visitor.marking_state()
+                  .not_fully_constructed_worklist()
+                  .ContainsForTesting(&header));
+  EXPECT_FALSE(header.IsMarked());
 }
 
 TEST_F(MarkingVisitorTest, DontMarkWeakMemberInConstruction) {
@@ -238,7 +251,11 @@ TEST_F(MarkingVisitorTest, DontMarkWeakMemberInConstruction) {
             WeakMember<GCedWithInConstructionCallback> object(obj);
             visitor.Trace(object);
           });
-  EXPECT_FALSE(HeapObjectHeader::FromPayload(gced).IsMarked());
+  HeapObjectHeader& header = HeapObjectHeader::FromPayload(gced);
+  EXPECT_FALSE(visitor.marking_state()
+                   .not_fully_constructed_worklist()
+                   .ContainsForTesting(&header));
+  EXPECT_FALSE(header.IsMarked());
 }
 
 TEST_F(MarkingVisitorTest, DontMarkWeakMemberMixinInConstruction) {
@@ -250,10 +267,14 @@ TEST_F(MarkingVisitorTest, DontMarkWeakMemberMixinInConstruction) {
             WeakMember<MixinWithInConstructionCallback> mixin(obj);
             visitor.Trace(mixin);
           });
-  EXPECT_FALSE(HeapObjectHeader::FromPayload(gced).IsMarked());
+  HeapObjectHeader& header = HeapObjectHeader::FromPayload(gced);
+  EXPECT_FALSE(visitor.marking_state()
+                   .not_fully_constructed_worklist()
+                   .ContainsForTesting(&header));
+  EXPECT_FALSE(header.IsMarked());
 }
 
-TEST_F(MarkingVisitorTest, DontMarkPersistentInConstruction) {
+TEST_F(MarkingVisitorTest, MarkPersistentInConstruction) {
   TestMarkingVisitor visitor(GetMarker());
   GCedWithInConstructionCallback* gced =
       MakeGarbageCollected<GCedWithInConstructionCallback>(
@@ -262,10 +283,14 @@ TEST_F(MarkingVisitorTest, DontMarkPersistentInConstruction) {
             Persistent<GCedWithInConstructionCallback> object(obj);
             visitor.TraceRootForTesting(object, SourceLocation::Current());
           });
-  EXPECT_FALSE(HeapObjectHeader::FromPayload(gced).IsMarked());
+  HeapObjectHeader& header = HeapObjectHeader::FromPayload(gced);
+  EXPECT_TRUE(visitor.marking_state()
+                  .not_fully_constructed_worklist()
+                  .ContainsForTesting(&header));
+  EXPECT_FALSE(header.IsMarked());
 }
 
-TEST_F(MarkingVisitorTest, DontMarkPersistentMixinInConstruction) {
+TEST_F(MarkingVisitorTest, MarkPersistentMixinInConstruction) {
   TestMarkingVisitor visitor(GetMarker());
   GCedWithMixinWithInConstructionCallback* gced =
       MakeGarbageCollected<GCedWithMixinWithInConstructionCallback>(
@@ -274,7 +299,11 @@ TEST_F(MarkingVisitorTest, DontMarkPersistentMixinInConstruction) {
             Persistent<MixinWithInConstructionCallback> mixin(obj);
             visitor.TraceRootForTesting(mixin, SourceLocation::Current());
           });
-  EXPECT_FALSE(HeapObjectHeader::FromPayload(gced).IsMarked());
+  HeapObjectHeader& header = HeapObjectHeader::FromPayload(gced);
+  EXPECT_TRUE(visitor.marking_state()
+                  .not_fully_constructed_worklist()
+                  .ContainsForTesting(&header));
+  EXPECT_FALSE(header.IsMarked());
 }
 
 }  // namespace internal

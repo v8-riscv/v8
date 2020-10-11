@@ -5,7 +5,6 @@
 #include "src/heap/sweeper.h"
 
 #include "src/execution/vm-state-inl.h"
-#include "src/heap/array-buffer-tracker-inl.h"
 #include "src/heap/code-object-registry.h"
 #include "src/heap/free-list-inl.h"
 #include "src/heap/gc-tracer.h"
@@ -354,10 +353,6 @@ int Sweeper::RawSweep(
 
   // Phase 1: Prepare the page for sweeping.
 
-  // Before we sweep objects on the page, we free dead array buffers which
-  // requires valid mark bits.
-  ArrayBufferTracker::FreeDead(p, marking_state_);
-
   // Set the allocated_bytes_ counter to area_size and clear the wasted_memory_
   // counter. The free operations below will decrease allocated_bytes_ to actual
   // live bytes and keep track of wasted_memory_.
@@ -391,6 +386,10 @@ int Sweeper::RawSweep(
   // The free ranges map is used for filtering typed slots.
   FreeRangesMap free_ranges_map;
 
+#ifdef V8_ENABLE_CONSERVATIVE_STACK_SCANNING
+  p->object_start_bitmap()->Clear();
+#endif
+
   // Iterate over the page using the live objects and free the memory before
   // the given live object.
   Address free_start = p->area_start();
@@ -415,6 +414,10 @@ int Sweeper::RawSweep(
     int size = object.SizeFromMap(map);
     live_bytes += size;
     free_start = free_end + size;
+
+#ifdef V8_ENABLE_CONSERVATIVE_STACK_SCANNING
+    p->object_start_bitmap()->SetBit(object.address());
+#endif
   }
 
   // If there is free memory after the last live object also free that.

@@ -1845,16 +1845,18 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       break;
     }
     case kIA32Peek: {
-      int reverse_slot = i.InputInt32(0) + 1;
+      int reverse_slot = i.InputInt32(0);
       int offset =
           FrameSlotToFPOffset(frame()->GetTotalFrameSlotCount() - reverse_slot);
       if (instr->OutputAt(0)->IsFPRegister()) {
         LocationOperand* op = LocationOperand::cast(instr->OutputAt(0));
         if (op->representation() == MachineRepresentation::kFloat64) {
           __ movsd(i.OutputDoubleRegister(), Operand(ebp, offset));
-        } else {
-          DCHECK_EQ(MachineRepresentation::kFloat32, op->representation());
+        } else if (op->representation() == MachineRepresentation::kFloat32) {
           __ movss(i.OutputFloatRegister(), Operand(ebp, offset));
+        } else {
+          DCHECK_EQ(MachineRepresentation::kSimd128, op->representation());
+          __ movdqu(i.OutputSimd128Register(), Operand(ebp, offset));
         }
       } else {
         __ mov(i.OutputRegister(), Operand(ebp, offset));
@@ -1966,7 +1968,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
                   tmp = i.TempSimd128Register(0);
       // The minpd instruction doesn't propagate NaNs and +0's in its first
       // operand. Perform minpd in both orders, merge the resuls, and adjust.
-      __ Movapd(tmp, src1);
+      __ Movupd(tmp, src1);
       __ Minpd(tmp, tmp, src);
       __ Minpd(dst, src, src1);
       // propagate -0's and NaNs, which may be non-canonical.
@@ -1985,7 +1987,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
                   tmp = i.TempSimd128Register(0);
       // The maxpd instruction doesn't propagate NaNs and +0's in its first
       // operand. Perform maxpd in both orders, merge the resuls, and adjust.
-      __ Movapd(tmp, src1);
+      __ Movupd(tmp, src1);
       __ Maxpd(tmp, tmp, src);
       __ Maxpd(dst, src, src1);
       // Find discrepancies.
@@ -2346,7 +2348,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       Operand src1 = i.InputOperand(1);
       // See comment above for correction of minps.
       __ movups(kScratchDoubleReg, src1);
-      __ vminps(kScratchDoubleReg, kScratchDoubleReg, dst);
+      __ vminps(kScratchDoubleReg, kScratchDoubleReg, src0);
       __ vminps(dst, src0, src1);
       __ vorps(dst, dst, kScratchDoubleReg);
       __ vcmpneqps(kScratchDoubleReg, dst, dst);
@@ -2379,11 +2381,12 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kAVXF32x4Max: {
       CpuFeatureScope avx_scope(tasm(), AVX);
       XMMRegister dst = i.OutputSimd128Register();
+      XMMRegister src0 = i.InputSimd128Register(0);
       Operand src1 = i.InputOperand(1);
       // See comment above for correction of maxps.
-      __ movaps(kScratchDoubleReg, src1);
-      __ vmaxps(kScratchDoubleReg, kScratchDoubleReg, dst);
-      __ vmaxps(dst, dst, src1);
+      __ vmovups(kScratchDoubleReg, src1);
+      __ vmaxps(kScratchDoubleReg, kScratchDoubleReg, src0);
+      __ vmaxps(dst, src0, src1);
       __ vxorps(dst, dst, kScratchDoubleReg);
       __ vorps(kScratchDoubleReg, kScratchDoubleReg, dst);
       __ vsubps(kScratchDoubleReg, kScratchDoubleReg, dst);
@@ -3713,7 +3716,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ Andnps(dst, src1);
       break;
     }
-    case kIA32S8x16Swizzle: {
+    case kIA32I8x16Swizzle: {
       DCHECK_EQ(i.OutputSimd128Register(), i.InputSimd128Register(0));
       XMMRegister dst = i.OutputSimd128Register();
       XMMRegister mask = i.TempSimd128Register(0);
@@ -3726,7 +3729,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ Pshufb(dst, mask);
       break;
     }
-    case kIA32S8x16Shuffle: {
+    case kIA32I8x16Shuffle: {
       XMMRegister dst = i.OutputSimd128Register();
       Operand src0 = i.InputOperand(0);
       Register tmp = i.TempRegister(0);
@@ -3770,48 +3773,48 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ mov(esp, tmp);
       break;
     }
-    case kIA32S8x16LoadSplat: {
+    case kIA32S128Load8Splat: {
       __ Pinsrb(i.OutputSimd128Register(), i.MemoryOperand(), 0);
       __ Pxor(kScratchDoubleReg, kScratchDoubleReg);
       __ Pshufb(i.OutputSimd128Register(), kScratchDoubleReg);
       break;
     }
-    case kIA32S16x8LoadSplat: {
+    case kIA32S128Load16Splat: {
       __ Pinsrw(i.OutputSimd128Register(), i.MemoryOperand(), 0);
       __ Pshuflw(i.OutputSimd128Register(), i.OutputSimd128Register(),
                  uint8_t{0});
       __ Punpcklqdq(i.OutputSimd128Register(), i.OutputSimd128Register());
       break;
     }
-    case kIA32S32x4LoadSplat: {
+    case kIA32S128Load32Splat: {
       __ Vbroadcastss(i.OutputSimd128Register(), i.MemoryOperand());
       break;
     }
-    case kIA32S64x2LoadSplat: {
+    case kIA32S128Load64Splat: {
       __ Movddup(i.OutputSimd128Register(), i.MemoryOperand());
       break;
     }
-    case kIA32I16x8Load8x8S: {
+    case kIA32S128Load8x8S: {
       __ Pmovsxbw(i.OutputSimd128Register(), i.MemoryOperand());
       break;
     }
-    case kIA32I16x8Load8x8U: {
+    case kIA32S128Load8x8U: {
       __ Pmovzxbw(i.OutputSimd128Register(), i.MemoryOperand());
       break;
     }
-    case kIA32I32x4Load16x4S: {
+    case kIA32S128Load16x4S: {
       __ Pmovsxwd(i.OutputSimd128Register(), i.MemoryOperand());
       break;
     }
-    case kIA32I32x4Load16x4U: {
+    case kIA32S128Load16x4U: {
       __ Pmovzxwd(i.OutputSimd128Register(), i.MemoryOperand());
       break;
     }
-    case kIA32I64x2Load32x2S: {
+    case kIA32S128Load32x2S: {
       __ Pmovsxdq(i.OutputSimd128Register(), i.MemoryOperand());
       break;
     }
-    case kIA32I64x2Load32x2U: {
+    case kIA32S128Load32x2U: {
       __ Pmovzxdq(i.OutputSimd128Register(), i.MemoryOperand());
       break;
     }
@@ -4688,9 +4691,6 @@ void CodeGenerator::AssembleConstructFrame() {
       }
     } else if (call_descriptor->IsJSFunctionCall()) {
       __ Prologue();
-      if (call_descriptor->PushArgumentCount()) {
-        __ push(kJavaScriptCallArgCountRegister);
-      }
     } else {
       __ StubPrologue(info()->GetOutputStackFrameType());
       if (call_descriptor->IsWasmFunctionCall()) {
@@ -4834,10 +4834,11 @@ void CodeGenerator::AssembleReturn(InstructionOperand* pop) {
   } else {
     Register pop_reg = g.ToRegister(pop);
     Register scratch_reg = pop_reg == ecx ? edx : ecx;
-    __ pop(scratch_reg);
+    __ PopReturnAddressTo(scratch_reg);
     __ lea(esp, Operand(esp, pop_reg, times_system_pointer_size,
                         static_cast<int>(pop_size)));
-    __ jmp(scratch_reg);
+    __ PushReturnAddressFrom(scratch_reg);
+    __ Ret();
   }
 }
 

@@ -569,7 +569,7 @@ IfValueParameters const& IfValueParametersOf(const Operator* op) {
   V(TrapDivUnrepresentable)        \
   V(TrapRemByZero)                 \
   V(TrapFloatUnrepresentable)      \
-  V(TrapFuncInvalid)               \
+  V(TrapTableOutOfBounds)          \
   V(TrapFuncSigMismatch)
 
 #define CACHED_PARAMETER_LIST(V) \
@@ -889,7 +889,7 @@ struct CommonOperatorGlobalCache final {
 namespace {
 DEFINE_LAZY_LEAKY_OBJECT_GETTER(CommonOperatorGlobalCache,
                                 GetCommonOperatorGlobalCache)
-}
+}  // namespace
 
 CommonOperatorBuilder::CommonOperatorBuilder(Zone* zone)
     : cache_(*GetCommonOperatorGlobalCache()), zone_(zone) {}

@@ -1034,8 +1034,8 @@ BUILTIN(SegmentsPrototypeContaining) {
                                      Object::ToInteger(isolate, index));
   double const n = index->Number();
 
-  RETURN_RESULT_OR_FAILURE(
-      isolate, JSSegments::Containing(isolate, segments, static_cast<int>(n)));
+  RETURN_RESULT_OR_FAILURE(isolate,
+                           JSSegments::Containing(isolate, segments, n));
 }
 
 // ecma402 #sec-%segmentsprototype%-@@iterator
@@ -1044,7 +1044,9 @@ BUILTIN(SegmentsPrototypeIterator) {
   HandleScope scope(isolate);
   CHECK_RECEIVER(JSSegments, segments, method);
   RETURN_RESULT_OR_FAILURE(
-      isolate, JSSegments::CreateSegmentIterator(isolate, segments));
+      isolate,
+      JSSegmentIterator::Create(isolate, segments->icu_break_iterator().raw(),
+                                segments->granularity()));
 }
 
 BUILTIN(V8BreakIteratorConstructor) {

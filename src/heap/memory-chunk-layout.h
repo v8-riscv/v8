@@ -9,6 +9,10 @@
 #include "src/heap/list.h"
 #include "src/heap/slot-set.h"
 
+#ifdef V8_ENABLE_CONSERVATIVE_STACK_SCANNING
+#include "src/heap/object-start-bitmap.h"
+#endif
+
 namespace v8 {
 namespace internal {
 
@@ -16,7 +20,6 @@ class Bitmap;
 class CodeObjectRegistry;
 class FreeListCategory;
 class Heap;
-class LocalArrayBuferTracker;
 class TypedSlotsSet;
 class SlotSet;
 
@@ -58,11 +61,13 @@ class V8_EXPORT_PRIVATE MemoryChunkLayout {
     FIELD(std::atomic<size_t>[kNumTypes], ExternalBackingStoreBytes),
     FIELD(heap::ListNode<MemoryChunk>, ListNode),
     FIELD(FreeListCategory**, Categories),
-    FIELD(LocalArrayBuferTracker*, LocalTracker),
     FIELD(std::atomic<intptr_t>, YoungGenerationLiveByteCount),
     FIELD(Bitmap*, YoungGenerationBitmap),
     FIELD(CodeObjectRegistry*, CodeObjectRegistry),
     FIELD(PossiblyEmptyBuckets, PossiblyEmptyBuckets),
+#ifdef V8_ENABLE_CONSERVATIVE_STACK_SCANNING
+    FIELD(ObjectStartBitmap, ObjectStartBitmap),
+#endif
     kMarkingBitmapOffset,
     kMemoryChunkHeaderSize = kMarkingBitmapOffset,
     kMemoryChunkHeaderStart = kSlotSetOffset,

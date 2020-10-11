@@ -48,8 +48,6 @@ class BuildFlags : public ContextualClass<BuildFlags> {
     build_flags_["V8_SFI_HAS_UNIQUE_ID"] = V8_SFI_HAS_UNIQUE_ID;
     build_flags_["TAGGED_SIZE_8_BYTES"] = TAGGED_SIZE_8_BYTES;
     build_flags_["V8_DOUBLE_FIELDS_UNBOXING"] = V8_DOUBLE_FIELDS_UNBOXING;
-    build_flags_["V8_ARRAY_BUFFER_EXTENSION_BOOL"] =
-        V8_ARRAY_BUFFER_EXTENSION_BOOL;
     build_flags_["TRUE_FOR_TESTING"] = true;
     build_flags_["FALSE_FOR_TESTING"] = false;
   }
@@ -967,8 +965,17 @@ base::Optional<ParseResult> MakeClassDeclaration(
   std::vector<Declaration*> result;
 
   result.push_back(MakeNode<ClassDeclaration>(
-      name, flags, std::move(extends), std::move(generates), std::move(methods),
-      fields, MakeInstanceTypeConstraints(annotations)));
+      name, flags, extends, std::move(generates), std::move(methods), fields,
+      MakeInstanceTypeConstraints(annotations)));
+
+  Identifier* constexpr_name =
+      MakeNode<Identifier>(CONSTEXPR_TYPE_PREFIX + name->value);
+  constexpr_name->pos = name->pos;
+  TypeExpression* constexpr_extends = AddConstexpr(extends);
+  TypeDeclaration* constexpr_decl = MakeNode<AbstractTypeDeclaration>(
+      constexpr_name, transient, constexpr_extends, name->value);
+  constexpr_decl->pos = name->pos;
+  result.push_back(constexpr_decl);
 
   if ((flags & ClassFlag::kDoNotGenerateCast) == 0 &&
       (flags & ClassFlag::kIsShape) == 0) {

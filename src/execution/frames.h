@@ -15,7 +15,7 @@ namespace v8 {
 namespace internal {
 namespace wasm {
 class WasmCode;
-}
+}  // namespace wasm
 
 // Forward declarations.
 class AbstractCode;
@@ -205,6 +205,7 @@ class StackFrame {
            (type == JAVA_SCRIPT_BUILTIN_CONTINUATION_WITH_CATCH);
   }
   bool is_wasm_to_js() const { return type() == WASM_TO_JS; }
+  bool is_js_to_wasm() const { return type() == JS_TO_WASM; }
 
   // Accessors.
   Address sp() const { return state_.sp; }
@@ -669,6 +670,9 @@ class JavaScriptFrame : public StandardFrame {
   inline Address GetParameterSlot(int index) const;
   Object GetParameter(int index) const override;
   int ComputeParametersCount() const override;
+#ifdef V8_NO_ARGUMENTS_ADAPTOR
+  int GetActualArgumentCount() const;
+#endif
   Handle<FixedArray> GetParameters() const;
 
   // Debugger access.
@@ -784,11 +788,6 @@ class OptimizedFrame : public JavaScriptFrame {
 
   DeoptimizationData GetDeoptimizationData(int* deopt_index) const;
 
-#ifndef V8_REVERSE_JSARGS
-  // When the arguments are reversed in the stack, receiver() is
-  // inherited from JavaScriptFrame.
-  Object receiver() const override;
-#endif
   int ComputeParametersCount() const override;
 
   static int StackSlotOffsetRelativeToFp(int slot_index);
@@ -999,6 +998,8 @@ class WasmToJsFrame : public StubFrame {
 class JsToWasmFrame : public StubFrame {
  public:
   Type type() const override { return JS_TO_WASM; }
+
+  void Iterate(RootVisitor* v) const override;
 
  protected:
   inline explicit JsToWasmFrame(StackFrameIteratorBase* iterator);
@@ -1228,6 +1229,7 @@ class V8_EXPORT_PRIVATE StackTraceFrameIterator {
   bool done() const { return iterator_.done(); }
   void Advance();
   void AdvanceOneFrame() { iterator_.Advance(); }
+  int FrameFunctionCount() const;
 
   inline StandardFrame* frame() const;
 

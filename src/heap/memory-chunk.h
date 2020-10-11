@@ -23,7 +23,6 @@ namespace internal {
 
 class CodeObjectRegistry;
 class FreeListCategory;
-class LocalArrayBufferTracker;
 
 // MemoryChunk represents a memory region owned by a specific space.
 // It is divided into the header and the body. Chunk start is always
@@ -156,8 +155,6 @@ class MemoryChunk : public BasicMemoryChunk {
     return invalidated_slots_[type];
   }
 
-  void ReleaseLocalTracker();
-
   void AllocateYoungGenerationBitmap();
   void ReleaseYoungGenerationBitmap();
 
@@ -230,6 +227,10 @@ class MemoryChunk : public BasicMemoryChunk {
   // read-only space chunks.
   void ReleaseAllocatedMemoryNeededForWritableChunk();
 
+#ifdef V8_ENABLE_CONSERVATIVE_STACK_SCANNING
+  ObjectStartBitmap* object_start_bitmap() { return &object_start_bitmap_; }
+#endif
+
  protected:
   static MemoryChunk* Initialize(BasicMemoryChunk* basic_chunk, Heap* heap,
                                  Executability executable);
@@ -297,14 +298,16 @@ class MemoryChunk : public BasicMemoryChunk {
 
   FreeListCategory** categories_;
 
-  LocalArrayBufferTracker* local_tracker_;
-
   std::atomic<intptr_t> young_generation_live_byte_count_;
   Bitmap* young_generation_bitmap_;
 
   CodeObjectRegistry* code_object_registry_;
 
   PossiblyEmptyBuckets possibly_empty_buckets_;
+
+#ifdef V8_ENABLE_CONSERVATIVE_STACK_SCANNING
+  ObjectStartBitmap object_start_bitmap_;
+#endif
 
  private:
   friend class ConcurrentMarkingState;

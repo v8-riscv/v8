@@ -14,6 +14,7 @@ namespace v8 {
 class Isolate;
 template <typename T>
 class JSMember;
+class JSVisitor;
 
 namespace internal {
 
@@ -49,11 +50,21 @@ class V8_EXPORT JSMemberBase {
   inline JSMemberBase& CopyImpl(const JSMemberBase& other);
   inline JSMemberBase& MoveImpl(JSMemberBase&& other);
 
+  void SetSlotThreadSafe(void* value) {
+    reinterpret_cast<std::atomic<void*>*>(&val_)->store(
+        value, std::memory_order_relaxed);
+  }
+  bool IsEmptyThreadSafe() const {
+    return reinterpret_cast<std::atomic<const void*> const*>(&val_)->load(
+               std::memory_order_relaxed) == nullptr;
+  }
+
   // val_ points to a GlobalHandles node.
   internal::Address* val_ = nullptr;
 
   template <typename T>
   friend class v8::JSMember;
+  friend class v8::JSVisitor;
   friend class v8::internal::JSMemberBaseExtractor;
 };
 
@@ -79,7 +90,7 @@ JSMemberBase& JSMemberBase::MoveImpl(JSMemberBase&& other) {
 void JSMemberBase::Reset() {
   if (IsEmpty()) return;
   Delete(val_);
-  val_ = nullptr;
+  SetSlotThreadSafe(nullptr);
 }
 
 }  // namespace internal
@@ -144,7 +155,8 @@ class V8_EXPORT JSMember : public internal::JSMemberBase {
             typename = std::enable_if_t<std::is_base_of<T, U>::value>>
   void Set(v8::Isolate* isolate, Local<U> that) {
     Reset();
-    val_ = New(isolate, reinterpret_cast<internal::Address*>(*that), &val_);
+    SetSlotThreadSafe(
+        New(isolate, reinterpret_cast<internal::Address*>(*that), &val_));
   }
 };
 
@@ -198,9 +210,8 @@ class JSVisitor : public cppgc::Visitor {
  public:
   explicit JSVisitor(cppgc::Visitor::Key key) : cppgc::Visitor(key) {}
 
-  template <typename T>
-  void Trace(const JSMember<T>& ref) {
-    if (ref.IsEmpty()) return;
+  void Trace(const internal::JSMemberBase& ref) {
+    if (ref.IsEmptyThreadSafe()) return;
     Visit(ref);
   }
 
@@ -214,9 +225,9 @@ class JSVisitor : public cppgc::Visitor {
 
 namespace cppgc {
 
-template <typename T>
-struct TraceTrait<v8::JSMember<T>> {
-  static void Trace(Visitor* visitor, const v8::JSMember<T>* self) {
+template <>
+struct TraceTrait<v8::internal::JSMemberBase> {
+  static void Trace(Visitor* visitor, const v8::internal::JSMemberBase* self) {
     static_cast<v8::JSVisitor*>(visitor)->Trace(*self);
   }
 };

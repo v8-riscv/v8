@@ -57,25 +57,21 @@ MaybeHandle<JSSegments> JSSegments::Create(Isolate* isolate,
   return segments;
 }
 
-// ecma402 #sec-createsegmentiterator
-MaybeHandle<Object> JSSegments::CreateSegmentIterator(
-    Isolate* isolate, Handle<JSSegments> segments) {
-  return JSSegmentIterator::Create(
-      isolate, segments->icu_break_iterator().raw()->clone(),
-      segments->granularity());
-}
-
 // ecma402 #sec-%segmentsprototype%.containing
 MaybeHandle<Object> JSSegments::Containing(Isolate* isolate,
                                            Handle<JSSegments> segments,
-                                           int32_t n) {
+                                           double n_double) {
   // 5. Let len be the length of string.
   int32_t len = segments->unicode_string().raw()->length();
 
   // 7. If n < 0 or n ≥ len, return undefined.
-  if (n < 0 || n >= len) {
+  if (n_double < 0 || n_double >= len) {
     return isolate->factory()->undefined_value();
   }
+
+  int32_t n = static_cast<int32_t>(n_double);
+  // n may point to the surrogate tail- adjust it back to the lead.
+  n = segments->unicode_string().raw()->getChar32Start(n);
 
   icu::BreakIterator* break_iterator = segments->icu_break_iterator().raw();
   // 8. Let startIndex be ! FindBoundary(segmenter, string, n, before).

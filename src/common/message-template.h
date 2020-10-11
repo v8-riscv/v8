@@ -33,6 +33,9 @@ namespace internal {
     "Derived ArrayBuffer constructor created a buffer which was too small")    \
   T(ArrayBufferSpeciesThis,                                                    \
     "ArrayBuffer subclass returned this from species constructor")             \
+  T(AwaitNotInAsyncContext,                                                    \
+    "await is only valid in async functions and the top level bodies of "      \
+    "modules")                                                                 \
   T(AwaitNotInAsyncFunction, "await is only valid in async function")          \
   T(AtomicsWaitNotAllowed, "Atomics.wait cannot be called in this context")    \
   T(BadSortComparisonFunction,                                                 \
@@ -144,9 +147,10 @@ namespace internal {
   T(NotSuperConstructor, "Super constructor % of % is not a constructor")      \
   T(NotSuperConstructorAnonymousClass,                                         \
     "Super constructor % of anonymous class is not a constructor")             \
-  T(NotIntegerSharedTypedArray, "% is not an integer shared typed array.")     \
-  T(NotInt32OrBigInt64SharedTypedArray,                                        \
-    "% is not an int32 or BigInt64 shared typed array.")                       \
+  T(NotIntegerTypedArray, "% is not an integer typed array.")                  \
+  T(NotInt32OrBigInt64TypedArray,                                              \
+    "% is not an int32 or BigInt64 typed array.")                              \
+  T(NotSharedTypedArray, "% is not a shared typed array.")                     \
   T(ObjectGetterExpectingFunction,                                             \
     "Object.prototype.__defineGetter__: Expecting function")                   \
   T(ObjectGetterCallable, "Getter must be a function: %")                      \
@@ -314,6 +318,7 @@ namespace internal {
   T(BigIntDivZero, "Division by zero")                                         \
   T(BigIntNegativeExponent, "Exponent must be positive")                       \
   T(BigIntTooBig, "Maximum BigInt size exceeded")                              \
+  T(CantSetOptionXWhenYIsUsed, "Can't set option % when % is used")            \
   T(DateRange, "Provided date is not in valid range.")                         \
   T(ExpectedLocation,                                                          \
     "Expected letters optionally connected with underscores or hyphens for "   \
@@ -359,6 +364,8 @@ namespace internal {
   T(ToRadixFormatRange, "toString() radix argument must be between 2 and 36")  \
   T(TypedArraySetOffsetOutOfBounds, "offset is out of bounds")                 \
   T(TypedArraySetSourceTooLarge, "Source is too large")                        \
+  T(TypedArrayTooLargeToSort,                                                  \
+    "Custom comparefn not supported for huge TypedArrays")                     \
   T(ValueOutOfRange, "Value % out of range for % options property %")          \
   /* SyntaxError */                                                            \
   T(AmbiguousExport,                                                           \
@@ -546,18 +553,18 @@ namespace internal {
   T(WasmTrapDivUnrepresentable, "divide result unrepresentable")               \
   T(WasmTrapRemByZero, "remainder by zero")                                    \
   T(WasmTrapFloatUnrepresentable, "float unrepresentable in integer range")    \
-  T(WasmTrapFuncInvalid, "invalid index into function table")                  \
+  T(WasmTrapTableOutOfBounds, "table index is out of bounds")                  \
   T(WasmTrapFuncSigMismatch, "function signature mismatch")                    \
   T(WasmTrapMultiReturnLengthMismatch, "multi-return length mismatch")         \
   T(WasmTrapTypeError, "wasm function signature contains illegal type")        \
   T(WasmTrapDataSegmentDropped, "data segment has been dropped")               \
   T(WasmTrapElemSegmentDropped, "element segment has been dropped")            \
-  T(WasmTrapTableOutOfBounds, "table access out of bounds")                    \
   T(WasmTrapBrOnExnNull, "br_on_exn on null value")                            \
   T(WasmTrapRethrowNull, "rethrowing null value")                              \
   T(WasmTrapNullDereference, "dereferencing a null pointer")                   \
   T(WasmTrapIllegalCast, "illegal cast")                                       \
   T(WasmTrapArrayOutOfBounds, "array element access out of bounds")            \
+  T(WasmTrapWasmJSFunction, "cannot call WebAssembly.Function with call_ref")  \
   T(WasmExceptionError, "wasm exception")                                      \
   /* Asm.js validation related */                                              \
   T(AsmJsInvalid, "Invalid asm.js: %")                                         \

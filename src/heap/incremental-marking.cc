@@ -237,7 +237,7 @@ void IncrementalMarking::StartMarking() {
 
   SetState(MARKING);
 
-  heap_->marking_barrier()->Activate(is_compacting_);
+  MarkingBarrier::ActivateAll(heap(), is_compacting_);
 
   heap_->isolate()->compilation_cache()->MarkCompactPrologue();
 
@@ -412,6 +412,8 @@ void IncrementalMarking::FinalizeIncrementally() {
   // so we can do it only once at the beginning of the finalization.
   RetainMaps();
 
+  MarkingBarrier::PublishAll(heap());
+
   finalize_marking_completed_ = true;
 
   if (FLAG_trace_incremental_marking) {
@@ -432,7 +434,9 @@ void IncrementalMarking::UpdateMarkingWorklistAfterScavenge() {
       heap()->minor_mark_compact_collector()->marking_state();
 #endif  // ENABLE_MINOR_MC
 
-  collector_->marking_worklists_holder()->Update(
+  collector_->local_marking_worklists()->Publish();
+  MarkingBarrier::PublishAll(heap());
+  collector_->marking_worklists()->Update(
       [
 #ifdef DEBUG
           // this is referred inside DCHECK.
@@ -633,7 +637,7 @@ StepResult IncrementalMarking::EmbedderStep(double expected_duration_ms,
     HeapObject object;
     size_t cnt = 0;
     empty_worklist = true;
-    while (marking_worklists()->PopEmbedder(&object)) {
+    while (local_marking_worklists()->PopEmbedder(&object)) {
       scope.TracePossibleWrapper(JSObject::cast(object));
       if (++cnt == kObjectsToProcessBeforeDeadlineCheck) {
         if (deadline <= heap_->MonotonicallyIncreasingTimeInMs()) {
@@ -658,7 +662,7 @@ StepResult IncrementalMarking::EmbedderStep(double expected_duration_ms,
 }
 
 void IncrementalMarking::Hurry() {
-  if (!marking_worklists()->IsEmpty()) {
+  if (!local_marking_worklists()->IsEmpty()) {
     double start = 0.0;
     if (FLAG_trace_incremental_marking) {
       start = heap_->MonotonicallyIncreasingTimeInMs();
@@ -1037,19 +1041,17 @@ StepResult IncrementalMarking::Step(double max_step_size_in_ms,
   double embedder_deadline = 0.0;
   if (state_ == MARKING) {
     if (FLAG_concurrent_marking) {
-      heap_->new_space()->ResetOriginalTop();
-      heap_->new_lo_space()->ResetPendingObject();
       // It is safe to merge back all objects that were on hold to the shared
       // work list at Step because we are at a safepoint where all objects
       // are properly initialized.
-      marking_worklists()->MergeOnHold();
+      local_marking_worklists()->MergeOnHold();
     }
 
 // Only print marking worklist in debug mode to save ~40KB of code size.
 #ifdef DEBUG
     if (FLAG_trace_incremental_marking && FLAG_trace_concurrent_marking &&
         FLAG_trace_gc_verbose) {
-      collector_->marking_worklists_holder()->Print();
+      collector_->marking_worklists()->Print();
     }
 #endif
     if (FLAG_trace_incremental_marking) {
@@ -1073,7 +1075,7 @@ StepResult IncrementalMarking::Step(double max_step_size_in_ms,
     // assumption is that large graphs are well connected and can mostly be
     // processed on their own. For small graphs, helping is not necessary.
     v8_bytes_processed = collector_->ProcessMarkingWorklist(bytes_to_process);
-    StepResult v8_result = marking_worklists()->IsEmpty()
+    StepResult v8_result = local_marking_worklists()->IsEmpty()
                                ? StepResult::kNoImmediateWork
                                : StepResult::kMoreWorkRemaining;
     StepResult embedder_result = StepResult::kNoImmediateWork;
@@ -1081,6 +1083,9 @@ StepResult IncrementalMarking::Step(double max_step_size_in_ms,
       embedder_deadline =
           Min(max_step_size_in_ms,
               static_cast<double>(bytes_to_process) / marking_speed);
+      // TODO(chromium:1056170): Replace embedder_deadline with bytes_to_process
+      // after migrating blink to the cppgc library and after v8 can directly
+      // push objects to Oilpan.
       embedder_result = EmbedderStep(embedder_deadline, &embedder_duration);
     }
     bytes_marked_ += v8_bytes_processed;
@@ -1098,7 +1103,7 @@ StepResult IncrementalMarking::Step(double max_step_size_in_ms,
       }
     }
     if (FLAG_concurrent_marking) {
-      marking_worklists()->ShareWorkIfGlobalPoolIsEmpty();
+      local_marking_worklists()->ShareWork();
       heap_->concurrent_marking()->RescheduleTasksIfNeeded();
     }
   }

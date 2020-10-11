@@ -41,10 +41,10 @@ vars = {
   'mac_xcode_version': 'default',
 
   # GN CIPD package version.
-  'gn_version': 'git_revision:3028c6a426a4aaf6da91c4ebafe716ae370225fe',
+  'gn_version': 'git_revision:e002e68a48d1c82648eadde2f6aafa20d08c36f2',
 
   # luci-go CIPD package version.
-  'luci_go': 'git_revision:56ae79476e3caf14da59d75118408aa778637936',
+  'luci_go': 'git_revision:576741d3eed0fa33971fb34cd823650e6f5b47fb',
 
   # Three lines of non-changing comments so that
   # the commit queue can handle CLs rolling android_sdk_build-tools_version
@@ -82,15 +82,15 @@ vars = {
 
 deps = {
   'build':
-    Var('chromium_url') + '/chromium/src/build.git' + '@' + '2e781420a97613742bade0930d82dd94d0b2177c',
+    Var('chromium_url') + '/chromium/src/build.git' + '@' + '4af5c075ce1ec422c0e8498588dea37fd3aa0821',
   'third_party/depot_tools':
-    Var('chromium_url') + '/chromium/tools/depot_tools.git' + '@' + '486f1812ef65fde35ad0c63e3939e89dc1c876a3',
+    Var('chromium_url') + '/chromium/tools/depot_tools.git' + '@' + '6e970e597b25a3a74a560746711d1811133841d2',
   'third_party/icu':
-    Var('chromium_url') + '/chromium/deps/icu.git' + '@' + '79326efe26e5440f530963704c3c0ff965b3a4ac',
+    Var('chromium_url') + '/chromium/deps/icu.git' + '@' + 'aba3f0dfeeddc0c69730ec28ef423543b8a62693',
   'third_party/instrumented_libraries':
-    Var('chromium_url') + '/chromium/src/third_party/instrumented_libraries.git' + '@' + 'bb3f1802c237dd19105dd0f7919f99e536a39d10',
+    Var('chromium_url') + '/chromium/src/third_party/instrumented_libraries.git' + '@' + '6ba978ccb754d270b6cd12da58c8269b617e4f6e',
   'buildtools':
-    Var('chromium_url') + '/chromium/src/buildtools.git' + '@' + '1ecfe3ce669a34f8c76ffe5895d95b3ea3b549fd',
+    Var('chromium_url') + '/chromium/src/buildtools.git' + '@' + '4be464e050b3d05060471788f926b34c641db9fd',
   'buildtools/clang_format/script':
     Var('chromium_url') + '/chromium/llvm-project/cfe/tools/clang-format.git' + '@' + '96636aa0e9f047f17447f2d45a094d0b59ed7917',
   'buildtools/linux64': {
@@ -130,13 +130,13 @@ deps = {
     'condition': 'host_os == "win"',
   },
   'base/trace_event/common':
-    Var('chromium_url') + '/chromium/src/base/trace_event/common.git' + '@' + '23ef5333a357fc7314630ef88b44c3a545881dee',
+    Var('chromium_url') + '/chromium/src/base/trace_event/common.git' + '@' + 'ea3ab7b3f22a844966f27bcafc0475e4ea95a019',
   'third_party/android_ndk': {
     'url': Var('chromium_url') + '/android_ndk.git' + '@' + '27c0a8d090c666a50e40fceb4ee5b40b1a2d3f87',
     'condition': 'checkout_android',
   },
   'third_party/android_platform': {
-    'url': Var('chromium_url') + '/chromium/src/third_party/android_platform.git' + '@' + 'c1f84dcf41795fba13a53c86de608fc0cf6f813e',
+    'url': Var('chromium_url') + '/chromium/src/third_party/android_platform.git' + '@' + 'fc6c6840eeb254ac4fd199c548c54178ce3545bb',
     'condition': 'checkout_android',
   },
   'third_party/android_sdk/public': {
@@ -178,7 +178,7 @@ deps = {
       'dep_type': 'cipd',
   },
   'third_party/catapult': {
-    'url': Var('chromium_url') + '/catapult.git' + '@' + 'ac60992d41b7007e9c6c4329e5bbfc02c912f314',
+    'url': Var('chromium_url') + '/catapult.git' + '@' + '01898ca871b257ed8bd4437067a4ec8fc47e14f4',
     'condition': 'checkout_android',
   },
   'third_party/colorama/src': {
@@ -186,7 +186,7 @@ deps = {
     'condition': 'checkout_android',
   },
   'third_party/fuchsia-sdk': {
-    'url': Var('chromium_url') + '/chromium/src/third_party/fuchsia-sdk.git' + '@' + '8ce22865fbbc501198e0dc9d3ca2eeaa46471d11',
+    'url': Var('chromium_url') + '/chromium/src/third_party/fuchsia-sdk.git' + '@' + 'f8df9ff79b878d1998970cc04a197061069e48ce',
     'condition': 'checkout_fuchsia',
   },
   'third_party/googletest/src':
@@ -196,17 +196,17 @@ deps = {
     'condition': 'checkout_google_benchmark',
   },
   'third_party/jinja2':
-    Var('chromium_url') + '/chromium/src/third_party/jinja2.git' + '@' + '3f90fa05c85718505e28c9c3426c1ba52843b9b7',
+    Var('chromium_url') + '/chromium/src/third_party/jinja2.git' + '@' + 'a82a4944a7f2496639f34a89c9923be5908b80aa',
   'third_party/markupsafe':
-    Var('chromium_url') + '/chromium/src/third_party/markupsafe.git' + '@' + '8f45f5cfa0009d2a70589bcda0349b8cb2b72783',
+    Var('chromium_url') + '/chromium/src/third_party/markupsafe.git' + '@' + 'f2fb0f21ef1e1d4ffd43be8c63fc3d4928dea7ab',
   'tools/swarming_client':
-    Var('chromium_url') + '/infra/luci/client-py.git' + '@' + '4c095d04179dc725a300085ae21fe3b79900d072',
+    Var('chromium_url') + '/infra/luci/client-py.git' + '@' + 'd46ea7635f2911208268170512cb611412488fd8',
   'test/benchmarks/data':
     Var('chromium_url') + '/v8/deps/third_party/benchmarks.git' + '@' + '05d7188267b4560491ff9155c5ee13e207ecd65f',
   'test/mozilla/data':
     Var('chromium_url') + '/v8/deps/third_party/mozilla-tests.git' + '@' + 'f6c578a10ea707b1a8ab0b88943fe5115ce2b9be',
   'test/test262/data':
-    Var('chromium_url') + '/external/github.com/tc39/test262.git' + '@' + '0f5a274aad28e529ef4442681d50640e9090ea25',
+    Var('chromium_url') + '/external/github.com/tc39/test262.git' + '@' + 'ad8a5e9940ee60d1ecb6e150b7aecf09b17545dd',
   'test/test262/harness':
     Var('chromium_url') + '/external/github.com/test262-utils/test262-harness-py.git' + '@' + '4555345a943d0c99a9461182705543fb171dda4b',
   'third_party/qemu-linux-x64': {
@@ -233,7 +233,7 @@ deps = {
       'packages': [
           {
               'package': 'fuchsia/third_party/aemu/linux-amd64',
-              'version': 'TfK3Whl6AfZifLOotcOS_jvckKztERlPvmVyZo16fN0C'
+              'version': '7vSUW_nuKSjSwu_SJlXmDCOkdOAMe1nyjgN02vO04jEC'
           },
       ],
       'condition': 'host_os == "linux" and checkout_fuchsia',
@@ -250,7 +250,7 @@ deps = {
       'dep_type': 'cipd',
   },
   'tools/clang':
-    Var('chromium_url') + '/chromium/src/tools/clang.git' + '@' + '1078c4141a00d7174786d9d0fae2e7804c2a54e3',
+    Var('chromium_url') + '/chromium/src/tools/clang.git' + '@' + 'd4827bfe100154b06d9ffa59b21bb845fce9c7d5',
   'tools/luci-go': {
       'packages': [
         {
@@ -280,18 +280,22 @@ deps = {
     'dep_type': 'cipd',
   },
   'third_party/perfetto':
-    Var('android_url') + '/platform/external/perfetto.git' + '@' + 'ff70e0d273ed10995866c803f23e11250eb3dc52',
+    Var('android_url') + '/platform/external/perfetto.git' + '@' + '7cdc44f903d3bcfd1d0f67188bfa797a24756868',
   'third_party/protobuf':
     Var('chromium_url') + '/external/github.com/google/protobuf'+ '@' + 'b68a347f56137b4b1a746e8c7438495a6ac1bd91',
   'third_party/zlib':
-    Var('chromium_url') + '/chromium/src/third_party/zlib.git'+ '@' + '7492de9a52f656b070f41968e39a6efa603590d5',
+    Var('chromium_url') + '/chromium/src/third_party/zlib.git'+ '@' + '26211a5a8e7e28286fc28a84a0e102cc96bf0f0b',
   'third_party/jsoncpp/source':
-    Var('chromium_url') + '/external/github.com/open-source-parsers/jsoncpp.git'+ '@' + '645250b6690785be60ab6780ce4b58698d884d11',
+    Var('chromium_url') + '/external/github.com/open-source-parsers/jsoncpp.git'+ '@' + '9059f5cad030ba11d37818847443a53918c327b1',
   'third_party/ittapi': {
     # Force checkout ittapi libraries to pass v8 header includes check on
     # bots that has check_v8_header_includes enabled.
     'url': Var('chromium_url') + '/external/github.com/intel/ittapi' + '@' + 'b4ae0122ba749163096058b4f1bb065bf4a7de94',
     'condition': "checkout_ittapi or check_v8_header_includes",
+  },
+  'third_party/requests': {
+      'url': Var('chromium_url') + '/external/github.com/kennethreitz/requests.git' + '@' + 'bfb93d4b7d269a8735f1b216093e7e9a9fdc4517',
+      'condition': 'checkout_android',
   },
 }
 
@@ -477,7 +481,8 @@ hooks = [
     'name': 'mac_toolchain',
     'pattern': '.',
     'condition': 'checkout_mac',
-    'action': ['python', 'build/mac_toolchain.py'],
+    'action': ['python', 'build/mac_toolchain.py',
+               '--xcode-version', Var('mac_xcode_version')],
   },
   # Pull binutils for linux, enabled debug fission for faster linking /
   # debugging when used with clang on Ubuntu Precise.
@@ -514,12 +519,21 @@ hooks = [
                '-o', 'build/util/LASTCHANGE'],
   },
   {
-    'name': 'fuchsia_sdk',
+    'name': 'Download Fuchsia SDK',
     'pattern': '.',
     'condition': 'checkout_fuchsia',
     'action': [
       'python',
       'build/fuchsia/update_sdk.py',
+    ],
+  },
+  {
+    'name': 'Download Fuchsia system images',
+    'pattern': '.',
+    'condition': 'checkout_fuchsia',
+    'action': [
+      'python',
+      'build/fuchsia/update_images.py',
       '--boot-images={checkout_fuchsia_boot_images}',
     ],
   },

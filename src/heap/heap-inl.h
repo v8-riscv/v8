@@ -10,13 +10,13 @@
 // Clients of this interface shouldn't depend on lots of heap internals.
 // Do not include anything from src/heap other than src/heap/heap.h and its
 // write barrier here!
+#include "src/base/atomic-utils.h"
 #include "src/base/atomicops.h"
+#include "src/base/platform/platform.h"
+#include "src/common/assert-scope.h"
 #include "src/heap/heap-write-barrier.h"
 #include "src/heap/heap.h"
 #include "src/heap/third-party/heap-api.h"
-
-#include "src/base/atomic-utils.h"
-#include "src/base/platform/platform.h"
 #include "src/objects/feedback-vector.h"
 
 // TODO(gc): There is one more include to remove in order to no longer
@@ -24,6 +24,7 @@
 #include "src/execution/isolate-data.h"
 #include "src/execution/isolate.h"
 #include "src/heap/code-object-registry.h"
+#include "src/heap/large-spaces.h"
 #include "src/heap/memory-allocator.h"
 #include "src/heap/memory-chunk.h"
 #include "src/heap/new-spaces-inl.h"
@@ -77,29 +78,10 @@ Isolate* Heap::isolate() {
       reinterpret_cast<size_t>(reinterpret_cast<Isolate*>(16)->heap()) + 16);
 }
 
-int64_t Heap::external_memory() {
-  return isolate()->isolate_data()->external_memory_;
-}
+int64_t Heap::external_memory() { return external_memory_.total(); }
 
-void Heap::update_external_memory(int64_t delta) {
-  const int64_t amount = isolate()->isolate_data()->external_memory_ + delta;
-  isolate()->isolate_data()->external_memory_ = amount;
-  if (amount <
-      isolate()->isolate_data()->external_memory_low_since_mark_compact_) {
-    isolate()->isolate_data()->external_memory_low_since_mark_compact_ = amount;
-    isolate()->isolate_data()->external_memory_limit_ =
-        amount + kExternalAllocationSoftLimit;
-  }
-}
-
-void Heap::update_external_memory_concurrently_freed(uintptr_t freed) {
-  external_memory_concurrently_freed_ += freed;
-}
-
-void Heap::account_external_memory_concurrently_freed() {
-  update_external_memory(
-      -static_cast<int64_t>(external_memory_concurrently_freed_));
-  external_memory_concurrently_freed_ = 0;
+int64_t Heap::update_external_memory(int64_t delta) {
+  return external_memory_.Update(delta);
 }
 
 RootsTable& Heap::roots_table() { return isolate()->roots_table(); }
@@ -130,10 +112,6 @@ void Heap::SetRootMaterializedObjects(FixedArray objects) {
 
 void Heap::SetRootScriptList(Object value) {
   roots_table()[RootIndex::kScriptList] = value.ptr();
-}
-
-void Heap::SetRootStringTable(StringTable value) {
-  roots_table()[RootIndex::kStringTable] = value.ptr();
 }
 
 void Heap::SetMessageListeners(TemplateList value) {
@@ -192,8 +170,9 @@ AllocationResult Heap::AllocateRaw(int size_in_bytes, AllocationType type,
                                    AllocationAlignment alignment) {
   DCHECK(AllowHandleAllocation::IsAllowed());
   DCHECK(AllowHeapAllocation::IsAllowed());
-  DCHECK_IMPLIES(type == AllocationType::kCode,
-                 alignment == AllocationAlignment::kCodeAligned);
+  DCHECK(AllowGarbageCollection::IsAllowed());
+  DCHECK_IMPLIES(type == AllocationType::kCode || type == AllocationType::kMap,
+                 alignment == AllocationAlignment::kWordAligned);
   DCHECK_EQ(gc_state(), NOT_IN_GC);
 #ifdef V8_ENABLE_ALLOCATION_TIMEOUT
   if (FLAG_random_gc_interval > 0 || FLAG_gc_interval >= 0) {
@@ -206,7 +185,12 @@ AllocationResult Heap::AllocateRaw(int size_in_bytes, AllocationType type,
   IncrementObjectCounters();
 #endif
 
-  bool large_object = size_in_bytes > kMaxRegularHeapObjectSize;
+  size_t large_object_threshold =
+      AllocationType::kCode == type
+          ? std::min(kMaxRegularHeapObjectSize, code_space()->AreaSize())
+          : kMaxRegularHeapObjectSize;
+  bool large_object =
+      static_cast<size_t>(size_in_bytes) > large_object_threshold;
 
   HeapObject object;
   AllocationResult allocation;
@@ -239,15 +223,15 @@ AllocationResult Heap::AllocateRaw(int size_in_bytes, AllocationType type,
         allocation = old_space_->AllocateRaw(size_in_bytes, alignment, origin);
       }
     } else if (AllocationType::kCode == type) {
-      if (size_in_bytes <= code_space()->AreaSize() && !large_object) {
-        allocation = code_space_->AllocateRawUnaligned(size_in_bytes);
-      } else {
+      DCHECK(AllowCodeAllocation::IsAllowed());
+      if (large_object) {
         allocation = code_lo_space_->AllocateRaw(size_in_bytes);
+      } else {
+        allocation = code_space_->AllocateRawUnaligned(size_in_bytes);
       }
     } else if (AllocationType::kMap == type) {
       allocation = map_space_->AllocateRawUnaligned(size_in_bytes);
     } else if (AllocationType::kReadOnly == type) {
-      DCHECK(isolate_->serializer_enabled());
       DCHECK(!large_object);
       DCHECK(CanAllocateInReadOnlySpace());
       DCHECK_EQ(AllocationOrigin::kRuntime, origin);
@@ -269,6 +253,15 @@ AllocationResult Heap::AllocateRaw(int size_in_bytes, AllocationType type,
             ->RegisterNewlyAllocatedCodeObject(object.address());
       }
     }
+
+#ifdef V8_ENABLE_CONSERVATIVE_STACK_SCANNING
+    if (AllocationType::kReadOnly != type) {
+      DCHECK_TAG_ALIGNED(object.address());
+      Page::FromHeapObject(object)->object_start_bitmap()->SetBit(
+          object.address());
+    }
+#endif
+
     OnAllocationEvent(object, size_in_bytes);
   }
 
@@ -281,6 +274,7 @@ HeapObject Heap::AllocateRawWith(int size, AllocationType allocation,
                                  AllocationAlignment alignment) {
   DCHECK(AllowHandleAllocation::IsAllowed());
   DCHECK(AllowHeapAllocation::IsAllowed());
+  DCHECK(AllowGarbageCollection::IsAllowed());
   if (V8_ENABLE_THIRD_PARTY_HEAP_BOOL) {
     AllocationResult result = AllocateRaw(size, allocation, origin, alignment);
     DCHECK(!result.IsRetry());
@@ -288,20 +282,21 @@ HeapObject Heap::AllocateRawWith(int size, AllocationType allocation,
   }
   DCHECK_EQ(gc_state(), NOT_IN_GC);
   Heap* heap = isolate()->heap();
-  Address* top = heap->NewSpaceAllocationTopAddress();
-  Address* limit = heap->NewSpaceAllocationLimitAddress();
   if (allocation == AllocationType::kYoung &&
       alignment == AllocationAlignment::kWordAligned &&
-      size <= kMaxRegularHeapObjectSize &&
-      (*limit - *top >= static_cast<unsigned>(size)) &&
-      V8_LIKELY(!FLAG_single_generation && FLAG_inline_new &&
-                FLAG_gc_interval == 0)) {
-    DCHECK(IsAligned(size, kTaggedSize));
-    HeapObject obj = HeapObject::FromAddress(*top);
-    *top += size;
-    heap->CreateFillerObjectAt(obj.address(), size, ClearRecordedSlots::kNo);
-    MSAN_ALLOCATED_UNINITIALIZED_MEMORY(obj.address(), size);
-    return obj;
+      size <= kMaxRegularHeapObjectSize) {
+    Address* top = heap->NewSpaceAllocationTopAddress();
+    Address* limit = heap->NewSpaceAllocationLimitAddress();
+    if ((*limit - *top >= static_cast<unsigned>(size)) &&
+        V8_LIKELY(!FLAG_single_generation && FLAG_inline_new &&
+                  FLAG_gc_interval == 0)) {
+      DCHECK(IsAligned(size, kTaggedSize));
+      HeapObject obj = HeapObject::FromAddress(*top);
+      *top += size;
+      heap->CreateFillerObjectAt(obj.address(), size, ClearRecordedSlots::kNo);
+      MSAN_ALLOCATED_UNINITIALIZED_MEMORY(obj.address(), size);
+      return obj;
+    }
   }
   switch (mode) {
     case kLightRetry:

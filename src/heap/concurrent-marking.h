@@ -70,8 +70,7 @@ class V8_EXPORT_PRIVATE ConcurrentMarking {
   // task 0, reserved for the main thread).
   static constexpr int kMaxTasks = 7;
 
-  ConcurrentMarking(Heap* heap,
-                    MarkingWorklistsHolder* marking_worklists_holder,
+  ConcurrentMarking(Heap* heap, MarkingWorklists* marking_worklists,
                     WeakObjects* weak_objects);
 
   // Schedules asynchronous tasks to perform concurrent marking. Objects in the
@@ -104,31 +103,24 @@ class V8_EXPORT_PRIVATE ConcurrentMarking {
 
  private:
   struct TaskState {
-    // The main thread sets this flag to true when it wants the concurrent
-    // marker to give up the worker thread.
-    std::atomic<bool> preemption_request;
     size_t marked_bytes = 0;
-    unsigned mark_compact_epoch;
-    bool is_forced_gc;
     MemoryChunkDataMap memory_chunk_data;
     NativeContextInferrer native_context_inferrer;
     NativeContextStats native_context_stats;
     char cache_line_padding[64];
   };
-  class Task;
-  void Run(int task_id, TaskState* task_state);
+  class JobTask;
+  void Run(JobDelegate* delegate, unsigned mark_compact_epoch,
+           bool is_forced_gc);
+  size_t GetMaxConcurrency(size_t worker_count);
+
+  std::unique_ptr<JobHandle> job_handle_;
   Heap* const heap_;
-  MarkingWorklistsHolder* const marking_worklists_holder_;
+  MarkingWorklists* const marking_worklists_;
   WeakObjects* const weak_objects_;
   TaskState task_state_[kMaxTasks + 1];
   std::atomic<size_t> total_marked_bytes_{0};
   std::atomic<bool> ephemeron_marked_{false};
-  base::Mutex pending_lock_;
-  base::ConditionVariable pending_condition_;
-  int pending_task_count_ = 0;
-  bool is_pending_[kMaxTasks + 1] = {};
-  CancelableTaskManager::Id cancelable_id_[kMaxTasks + 1] = {};
-  int total_task_count_ = 0;
 };
 
 }  // namespace internal

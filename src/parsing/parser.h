@@ -655,7 +655,7 @@ class V8_EXPORT_PRIVATE Parser : public NON_EXPORTED_BASE(ParserBase<Parser>) {
     if (expr->IsStringLiteral()) return expr;
     ScopedPtrList<Expression> args(pointer_buffer());
     args.Add(expr);
-    return factory()->NewCallRuntime(Runtime::kInlineToStringRT, args,
+    return factory()->NewCallRuntime(Runtime::kInlineToString, args,
                                      expr->position());
   }
 
@@ -784,6 +784,11 @@ class V8_EXPORT_PRIVATE Parser : public NON_EXPORTED_BASE(ParserBase<Parser>) {
   class ThisExpression* ThisExpression() {
     UseThis();
     return factory()->ThisExpression();
+  }
+
+  class ThisExpression* NewThisExpression(int pos) {
+    UseThis();
+    return factory()->NewThisExpression(pos);
   }
 
   Expression* NewSuperPropertyReference(int pos);

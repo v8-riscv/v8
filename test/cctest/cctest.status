@@ -41,6 +41,11 @@
   'test-serialize/TestThatAlwaysFails': [FAIL],
   'test-api/SealHandleScope': [FAIL],
 
+  # These tests are expected to hit a CHECK (i.e. a FAIL result actually means
+  # the test passed).
+  'test-api/RegExpInterruptAndReenterIrregexp': [FAIL, CRASH],
+  'test-verifiers/Fail*': [FAIL, CRASH],
+
   # This test always fails.  It tests that LiveEdit causes abort when turned off.
   'test-debug/LiveEditDisabled': [FAIL],
 
@@ -112,6 +117,10 @@
   # https://crbug.com/v8/8919
   'test-platform/StackAlignment': [PASS, ['not is_clang', SKIP]],
 
+  # Test that misuse of PopAndReturn does not compile.
+  'test-code-stub-assembler/PopAndReturnFromJSBuiltinWithStackParameters' : [FAIL],
+  'test-code-stub-assembler/PopAndReturnFromTFCBuiltinWithStackParameters' : [FAIL],
+
   ############################################################################
   # Slow tests.
   'test-debug/CallFunctionInDebugger': [PASS, ['mode == debug', SLOW]],
@@ -127,14 +136,6 @@
   # These tests are supposed to fail in a DCHECK.
   'test-persistent-handles/NewPersistentHandleFailsWhenParked': [FAIL],
   'test-persistent-handles/NewPersistentHandleFailsWhenParkedExplicit': [FAIL],
-}],
-
-##############################################################################
-['(arch != ia32 and arch != x64)', {
-  # BUG(v8:9860). We can only safely read the native context for a frame on
-  # ia32 and x64.
-  'test-cpu-profiler/ContextFilterMovedNativeContext': [FAIL],
-  'test-cpu-profiler/ContextIsolation': [FAIL],
 }],
 
 ##############################################################################
@@ -176,11 +177,29 @@
   'test-debug/DebugBreakStackTrace': [PASS, SLOW],
 }],  # 'arch == arm64 and simulator_run'
 
+['arch == arm64 and system == macos and not simulator_run', {
+  # printf, being a variadic function, has a different, stack-based ABI on
+  # Apple silicon. See:
+  # https://developer.apple.com/library/archive/documentation/Xcode/Conceptual/iPhoneOSABIReference/Articles/ARM64FunctionCallingConventions.html
+  'test-assembler-arm64/printf_no_preserve': [SKIP],
+}],  # arch == arm64 and system == macos and not simulator_run
+
 ##############################################################################
 ['variant == nooptimization and (arch == arm or arch == arm64) and simulator_run', {
   # Slow tests: https://crbug.com/v8/7783
   'test-cpu-profiler/MultipleIsolates': [SKIP],
 }],  # variant == nooptimization and (arch == arm or arch == arm64) and simulator_run
+
+##############################################################################
+['variant == nooptimization', {
+  # Wasm serialization relies on TurboFan to be available, hence does not work
+  # in the 'nooptimization' variant.
+  'test-wasm-serialization/*': [SKIP],
+  'test-streaming-compilation/SingleThreadedTestDeserializationBypassesCompilation': [SKIP],
+  'test-streaming-compilation/SingleThreadedTestDeserializationFails': [SKIP],
+  'test-streaming-compilation/AsyncTestDeserializationFails': [SKIP],
+  'test-streaming-compilation/AsyncTestDeserializationBypassesCompilation': [SKIP],
+}],  # variant == nooptimization
 
 ##############################################################################
 ['variant == no_lfa', {
@@ -358,6 +377,27 @@
 ['arch == riscv  or arch == riscv64', {
   # this test is unstable, sometimes fail when running w/ other tests
   'test-cpu-profiler/CrossScriptInliningCallerLineNumbers2': [SKIP],
+
+  # issue 297: Check failed: constpool_.IsEmpty()
+  'test-run-wasm-simd/RunWasm_F64x2ExtractLaneWithI64x2_liftoff': [SKIP],
+  'test-run-wasm-simd/RunWasm_I64x2ExtractWithF64x2_liftoff': [SKIP],
+
+  # issue 288: Fatal error in ../../src/objects/tagged-impl.h, line 92
+  'test-orderedhashtable/OrderedNameDictionaryHandlerDeletion': [SKIP],
+  'test-orderedhashtable/OrderedNameDictionaryHandlerInsertion': [SKIP],
+  'test-orderedhashtable/SmallOrderedNameDictionaryDeleteEntry': [SKIP],
+  'test-orderedhashtable/SmallOrderedNameDictionaryDetailsAtAndDetailsAtPut': [SKIP],
+  'test-orderedhashtable/SmallOrderedNameDictionaryFindEntry': [SKIP],
+  'test-orderedhashtable/SmallOrderedNameDictionaryInsertion': [SKIP],
+  'test-orderedhashtable/SmallOrderedNameDictionaryValueAtAndValueAtPut': [SKIP],
+  'test-orderedhashtable/SmallOrderedNameDictionarySetEntry': [SKIP],
+
+  # issue 290: Seg fault
+  'test-orderedhashtable/SmallOrderedNameDictionaryInsertionMax': [SKIP],
+  'test-orderedhashtable/SmallOrderedNameDictionarySetAndMigrateHash': [SKIP],
+
+  # SIMD not fully implemented yet
+  'test-run-wasm-simd-liftoff/*': [SKIP],
 }],
 
 ##############################################################################
@@ -406,8 +446,10 @@
   'test-wasm-breakpoints/*' : [SKIP],
   'test-wasm-debug-evaluate/*': [SKIP],
   'test-run-wasm-module/Run_WasmModule_CompilationHintsNoTiering': [SKIP],
+  'test-wasm-serialization/TierDownAfterDeserialization': [SKIP],
 
   # SIMD not fully implemented yet
+  'test-run-wasm-simd/*': [SKIP],
   'test-run-wasm-simd-liftoff/*': [SKIP],
 
 }],  # 'arch == ppc or arch == ppc64 or arch == s390 or arch == s390x'
@@ -459,12 +501,16 @@
 
 ##############################################################################
 # The stack unwinder API is only supported on x64, arm64 and arm.
-['arch != x64 and arch != arm64', {
-  'test-unwinder/*': [SKIP]
-}],
-
 ['arch != x64 and arch != arm64 and arch != arm', {
   'test-unwinder-code-pages/*': [SKIP]
+}],
+
+# TODO(solanes, v8:10833): Re-enable these tests or create specific ones for
+# Arm. They are disabled because the stack is not being set up the way it does
+# in the wild.
+['arch == arm64 or arch == arm', {
+  'test-unwinder-code-pages/Unwind_TwoJSFrames_Success_CodePagesAPI': [SKIP],
+  'test-unwinder-code-pages/Unwind_StackBounds_WithUnwinding_CodePagesAPI': [SKIP],
 }],
 
 ##############################################################################
@@ -483,6 +529,7 @@
   'test-jump-table-assembler/*': [SKIP],
   'test-gc/*': [SKIP],
   'test-grow-memory/*': [SKIP],
+  'test-liftoff-inspection/*': [SKIP],
   'test-run-wasm-64/*': [SKIP],
   'test-run-wasm-asmjs/*': [SKIP],
   'test-run-wasm-atomics64/*': [SKIP],
@@ -497,11 +544,13 @@
   'test-run-wasm-simd-liftoff/*': [SKIP],
   'test-run-wasm-simd-scalar-lowering/*': [SKIP],
   'test-run-wasm-simd/*': [SKIP],
+  'test-run-wasm-wrappers/*': [SKIP],
   'test-streaming-compilation/*': [SKIP],
   'test-wasm-breakpoints/*': [SKIP],
   'test-wasm-codegen/*': [SKIP],
   'test-wasm-debug-evaluate/*': [SKIP],
   'test-wasm-import-wrapper-cache/*': [SKIP],
+  'test-wasm-metrics/*': [SKIP],
   'test-wasm-serialization/*': [SKIP],
   'test-wasm-shared-engine/*': [SKIP],
   'test-wasm-stack/*': [SKIP],
@@ -554,8 +603,6 @@
   'test-run-variables/*': [SKIP],
   'test-serialize/*': [SKIP],
   'test-torque/*': [SKIP],
-  'test-unwinder/PCIsInV8_InCodeOrEmbeddedRange': [SKIP],
-  'test-unwinder/PCIsInV8_LargeCodeObject': [SKIP],
   'test-unwinder-code-pages/PCIsInV8_LargeCodeObject_CodePagesAPI': [SKIP],
 
   # Field representation tracking is disabled in jitless mode.
@@ -623,6 +670,9 @@
   'test-macro-assembler-arm/ExtractLane': [PASS, ['arch == arm and not simulator_run', SKIP]],
   'test-macro-assembler-arm/LoadAndStoreWithRepresentation': [PASS, ['arch == arm and not simulator_run', SKIP]],
   'test-macro-assembler-arm/ReplaceLane': [PASS, ['arch == arm and not simulator_run', SKIP]],
+
+  # Too slow on arm64 simulator on Mac.
+  'test-cpu-profiler/MultipleIsolates': [PASS, ['arch == arm64 and system == macos and simulator_run', SKIP]],
 }], # variant == jitless
 
 ##############################################################################
@@ -649,7 +699,7 @@
 }],
 
 ################################################################################
-['variant == nci or variant == nci_as_highest_tier', {
+['variant == nci or variant == nci_as_midtier', {
   # Optimizes and deopts differently than TurboFan.
   'test-api/FastApiCalls': [SKIP],
   'test-cpu-profiler/Deopt*': [SKIP],
@@ -666,6 +716,6 @@
 
   # NCI code currently does not use the feedback vector's optimized code cache.
   'test-compiler/OptimizedCodeSharing1': [SKIP],
-}],  # variant == nci or variant == nci_as_highest_tier
+}],  # variant == nci or variant == nci_as_midtier
 
 ]

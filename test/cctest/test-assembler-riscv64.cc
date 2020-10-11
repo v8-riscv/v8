@@ -1148,8 +1148,9 @@ TEST(RISCV9) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code =
-      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
   USE(code);
 }
 
@@ -1219,10 +1220,10 @@ TEST(RVC_CI) {
 
   // Test c.addi16sp
   {
-    auto fn = [](MacroAssembler& assm) { 
+    auto fn = [](MacroAssembler& assm) {
       __ mv(t1, sp);
       __ mv(sp, a0);
-      __ c_addi16sp(-432); 
+      __ c_addi16sp(-432);
       __ mv(a0, sp);
       __ mv(sp, t1);
     };
@@ -1250,11 +1251,9 @@ TEST(RVC_CI) {
     auto res = GenAndRunTest<int64_t>(0x1234'5678ULL, fn);
     CHECK_EQ(0x1234'5678ULL << 13, res);
   }
-
 }
 
 TEST(RVC_CIW) {
-
   CcTest::InitializeVM();
 
   // Test c.addi4spn
@@ -1355,32 +1354,31 @@ TEST(RVC_LOAD_STORE_SP) {
   CcTest::InitializeVM();
 
   {
-    auto fn = [](MacroAssembler& assm) { 
-      __ c_fsdsp(fa0, 80); 
-      __ c_fldsp(fa0, 80); 
+    auto fn = [](MacroAssembler& assm) {
+      __ c_fsdsp(fa0, 80);
+      __ c_fldsp(fa0, 80);
     };
     auto res = GenAndRunTest<double>(-3456.678, fn);
     CHECK_EQ(-3456.678, res);
   }
 
   {
-    auto fn = [](MacroAssembler& assm) { 
-      __ c_swsp(a0, 40); 
-      __ c_lwsp(a0, 40); 
+    auto fn = [](MacroAssembler& assm) {
+      __ c_swsp(a0, 40);
+      __ c_lwsp(a0, 40);
     };
     auto res = GenAndRunTest<int32_t>(0x456AF894, fn);
     CHECK_EQ(0x456AF894, res);
   }
 
   {
-    auto fn = [](MacroAssembler& assm) { 
-      __ c_sdsp(a0, 160); 
-      __ c_ldsp(a0, 160); 
+    auto fn = [](MacroAssembler& assm) {
+      __ c_sdsp(a0, 160);
+      __ c_ldsp(a0, 160);
     };
     auto res = GenAndRunTest<uint64_t>(0xFBB10A9C12345678, fn);
     CHECK_EQ(0xFBB10A9C12345678, res);
   }
-
 }
 
 TEST(RVC_LOAD_STORE_COMPRESSED) {
@@ -1488,14 +1486,106 @@ TEST(RVC_JUMP) {
   CHECK_EQ(expected_res, res);
 }
 
+TEST(RVC_CB) {
+  // Test RV64C extension CI type instructions.
+  CcTest::InitializeVM();
+
+  // Test c.srai
+  {
+    auto fn = [](MacroAssembler& assm) { __ c_srai(a0, 13); };
+    auto res = GenAndRunTest<int64_t>(0x1234'5678ULL, fn);
+    CHECK_EQ(0x1234'5678ULL >> 13, res);
+  }
+
+  // Test c.srli
+  {
+    auto fn = [](MacroAssembler& assm) { __ c_srli(a0, 13); };
+    auto res = GenAndRunTest<int64_t>(0x1234'5678ULL, fn);
+    CHECK_EQ(0x1234'5678ULL >> 13, res);
+  }
+
+  // Test c.andi
+  {
+    auto fn = [](MacroAssembler& assm) { __ c_andi(a0, 13); };
+    auto res = GenAndRunTest<int64_t>(LARGE_INT_EXCEED_32_BIT, fn);
+    CHECK_EQ(LARGE_INT_EXCEED_32_BIT & 13, res);
+  }
+}
+
+TEST(RVC_CB_BRANCH) {
+  // Test floating point compare and
+  // branch instructions.
+  CcTest::InitializeVM();
+  Isolate* isolate = CcTest::i_isolate();
+  HandleScope scope(isolate);
+
+  struct T {
+    double a;
+    double b;
+    double c;
+    double d;
+    double e;
+    double f;
+    int32_t result;
+  } t;
+
+  // Create a function that accepts &t,
+  // and loads, manipulates, and stores
+  // the doubles t.a ... t.f.
+  Label neither_is_nan, less_than, outa_here;
+  auto fn = [&neither_is_nan, &less_than, &outa_here](MacroAssembler& assm) {
+    __ fld(ft0, a0, offsetof(T, a));
+    __ fld(ft1, a0, offsetof(T, b));
+
+    __ fclass_d(t5, ft0);
+    __ fclass_d(t6, ft1);
+    __ or_(a1, t5, t6);
+    __ andi(a1, a1, kSignalingNaN | kQuietNaN);
+    __ c_beqz(a1, &neither_is_nan);
+    __ sw(zero_reg, a0, offsetof(T, result));
+    __ j(&outa_here);
+
+    __ bind(&neither_is_nan);
+
+    __ flt_d(a1, ft1, ft0);
+    __ c_bnez(a1, &less_than);
+
+    __ sw(zero_reg, a0, offsetof(T, result));
+    __ j(&outa_here);
+
+    __ bind(&less_than);
+    __ RV_li(a4, 1);
+    __ sw(a4, a0, offsetof(T, result));  // Set true.
+
+    // This test-case should have additional
+    // tests.
+
+    __ bind(&outa_here);
+  };
+
+  auto f = AssembleCode<F3>(fn);
+
+  t.a = 1.5e14;
+  t.b = 2.75e11;
+  t.c = 2.0;
+  t.d = -4.0;
+  t.e = 0.0;
+  t.f = 0.0;
+  t.result = 0;
+  f.Call(&t, 0, 0, 0, 0);
+  CHECK_EQ(1.5e14, t.a);
+  CHECK_EQ(2.75e11, t.b);
+  CHECK_EQ(1, t.result);
+}
+
 TEST(TARGET_ADDR) {
   CcTest::InitializeVM();
   Isolate* isolate = CcTest::i_isolate();
   HandleScope scope(isolate);
 
   // This is the series of instructions to load 48 bit address 0x0123456789ab
-  uint32_t buffer[6] = {0x091ab37, 0x2b330213, 0x00b21213, 0x62626213,
-                        0x00621213, 0x02b26213};
+  uint32_t buffer[6] = {0x091ab37,  0x2b330213, 0x00b21213,
+                        0x62626213, 0x00621213, 0x02b26213};
   MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
 
   uintptr_t addr = reinterpret_cast<uintptr_t>(&buffer[0]);
@@ -1509,8 +1599,8 @@ TEST(SET_TARGET_ADDR) {
   HandleScope scope(isolate);
 
   // This is the series of instructions to load 48 bit address 0xba9876543210
-  uint32_t buffer[6] = {0x091ab37, 0x2b330213, 0x00b21213, 0x62626213,
-                        0x00621213, 0x02b26213};
+  uint32_t buffer[6] = {0x091ab37,  0x2b330213, 0x00b21213,
+                        0x62626213, 0x00621213, 0x02b26213};
 
   MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
 

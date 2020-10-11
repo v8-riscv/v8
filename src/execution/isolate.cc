@@ -18,6 +18,7 @@
 #include "src/ast/ast-value-factory.h"
 #include "src/ast/scopes.h"
 #include "src/base/hashmap.h"
+#include "src/base/logging.h"
 #include "src/base/platform/platform.h"
 #include "src/base/sys-info.h"
 #include "src/base/utils/random-number-generator.h"
@@ -26,6 +27,7 @@
 #include "src/codegen/assembler-inl.h"
 #include "src/codegen/compilation-cache.h"
 #include "src/codegen/flush-instruction-cache.h"
+#include "src/common/assert-scope.h"
 #include "src/common/ptr-compr.h"
 #include "src/compiler-dispatcher/compiler-dispatcher.h"
 #include "src/compiler-dispatcher/optimizing-compile-dispatcher.h"
@@ -98,6 +100,10 @@
 #if defined(V8_OS_WIN64)
 #include "src/diagnostics/unwinding-info-win64.h"
 #endif  // V8_OS_WIN64
+
+#ifdef V8_ENABLE_CONSERVATIVE_STACK_SCANNING
+#include "src/heap/conservative-stack-visitor.h"
+#endif
 
 extern "C" const uint8_t* v8_Default_embedded_blob_code_;
 extern "C" uint32_t v8_Default_embedded_blob_code_size_;
@@ -505,6 +511,11 @@ void Isolate::Iterate(RootVisitor* v, ThreadLocalTop* thread) {
         FullObjectSlot(reinterpret_cast<Address>(&(block->message_obj_))));
   }
 
+#ifdef V8_ENABLE_CONSERVATIVE_STACK_SCANNING
+  ConservativeStackVisitor stack_visitor(this, v);
+  thread_local_top()->stack_.IteratePointers(&stack_visitor);
+#endif
+
   // Iterate over pointers on native execution stack.
   wasm::WasmCodeRefScope wasm_code_ref_scope;
   for (StackFrameIterator it(this, thread); !it.done(); it.Advance()) {
@@ -516,40 +527,6 @@ void Isolate::Iterate(RootVisitor* v) {
   ThreadLocalTop* current_t = thread_local_top();
   Iterate(v, current_t);
 }
-
-void Isolate::IterateDeferredHandles(RootVisitor* visitor) {
-  for (DeferredHandles* deferred = deferred_handles_head_; deferred != nullptr;
-       deferred = deferred->next_) {
-    deferred->Iterate(visitor);
-  }
-}
-
-#ifdef DEBUG
-bool Isolate::IsDeferredHandle(Address* handle) {
-  // Comparing unrelated pointers (not from the same array) is undefined
-  // behavior, so cast to Address before making arbitrary comparisons.
-  Address handle_as_address = reinterpret_cast<Address>(handle);
-  // Each DeferredHandles instance keeps the handles to one job in the
-  // concurrent recompilation queue, containing a list of blocks.  Each block
-  // contains kHandleBlockSize handles except for the first block, which may
-  // not be fully filled.
-  // We iterate through all the blocks to see whether the argument handle
-  // belongs to one of the blocks.  If so, it is deferred.
-  for (DeferredHandles* deferred = deferred_handles_head_; deferred != nullptr;
-       deferred = deferred->next_) {
-    std::vector<Address*>* blocks = &deferred->blocks_;
-    for (size_t i = 0; i < blocks->size(); i++) {
-      Address* block_limit = (i == 0) ? deferred->first_block_limit_
-                                      : blocks->at(i) + kHandleBlockSize;
-      if (reinterpret_cast<Address>(blocks->at(i)) <= handle_as_address &&
-          handle_as_address < reinterpret_cast<Address>(block_limit)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-#endif  // DEBUG
 
 void Isolate::RegisterTryCatchHandler(v8::TryCatch* that) {
   thread_local_top()->try_catch_handler_ = that;
@@ -1622,7 +1599,8 @@ Object Isolate::Throw(Object raw_exception, MessageLocation* location) {
 // Script::GetLineNumber and Script::GetColumnNumber can allocate on the heap to
 // initialize the line_ends array, so be careful when calling them.
 #ifdef DEBUG
-      if (AllowHeapAllocation::IsAllowed()) {
+      if (AllowHeapAllocation::IsAllowed() &&
+          AllowGarbageCollection::IsAllowed()) {
 #else
       if ((false)) {
 #endif
@@ -1826,7 +1804,7 @@ Object Isolate::UnwindAndFindHandler() {
                             code.stack_slots() * kSystemPointerSize;
 
         // TODO(bmeurer): Turbofanned BUILTIN frames appear as OPTIMIZED,
-        // but do not have a code kind of OPTIMIZED_FUNCTION.
+        // but do not have a code kind of TURBOFAN.
         if (CodeKindCanDeoptimize(code.kind()) &&
             code.marked_for_deoptimization()) {
           // If the target code is lazy deoptimized, we jump to the original
@@ -2679,6 +2657,15 @@ void Isolate::ReleaseSharedPtrs() {
   }
 }
 
+bool Isolate::IsBuiltinsTableHandleLocation(Address* handle_location) {
+  FullObjectSlot location(handle_location);
+  FullObjectSlot first_root(builtins_table());
+  FullObjectSlot last_root(builtins_table() + Builtins::builtin_count);
+  if (location >= last_root) return false;
+  if (location < first_root) return false;
+  return true;
+}
+
 void Isolate::RegisterManagedPtrDestructor(ManagedPtrDestructor* destructor) {
   base::MutexGuard lock(&managed_ptr_destructors_mutex_);
   DCHECK_NULL(destructor->prev_);
@@ -2880,18 +2867,16 @@ std::atomic<size_t> Isolate::non_disposed_isolates_;
 #endif  // DEBUG
 
 // static
-Isolate* Isolate::New(IsolateAllocationMode mode) {
+Isolate* Isolate::New() {
   // IsolateAllocator allocates the memory for the Isolate object according to
   // the given allocation mode.
   std::unique_ptr<IsolateAllocator> isolate_allocator =
-      std::make_unique<IsolateAllocator>(mode);
+      std::make_unique<IsolateAllocator>();
   // Construct Isolate object in the allocated memory.
   void* isolate_ptr = isolate_allocator->isolate_memory();
   Isolate* isolate = new (isolate_ptr) Isolate(std::move(isolate_allocator));
-#if V8_TARGET_ARCH_64_BIT
-  DCHECK_IMPLIES(
-      mode == IsolateAllocationMode::kInV8Heap,
-      IsAligned(isolate->isolate_root(), kPtrComprIsolateRootAlignment));
+#ifdef V8_COMPRESS_POINTERS
+  DCHECK(IsAligned(isolate->isolate_root(), kPtrComprIsolateRootAlignment));
 #endif
 
 #ifdef DEBUG
@@ -2956,6 +2941,9 @@ Isolate::Isolate(std::unique_ptr<i::IsolateAllocator> isolate_allocator)
       id_(isolate_counter.fetch_add(1, std::memory_order_relaxed)),
       allocator_(new TracingAccountingAllocator(this)),
       builtins_(this),
+#if defined(DEBUG) || defined(VERIFY_HEAP)
+      num_active_deserializers_(0),
+#endif
       rail_mode_(PERFORMANCE_ANIMATION),
       code_event_dispatcher_(new CodeEventDispatcher()),
       persistent_handles_list_(new PersistentHandlesList()),
@@ -3005,17 +2993,15 @@ void Isolate::CheckIsolateLayout() {
            Internals::kIsolateStackGuardOffset);
   CHECK_EQ(static_cast<int>(OFFSET_OF(Isolate, isolate_data_.roots_)),
            Internals::kIsolateRootsOffset);
-  CHECK_EQ(Internals::kExternalMemoryOffset % 8, 0);
-  CHECK_EQ(static_cast<int>(OFFSET_OF(Isolate, isolate_data_.external_memory_)),
-           Internals::kExternalMemoryOffset);
-  CHECK_EQ(Internals::kExternalMemoryLimitOffset % 8, 0);
-  CHECK_EQ(static_cast<int>(
-               OFFSET_OF(Isolate, isolate_data_.external_memory_limit_)),
-           Internals::kExternalMemoryLimitOffset);
-  CHECK_EQ(Internals::kExternalMemoryLowSinceMarkCompactOffset % 8, 0);
-  CHECK_EQ(static_cast<int>(OFFSET_OF(
-               Isolate, isolate_data_.external_memory_low_since_mark_compact_)),
-           Internals::kExternalMemoryLowSinceMarkCompactOffset);
+
+#ifdef V8_HEAP_SANDBOX
+  CHECK_EQ(static_cast<int>(OFFSET_OF(ExternalPointerTable, buffer_)),
+           Internals::kExternalPointerTableBufferOffset);
+  CHECK_EQ(static_cast<int>(OFFSET_OF(ExternalPointerTable, length_)),
+           Internals::kExternalPointerTableLengthOffset);
+  CHECK_EQ(static_cast<int>(OFFSET_OF(ExternalPointerTable, capacity_)),
+           Internals::kExternalPointerTableCapacityOffset);
+#endif
 }
 
 void Isolate::ClearSerializerData() {
@@ -3040,6 +3026,7 @@ void Isolate::Deinit() {
   }
 
   metrics_recorder_->NotifyIsolateDisposal();
+  recorder_context_id_map_.clear();
 
 #if defined(V8_OS_WIN64)
   if (win64_unwindinfo::CanRegisterUnwindInfoForNonABICompliantCodeRange() &&
@@ -3092,6 +3079,7 @@ void Isolate::Deinit() {
 
   delete deoptimizer_data_;
   deoptimizer_data_ = nullptr;
+  string_table_.reset();
   builtins_.TearDown();
   bootstrapper_->TearDown();
 
@@ -3111,7 +3099,8 @@ void Isolate::Deinit() {
   cancelable_task_manager()->CancelAndWait();
 
   heap_.TearDown();
-  logger_->TearDown();
+  FILE* logfile = logger_->TearDownAndGetLogFile();
+  if (logfile != nullptr) fclose(logfile);
 
   if (wasm_engine_) {
     wasm_engine_->RemoveIsolate(this);
@@ -3367,6 +3356,8 @@ void Isolate::CreateAndSetEmbeddedBlob() {
 
   PrepareBuiltinSourcePositionMap();
 
+  PrepareBuiltinLabelInfoMap();
+
   // If a sticky blob has been set, we reuse it.
   if (StickyEmbeddedBlobCode() != nullptr) {
     CHECK_EQ(embedded_blob_code(), StickyEmbeddedBlobCode());
@@ -3415,13 +3406,14 @@ void Isolate::TearDownEmbeddedBlob() {
   }
 }
 
-bool Isolate::InitWithoutSnapshot() { return Init(nullptr, nullptr); }
+bool Isolate::InitWithoutSnapshot() { return Init(nullptr, nullptr, false); }
 
-bool Isolate::InitWithSnapshot(ReadOnlyDeserializer* read_only_deserializer,
-                               StartupDeserializer* startup_deserializer) {
-  DCHECK_NOT_NULL(read_only_deserializer);
-  DCHECK_NOT_NULL(startup_deserializer);
-  return Init(read_only_deserializer, startup_deserializer);
+bool Isolate::InitWithSnapshot(SnapshotData* startup_snapshot_data,
+                               SnapshotData* read_only_snapshot_data,
+                               bool can_rehash) {
+  DCHECK_NOT_NULL(startup_snapshot_data);
+  DCHECK_NOT_NULL(read_only_snapshot_data);
+  return Init(startup_snapshot_data, read_only_snapshot_data, can_rehash);
 }
 
 static std::string AddressToString(uintptr_t address) {
@@ -3470,12 +3462,12 @@ using MapOfLoadsAndStoresPerFunction =
 MapOfLoadsAndStoresPerFunction* stack_access_count_map = nullptr;
 }  // namespace
 
-bool Isolate::Init(ReadOnlyDeserializer* read_only_deserializer,
-                   StartupDeserializer* startup_deserializer) {
+bool Isolate::Init(SnapshotData* startup_snapshot_data,
+                   SnapshotData* read_only_snapshot_data, bool can_rehash) {
   TRACE_ISOLATE(init);
-  const bool create_heap_objects = (read_only_deserializer == nullptr);
+  const bool create_heap_objects = (read_only_snapshot_data == nullptr);
   // We either have both or neither.
-  DCHECK_EQ(create_heap_objects, startup_deserializer == nullptr);
+  DCHECK_EQ(create_heap_objects, startup_snapshot_data == nullptr);
 
   base::ElapsedTimer timer;
   if (create_heap_objects && FLAG_profile_deserialization) timer.Start();
@@ -3515,6 +3507,7 @@ bool Isolate::Init(ReadOnlyDeserializer* read_only_deserializer,
   date_cache_ = new DateCache();
   heap_profiler_ = new HeapProfiler(heap());
   interpreter_ = new interpreter::Interpreter(this);
+  string_table_.reset(new StringTable(this));
 
   compiler_dispatcher_ =
       new CompilerDispatcher(this, V8::GetCurrentPlatform(), FLAG_stack_size);
@@ -3522,7 +3515,7 @@ bool Isolate::Init(ReadOnlyDeserializer* read_only_deserializer,
   // Enable logging before setting up the heap
   logger_->SetUp(this);
 
-  metrics_recorder_ = std::make_shared<metrics::Recorder>(this);
+  metrics_recorder_ = std::make_shared<metrics::Recorder>();
 
   {  // NOLINT
     // Ensure that the thread has a valid stack guard.  The v8::Locker object
@@ -3535,7 +3528,7 @@ bool Isolate::Init(ReadOnlyDeserializer* read_only_deserializer,
   // SetUp the object heap.
   DCHECK(!heap_.HasBeenSetUp());
   heap_.SetUp();
-  ReadOnlyHeap::SetUp(this, read_only_deserializer);
+  ReadOnlyHeap::SetUp(this, read_only_snapshot_data, can_rehash);
   heap_.SetUpSpaces();
 
   isolate_data_.external_reference_table()->Init(this);
@@ -3626,7 +3619,9 @@ bool Isolate::Init(ReadOnlyDeserializer* read_only_deserializer,
       heap_.read_only_space()->ClearStringPaddingIfNeeded();
       read_only_heap_->OnCreateHeapObjectsComplete(this);
     } else {
-      startup_deserializer->DeserializeInto(this);
+      StartupDeserializer startup_deserializer(this, startup_snapshot_data,
+                                               can_rehash);
+      startup_deserializer.DeserializeIntoIsolate();
     }
     load_stub_cache_->Initialize();
     store_stub_cache_->Initialize();
@@ -3771,34 +3766,6 @@ void Isolate::Exit() {
 
   // Reinit the current thread for the isolate it was running before this one.
   SetIsolateThreadLocals(previous_isolate, previous_thread_data);
-}
-
-void Isolate::LinkDeferredHandles(DeferredHandles* deferred) {
-  deferred->next_ = deferred_handles_head_;
-  if (deferred_handles_head_ != nullptr) {
-    deferred_handles_head_->previous_ = deferred;
-  }
-  deferred_handles_head_ = deferred;
-}
-
-void Isolate::UnlinkDeferredHandles(DeferredHandles* deferred) {
-#ifdef DEBUG
-  // In debug mode assert that the linked list is well-formed.
-  DeferredHandles* deferred_iterator = deferred;
-  while (deferred_iterator->previous_ != nullptr) {
-    deferred_iterator = deferred_iterator->previous_;
-  }
-  DCHECK(deferred_handles_head_ == deferred_iterator);
-#endif
-  if (deferred_handles_head_ == deferred) {
-    deferred_handles_head_ = deferred_handles_head_->next_;
-  }
-  if (deferred->next_ != nullptr) {
-    deferred->next_->previous_ = deferred->previous_;
-  }
-  if (deferred->previous_ != nullptr) {
-    deferred->previous_->next_ = deferred->next_;
-  }
 }
 
 std::unique_ptr<PersistentHandles> Isolate::NewPersistentHandles() {
@@ -4268,6 +4235,15 @@ void Isolate::PrepareBuiltinSourcePositionMap() {
   }
 }
 
+void Isolate::PrepareBuiltinLabelInfoMap() {
+  if (embedded_file_writer_ != nullptr) {
+    embedded_file_writer_->PrepareBuiltinLabelInfoMap(
+        heap()->construct_stub_create_deopt_pc_offset().value(),
+        heap()->construct_stub_invoke_deopt_pc_offset().value(),
+        heap()->arguments_adaptor_deopt_pc_offset().value());
+  }
+}
+
 #if defined(V8_OS_WIN64)
 void Isolate::SetBuiltinUnwindData(
     int builtin_index,
@@ -4431,13 +4407,6 @@ void Isolate::CountUsage(v8::Isolate::UseCounterFeature feature) {
 }
 
 int Isolate::GetNextScriptId() { return heap()->NextScriptId(); }
-
-int Isolate::GetNextStackFrameInfoId() {
-  int id = last_stack_frame_info_id();
-  int next_id = id == Smi::kMaxValue ? 0 : (id + 1);
-  set_last_stack_frame_info_id(next_id);
-  return next_id;
-}
 
 // static
 std::string Isolate::GetTurboCfgFileName(Isolate* isolate) {
@@ -4639,11 +4608,33 @@ SaveAndSwitchContext::SaveAndSwitchContext(Isolate* isolate,
 #ifdef DEBUG
 AssertNoContextChange::AssertNoContextChange(Isolate* isolate)
     : isolate_(isolate), context_(isolate->context(), isolate) {}
+
+namespace {
+
+bool Overlapping(const MemoryRange& a, const MemoryRange& b) {
+  uintptr_t a1 = reinterpret_cast<uintptr_t>(a.start);
+  uintptr_t a2 = a1 + a.length_in_bytes;
+  uintptr_t b1 = reinterpret_cast<uintptr_t>(b.start);
+  uintptr_t b2 = b1 + b.length_in_bytes;
+  // Either b1 or b2 are in the [a1, a2) range.
+  return (a1 <= b1 && b1 < a2) || (a1 <= b2 && b2 < a2);
+}
+
+}  // anonymous namespace
+
 #endif  // DEBUG
 
 void Isolate::AddCodeMemoryRange(MemoryRange range) {
   std::vector<MemoryRange>* old_code_pages = GetCodePages();
   DCHECK_NOT_NULL(old_code_pages);
+#ifdef DEBUG
+  auto overlapping = [range](const MemoryRange& a) {
+    return Overlapping(range, a);
+  };
+  DCHECK_EQ(old_code_pages->end(),
+            std::find_if(old_code_pages->begin(), old_code_pages->end(),
+                         overlapping));
+#endif
 
   std::vector<MemoryRange>* new_code_pages;
   if (old_code_pages == &code_pages_buffer1_) {
@@ -4757,7 +4748,7 @@ void Isolate::RemoveCodeMemoryChunk(MemoryChunk* chunk) {
                       [removed_page_start](const MemoryRange& range) {
                         return range.start == removed_page_start;
                       });
-
+  DCHECK_EQ(old_code_pages->size(), new_code_pages->size() + 1);
   // Atomically switch out the pointer
   SetCodePages(new_code_pages);
 #endif  // !defined(V8_TARGET_ARCH_ARM)

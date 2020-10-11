@@ -342,22 +342,22 @@ namespace compiler {
   V(Mips64S8x16PackOdd)                      \
   V(Mips64S8x16InterleaveEven)               \
   V(Mips64S8x16InterleaveOdd)                \
-  V(Mips64S8x16Shuffle)                      \
-  V(Mips64S8x16Swizzle)                      \
+  V(Mips64I8x16Shuffle)                      \
+  V(Mips64I8x16Swizzle)                      \
   V(Mips64S8x16Concat)                       \
   V(Mips64S8x8Reverse)                       \
   V(Mips64S8x4Reverse)                       \
   V(Mips64S8x2Reverse)                       \
-  V(Mips64S8x16LoadSplat)                    \
-  V(Mips64S16x8LoadSplat)                    \
-  V(Mips64S32x4LoadSplat)                    \
-  V(Mips64S64x2LoadSplat)                    \
-  V(Mips64I16x8Load8x8S)                     \
-  V(Mips64I16x8Load8x8U)                     \
-  V(Mips64I32x4Load16x4S)                    \
-  V(Mips64I32x4Load16x4U)                    \
-  V(Mips64I64x2Load32x2S)                    \
-  V(Mips64I64x2Load32x2U)                    \
+  V(Mips64S128Load8Splat)                    \
+  V(Mips64S128Load16Splat)                   \
+  V(Mips64S128Load32Splat)                   \
+  V(Mips64S128Load64Splat)                   \
+  V(Mips64S128Load8x8S)                      \
+  V(Mips64S128Load8x8U)                      \
+  V(Mips64S128Load16x4S)                     \
+  V(Mips64S128Load16x4U)                     \
+  V(Mips64S128Load32x2S)                     \
+  V(Mips64S128Load32x2U)                     \
   V(Mips64MsaLd)                             \
   V(Mips64MsaSt)                             \
   V(Mips64I32x4SConvertI16x8Low)             \

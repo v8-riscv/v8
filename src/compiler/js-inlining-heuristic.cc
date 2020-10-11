@@ -204,7 +204,7 @@ Reduction JSInliningHeuristic::Reduce(Node* node) {
       unsigned inlined_bytecode_size = 0;
       if (candidate.functions[i].has_value()) {
         JSFunctionRef function = candidate.functions[i].value();
-        if (function.IsOptimized()) {
+        if (function.HasAttachedOptimizedCode()) {
           inlined_bytecode_size = function.code().inlined_bytecode_size();
           candidate.total_size += inlined_bytecode_size;
         }
@@ -260,10 +260,9 @@ void JSInliningHeuristic::Finalize() {
     Candidate candidate = *i;
     candidates_.erase(i);
 
-    // Make sure we don't try to inline dead candidate nodes.
-    if (candidate.node->IsDead()) {
-      continue;
-    }
+    // Ignore this candidate if it's no longer valid.
+    if (!IrOpcode::IsInlineeOpcode(candidate.node->opcode())) continue;
+    if (candidate.node->IsDead()) continue;
 
     // Make sure we have some extra budget left, so that any small functions
     // exposed by this function would be given a chance to inline.
@@ -793,7 +792,7 @@ void JSInliningHeuristic::PrintCandidates() {
         os << ", bytecode size: " << candidate.bytecode[i]->length();
         if (candidate.functions[i].has_value()) {
           JSFunctionRef function = candidate.functions[i].value();
-          if (function.IsOptimized()) {
+          if (function.HasAttachedOptimizedCode()) {
             os << ", existing opt code's inlined bytecode size: "
                << function.code().inlined_bytecode_size();
           }

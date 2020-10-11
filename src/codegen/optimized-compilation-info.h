@@ -16,6 +16,7 @@
 #include "src/handles/handles.h"
 #include "src/handles/persistent-handles.h"
 #include "src/objects/objects.h"
+#include "src/utils/identity-map.h"
 #include "src/utils/utils.h"
 #include "src/utils/vector.h"
 
@@ -23,11 +24,10 @@ namespace v8 {
 
 namespace tracing {
 class TracedValue;
-}
+}  // namespace tracing
 
 namespace internal {
 
-class DeferredHandles;
 class FunctionLiteral;
 class Isolate;
 class JavaScriptFrame;
@@ -36,7 +36,7 @@ class Zone;
 
 namespace wasm {
 struct WasmCompilationResult;
-}
+}  // namespace wasm
 
 // OptimizedCompilationInfo encapsulates the information needed to compile
 // optimized code for a given function, and the results of the optimized
@@ -46,29 +46,27 @@ class V8_EXPORT_PRIVATE OptimizedCompilationInfo final {
   // Various configuration flags for a compilation, as well as some properties
   // of the compiled code produced by a compilation.
 
-#define FLAGS(V)                                                              \
-  V(FunctionContextSpecializing, function_context_specializing, 0)            \
-  V(Inlining, inlining, 1)                                                    \
-  V(DisableFutureOptimization, disable_future_optimization, 2)                \
-  V(Splitting, splitting, 3)                                                  \
-  V(SourcePositions, source_positions, 4)                                     \
-  V(BailoutOnUninitialized, bailout_on_uninitialized, 5)                      \
-  V(LoopPeeling, loop_peeling, 6)                                             \
-  V(UntrustedCodeMitigations, untrusted_code_mitigations, 7)                  \
-  V(SwitchJumpTable, switch_jump_table, 8)                                    \
-  V(CalledWithCodeStartRegister, called_with_code_start_register, 9)          \
-  V(PoisonRegisterArguments, poison_register_arguments, 10)                   \
-  V(AllocationFolding, allocation_folding, 11)                                \
-  V(AnalyzeEnvironmentLiveness, analyze_environment_liveness, 12)             \
-  V(TraceTurboJson, trace_turbo_json, 13)                                     \
-  V(TraceTurboGraph, trace_turbo_graph, 14)                                   \
-  V(TraceTurboScheduled, trace_turbo_scheduled, 15)                           \
-  V(TraceTurboAllocation, trace_turbo_allocation, 16)                         \
-  V(TraceHeapBroker, trace_heap_broker, 17)                                   \
-  V(WasmRuntimeExceptionSupport, wasm_runtime_exception_support, 18)          \
-  V(TurboControlFlowAwareAllocation, turbo_control_flow_aware_allocation, 19) \
-  V(TurboPreprocessRanges, turbo_preprocess_ranges, 20)                       \
-  V(ConcurrentInlining, concurrent_inlining, 21)
+#define FLAGS(V)                                                     \
+  V(FunctionContextSpecializing, function_context_specializing, 0)   \
+  V(Inlining, inlining, 1)                                           \
+  V(DisableFutureOptimization, disable_future_optimization, 2)       \
+  V(Splitting, splitting, 3)                                         \
+  V(SourcePositions, source_positions, 4)                            \
+  V(BailoutOnUninitialized, bailout_on_uninitialized, 5)             \
+  V(LoopPeeling, loop_peeling, 6)                                    \
+  V(UntrustedCodeMitigations, untrusted_code_mitigations, 7)         \
+  V(SwitchJumpTable, switch_jump_table, 8)                           \
+  V(CalledWithCodeStartRegister, called_with_code_start_register, 9) \
+  V(PoisonRegisterArguments, poison_register_arguments, 10)          \
+  V(AllocationFolding, allocation_folding, 11)                       \
+  V(AnalyzeEnvironmentLiveness, analyze_environment_liveness, 12)    \
+  V(TraceTurboJson, trace_turbo_json, 13)                            \
+  V(TraceTurboGraph, trace_turbo_graph, 14)                          \
+  V(TraceTurboScheduled, trace_turbo_scheduled, 15)                  \
+  V(TraceTurboAllocation, trace_turbo_allocation, 16)                \
+  V(TraceHeapBroker, trace_heap_broker, 17)                          \
+  V(WasmRuntimeExceptionSupport, wasm_runtime_exception_support, 18) \
+  V(ConcurrentInlining, concurrent_inlining, 19)
 
   enum Flag {
 #define DEF_ENUM(Camel, Lower, Bit) k##Camel = 1 << Bit,
@@ -151,7 +149,10 @@ class V8_EXPORT_PRIVATE OptimizedCompilationInfo final {
   bool IsNativeContextIndependent() const {
     return code_kind() == CodeKind::NATIVE_CONTEXT_INDEPENDENT;
   }
-  bool IsStub() const { return code_kind() == CodeKind::STUB; }
+  bool IsTurboprop() const { return code_kind() == CodeKind::TURBOPROP; }
+  bool IsStub() const {
+    return code_kind() == CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING;
+  }
   bool IsWasm() const { return code_kind() == CodeKind::WASM_FUNCTION; }
 
   void SetOptimizingForOsr(BailoutId osr_offset, JavaScriptFrame* osr_frame) {
@@ -161,7 +162,18 @@ class V8_EXPORT_PRIVATE OptimizedCompilationInfo final {
   }
 
   void set_persistent_handles(
-      std::unique_ptr<PersistentHandles> persistent_handles);
+      std::unique_ptr<PersistentHandles> persistent_handles) {
+    DCHECK_NULL(ph_);
+    ph_ = std::move(persistent_handles);
+    DCHECK_NOT_NULL(ph_);
+  }
+
+  void set_canonical_handles(
+      std::unique_ptr<CanonicalHandlesMap> canonical_handles) {
+    DCHECK_NULL(canonical_handles_);
+    canonical_handles_ = std::move(canonical_handles);
+    DCHECK_NOT_NULL(canonical_handles_);
+  }
 
   void ReopenHandlesInNewHandleScope(Isolate* isolate);
 
@@ -224,7 +236,13 @@ class V8_EXPORT_PRIVATE OptimizedCompilationInfo final {
   }
 
   std::unique_ptr<PersistentHandles> DetachPersistentHandles() {
+    DCHECK_NOT_NULL(ph_);
     return std::move(ph_);
+  }
+
+  std::unique_ptr<CanonicalHandlesMap> DetachCanonicalHandles() {
+    DCHECK_NOT_NULL(canonical_handles_);
+    return std::move(canonical_handles_);
   }
 
  private:
@@ -265,8 +283,6 @@ class V8_EXPORT_PRIVATE OptimizedCompilationInfo final {
   // OptimizedCompilationInfo allocates.
   Zone* const zone_;
 
-  std::unique_ptr<PersistentHandles> persistent_handles_;
-
   BailoutReason bailout_reason_ = BailoutReason::kNoReason;
 
   InlinedFunctionList inlined_functions_;
@@ -283,14 +299,25 @@ class V8_EXPORT_PRIVATE OptimizedCompilationInfo final {
 
   TickCounter tick_counter_;
 
-  // This PersistentHandles container is owned first by
-  // OptimizedCompilationInfo, then by JSHeapBroker, then by LocalHeap (when we
-  // go to the background thread), then again by JSHeapBroker (right before
-  // returning to the main thread), which gets destroyed when PipelineData gets
-  // destroyed when e.g. PipelineCompilationJob gets destroyed. Since it is a
-  // member of OptimizedCompilationInfo, we make sure that we have one and only
-  // one per compilation job.
+  // 1) PersistentHandles created via PersistentHandlesScope inside of
+  //    CompilationHandleScope
+  // 2) Owned by OptimizedCompilationInfo
+  // 3) Owned by JSHeapBroker
+  // 4) Owned by the broker's LocalHeap
+  // 5) Back to the broker for a brief moment (after tearing down the
+  //   LocalHeap as part of exiting LocalHeapScope)
+  // 6) Back to OptimizedCompilationInfo when exiting the LocalHeapScope.
+  //
+  // In normal execution it gets destroyed when PipelineData gets destroyed.
+  // There is a special case in GenerateCodeForTesting where the JSHeapBroker
+  // will not be retired in that same method. In this case, we need to re-attach
+  // the PersistentHandles container to the JSHeapBroker.
   std::unique_ptr<PersistentHandles> ph_;
+
+  // Canonical handles follow the same path as described by the persistent
+  // handles above. The only difference is that is created in the
+  // CanonicalHandleScope(i.e step 1) is different).
+  std::unique_ptr<CanonicalHandlesMap> canonical_handles_;
 
   DISALLOW_COPY_AND_ASSIGN(OptimizedCompilationInfo);
 };

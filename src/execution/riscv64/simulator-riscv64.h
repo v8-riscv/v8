@@ -150,11 +150,9 @@ inline double fsgnj64(double rs1, double rs2, bool n, bool x) {
   return res.d;
 }
 
-inline bool is_boxed_float(int64_t v) {
-  return (uint32_t)((v >> 32) + 1) == 0;
-}
-inline int64_t box_float(float v) { 
-  return (0xFFFFFFFF00000000 | bit_cast<int32_t>(v)); 
+inline bool is_boxed_float(int64_t v) { return (uint32_t)((v >> 32) + 1) == 0; }
+inline int64_t box_float(float v) {
+  return (0xFFFFFFFF00000000 | bit_cast<int32_t>(v));
 }
 
 // -----------------------------------------------------------------------------
@@ -473,12 +471,16 @@ class Simulator : public SimulatorBase {
   inline int64_t rvc_rs1() const { return get_register(rvc_rs1_reg()); }
   inline int32_t rvc_rs2_reg() const { return instr_.RvcRs2Value(); }
   inline int64_t rvc_rs2() const { return get_register(rvc_rs2_reg()); }
-  inline double rvc_drs2() const { return get_fpu_register_double(rvc_rs2_reg()); }
+  inline double rvc_drs2() const {
+    return get_fpu_register_double(rvc_rs2_reg());
+  }
   inline int32_t rvc_rs1s_reg() const { return instr_.RvcRs1sValue(); }
   inline int64_t rvc_rs1s() const { return get_register(rvc_rs1s_reg()); }
   inline int32_t rvc_rs2s_reg() const { return instr_.RvcRs2sValue(); }
   inline int64_t rvc_rs2s() const { return get_register(rvc_rs2s_reg()); }
-  inline double rvc_drs2s() const { return get_fpu_register_double(rvc_rs2s_reg()); }
+  inline double rvc_drs2s() const {
+    return get_fpu_register_double(rvc_rs2s_reg());
+  }
   inline int32_t rvc_rd_reg() const { return instr_.RvcRdValue(); }
   inline int32_t rvc_frd_reg() const { return instr_.RvcRdValue(); }
   inline int16_t boffset() const { return instr_.BranchOffset(); }
@@ -487,14 +489,19 @@ class Simulator : public SimulatorBase {
   inline int32_t imm5CSR() const { return instr_.Rs1Value(); }
   inline int16_t csr_reg() const { return instr_.CsrValue(); }
   inline int16_t rvc_imm6() const { return instr_.RvcImm6Value(); }
-  inline int16_t rvc_imm6_addi16sp() const { return instr_.RvcImm6Addi16spValue(); }
-  inline int16_t rvc_imm8_addi4spn() const { return instr_.RvcImm8Addi4spnValue(); }
+  inline int16_t rvc_imm6_addi16sp() const {
+    return instr_.RvcImm6Addi16spValue();
+  }
+  inline int16_t rvc_imm8_addi4spn() const {
+    return instr_.RvcImm8Addi4spnValue();
+  }
   inline int16_t rvc_imm6_lwsp() const { return instr_.RvcImm6LwspValue(); }
   inline int16_t rvc_imm6_ldsp() const { return instr_.RvcImm6LdspValue(); }
   inline int16_t rvc_imm6_swsp() const { return instr_.RvcImm6SwspValue(); }
   inline int16_t rvc_imm6_sdsp() const { return instr_.RvcImm6SdspValue(); }
   inline int16_t rvc_imm5_w() const { return instr_.RvcImm5WValue(); }
   inline int16_t rvc_imm5_d() const { return instr_.RvcImm5DValue(); }
+  inline int16_t rvc_imm8_b() const { return instr_.RvcImm8BValue(); }
 
   inline void set_rd(int64_t value, bool trace = true) {
     set_register(rd_reg(), value);
@@ -616,6 +623,7 @@ class Simulator : public SimulatorBase {
   void DecodeRVJType();
   void DecodeCRType();
   void DecodeCAType();
+  void DecodeCBType();
   void DecodeCIType();
   void DecodeCIWType();
   void DecodeCSSType();

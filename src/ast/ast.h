@@ -117,7 +117,6 @@ namespace internal {
 
 // Forward declarations
 class Isolate;
-class OffThreadIsolate;
 
 class AstNode;
 class AstNodeFactory;
@@ -1107,6 +1106,7 @@ class AggregateLiteral : public MaterializedLiteral {
     kIsShallow = 1,
     kDisableMementos = 1 << 1,
     kNeedsInitialAllocationSite = 1 << 2,
+    kIsShallowAndDisableMementos = kIsShallow | kDisableMementos,
   };
 
   bool is_initialized() const { return 0 < depth_; }
@@ -1410,7 +1410,7 @@ class ThisExpression final : public Expression {
  private:
   friend class AstNodeFactory;
   friend Zone;
-  ThisExpression() : Expression(kNoSourcePosition, kThisExpression) {}
+  explicit ThisExpression(int pos) : Expression(pos, kThisExpression) {}
 };
 
 class VariableProxy final : public Expression {
@@ -2185,7 +2185,7 @@ class FunctionLiteral final : public Expression {
     }
     UNREACHABLE();
   }
-  Handle<String> GetInferredName(OffThreadIsolate* isolate) const {
+  Handle<String> GetInferredName(LocalIsolate* isolate) const {
     DCHECK(inferred_name_.is_null());
     DCHECK_NOT_NULL(raw_inferred_name_);
     return raw_inferred_name_->GetString(isolate);
@@ -2736,7 +2736,7 @@ class AstNodeFactory final {
       : zone_(zone),
         ast_value_factory_(ast_value_factory),
         empty_statement_(zone->New<class EmptyStatement>()),
-        this_expression_(zone->New<class ThisExpression>()),
+        this_expression_(zone->New<class ThisExpression>(kNoSourcePosition)),
         failure_expression_(zone->New<class FailureExpression>()) {}
 
   AstNodeFactory* ast_node_factory() { return this; }
@@ -2901,6 +2901,11 @@ class AstNodeFactory final {
     // verification, so clearing at this point is fine.
     this_expression_->clear_parenthesized();
     return this_expression_;
+  }
+
+  class ThisExpression* NewThisExpression(int pos) {
+    DCHECK_NE(pos, kNoSourcePosition);
+    return zone_->New<class ThisExpression>(pos);
   }
 
   class FailureExpression* FailureExpression() {

@@ -81,7 +81,7 @@ class V8_EXPORT_PRIVATE IncrementalMarking final {
   static constexpr size_t kGlobalActivationThreshold = 0;
 #endif
 
-#ifdef V8_CONCURRENT_MARKING
+#ifdef V8_ATOMIC_MARKING_STATE
   static const AccessMode kAtomicity = AccessMode::ATOMIC;
 #else
   static const AccessMode kAtomicity = AccessMode::NON_ATOMIC;
@@ -209,8 +209,8 @@ class V8_EXPORT_PRIVATE IncrementalMarking final {
     }
   }
 
-  MarkingWorklists* marking_worklists() const {
-    return collector_->marking_worklists();
+  MarkingWorklists::Local* local_marking_worklists() const {
+    return collector_->local_marking_worklists();
   }
 
   void Deactivate();
@@ -250,6 +250,8 @@ class V8_EXPORT_PRIVATE IncrementalMarking final {
   // Retain dying maps for <FLAG_retain_maps_for_n_gc> garbage collections to
   // increase chances of reusing of map transition tree in future.
   void RetainMaps();
+
+  void PublishWriteBarrierWorklists();
 
   // Updates scheduled_bytes_to_mark_ to ensure marking progress based on
   // time.

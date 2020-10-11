@@ -287,8 +287,8 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kArmS8x16TransposeLeft:
     case kArmS8x16TransposeRight:
     case kArmS8x16Concat:
-    case kArmS8x16Swizzle:
-    case kArmS8x16Shuffle:
+    case kArmI8x16Swizzle:
+    case kArmI8x16Shuffle:
     case kArmS32x2Reverse:
     case kArmS16x4Reverse:
     case kArmS16x2Reverse:
@@ -314,16 +314,16 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kArmLdr:
     case kArmPeek:
     case kArmWord32AtomicPairLoad:
-    case kArmS8x16LoadSplat:
-    case kArmS16x8LoadSplat:
-    case kArmS32x4LoadSplat:
-    case kArmS64x2LoadSplat:
-    case kArmI16x8Load8x8S:
-    case kArmI16x8Load8x8U:
-    case kArmI32x4Load16x4S:
-    case kArmI32x4Load16x4U:
-    case kArmI64x2Load32x2S:
-    case kArmI64x2Load32x2U:
+    case kArmS128Load8Splat:
+    case kArmS128Load16Splat:
+    case kArmS128Load32Splat:
+    case kArmS128Load64Splat:
+    case kArmS128Load8x8S:
+    case kArmS128Load8x8U:
+    case kArmS128Load16x4S:
+    case kArmS128Load16x4U:
+    case kArmS128Load32x2S:
+    case kArmS128Load32x2U:
       return kIsLoadOperation;
 
     case kArmVstrF32:

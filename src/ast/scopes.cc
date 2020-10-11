@@ -11,12 +11,13 @@
 #include "src/base/optional.h"
 #include "src/builtins/accessors.h"
 #include "src/common/message-template.h"
-#include "src/heap/off-thread-factory-inl.h"
+#include "src/heap/local-factory-inl.h"
 #include "src/init/bootstrapper.h"
 #include "src/logging/counters.h"
 #include "src/objects/module-inl.h"
 #include "src/objects/objects-inl.h"
 #include "src/objects/scope-info.h"
+#include "src/objects/string-set-inl.h"
 #include "src/parsing/parse-info.h"
 #include "src/parsing/parser.h"
 #include "src/parsing/preparse-data.h"
@@ -1628,7 +1629,6 @@ const char* Header(ScopeType scope_type, FunctionKind function_kind,
                    bool is_declaration_scope) {
   switch (scope_type) {
     case EVAL_SCOPE: return "eval";
-    // TODO(adamk): Should we print concise method scopes specially?
     case FUNCTION_SCOPE:
       if (IsGeneratorFunction(function_kind)) return "function*";
       if (IsAsyncFunction(function_kind)) return "async function";
@@ -2476,8 +2476,8 @@ template EXPORT_TEMPLATE_DEFINE(V8_EXPORT_PRIVATE) void Scope::
     AllocateScopeInfosRecursively<Isolate>(Isolate* isolate,
                                            MaybeHandle<ScopeInfo> outer_scope);
 template EXPORT_TEMPLATE_DEFINE(V8_EXPORT_PRIVATE) void Scope::
-    AllocateScopeInfosRecursively<OffThreadIsolate>(
-        OffThreadIsolate* isolate, MaybeHandle<ScopeInfo> outer_scope);
+    AllocateScopeInfosRecursively<LocalIsolate>(
+        LocalIsolate* isolate, MaybeHandle<ScopeInfo> outer_scope);
 
 void DeclarationScope::RecalcPrivateNameContextChain() {
   // The outermost scope in a class heritage expression is marked to skip the
@@ -2556,10 +2556,10 @@ void DeclarationScope::AllocateScopeInfos(ParseInfo* info,
   }
 }
 
-template V8_EXPORT_PRIVATE void DeclarationScope::AllocateScopeInfos<Isolate>(
+template V8_EXPORT_PRIVATE void DeclarationScope::AllocateScopeInfos(
     ParseInfo* info, Isolate* isolate);
-template V8_EXPORT_PRIVATE void DeclarationScope::AllocateScopeInfos<
-    OffThreadIsolate>(ParseInfo* info, OffThreadIsolate* isolate);
+template V8_EXPORT_PRIVATE void DeclarationScope::AllocateScopeInfos(
+    ParseInfo* info, LocalIsolate* isolate);
 
 int Scope::ContextLocalCount() const {
   if (num_heap_slots() == 0) return 0;

@@ -26,6 +26,7 @@
 #include "src/logging/counters.h"
 #include "src/objects/heap-object-inl.h"
 #include "src/objects/js-array-inl.h"
+#include "src/objects/js-function-inl.h"
 #include "src/objects/js-regexp-inl.h"
 #include "src/objects/smi.h"
 #include "src/snapshot/snapshot.h"
@@ -188,7 +189,7 @@ RUNTIME_FUNCTION(Runtime_DeoptimizeFunction) {
   if (!function_object->IsJSFunction()) return CrashUnlessFuzzing(isolate);
   Handle<JSFunction> function = Handle<JSFunction>::cast(function_object);
 
-  if (function->IsOptimized()) {
+  if (function->HasAttachedOptimizedCode()) {
     Deoptimizer::DeoptimizeFunction(*function);
   }
 
@@ -206,7 +207,7 @@ RUNTIME_FUNCTION(Runtime_DeoptimizeNow) {
   if (!it.done()) function = handle(it.frame()->function(), isolate);
   if (function.is_null()) return CrashUnlessFuzzing(isolate);
 
-  if (function->IsOptimized()) {
+  if (function->HasAttachedOptimizedCode()) {
     Deoptimizer::DeoptimizeFunction(*function);
   }
 
@@ -297,8 +298,9 @@ RUNTIME_FUNCTION(Runtime_OptimizeFunctionOnNextCall) {
     PendingOptimizationTable::MarkedForOptimization(isolate, function);
   }
 
-  if (function->HasOptimizedCode()) {
-    DCHECK(function->IsOptimized() || function->ChecksOptimizationMarker());
+  if (function->HasAvailableOptimizedCode()) {
+    DCHECK(function->HasAttachedOptimizedCode() ||
+           function->ChecksOptimizationMarker());
     if (FLAG_testing_d8_test_runner) {
       PendingOptimizationTable::FunctionWasOptimized(isolate, function);
     }
@@ -448,8 +450,9 @@ RUNTIME_FUNCTION(Runtime_OptimizeOsr) {
     PendingOptimizationTable::MarkedForOptimization(isolate, function);
   }
 
-  if (function->HasOptimizedCode()) {
-    DCHECK(function->IsOptimized() || function->ChecksOptimizationMarker());
+  if (function->HasAvailableOptimizedCode()) {
+    DCHECK(function->HasAttachedOptimizedCode() ||
+           function->ChecksOptimizationMarker());
     // If function is already optimized, remove the bytecode array from the
     // pending optimize for test table and return.
     if (FLAG_testing_d8_test_runner) {
@@ -555,7 +558,7 @@ RUNTIME_FUNCTION(Runtime_GetOptimizationStatus) {
     status |= static_cast<int>(OptimizationStatus::kOptimizingConcurrently);
   }
 
-  if (function->IsOptimized()) {
+  if (function->HasAttachedOptimizedCode()) {
     if (function->code().marked_for_deoptimization()) {
       status |= static_cast<int>(OptimizationStatus::kMarkedForDeoptimization);
     } else {
@@ -565,7 +568,7 @@ RUNTIME_FUNCTION(Runtime_GetOptimizationStatus) {
       status |= static_cast<int>(OptimizationStatus::kTurboFanned);
     }
   }
-  if (function->IsInterpreted()) {
+  if (function->ActiveTierIsIgnition()) {
     status |= static_cast<int>(OptimizationStatus::kInterpreted);
   }
 
@@ -1157,7 +1160,10 @@ RUNTIME_FUNCTION(Runtime_IsWasmCode) {
   SealHandleScope shs(isolate);
   DCHECK_EQ(1, args.length());
   CONVERT_ARG_CHECKED(JSFunction, function, 0);
-  bool is_js_to_wasm = function.code().kind() == CodeKind::JS_TO_WASM_FUNCTION;
+  bool is_js_to_wasm =
+      function.code().kind() == CodeKind::JS_TO_WASM_FUNCTION ||
+      (function.code().is_builtin() &&
+       function.code().builtin_index() == Builtins::kGenericJSToWasmWrapper);
   return isolate->heap()->ToBoolean(is_js_to_wasm);
 }
 
@@ -1250,6 +1256,28 @@ RUNTIME_FUNCTION(Runtime_RegexpHasNativeCode) {
   return isolate->heap()->ToBoolean(result);
 }
 
+RUNTIME_FUNCTION(Runtime_RegexpTypeTag) {
+  HandleScope shs(isolate);
+  DCHECK_EQ(1, args.length());
+  CONVERT_ARG_CHECKED(JSRegExp, regexp, 0);
+  const char* type_str;
+  switch (regexp.TypeTag()) {
+    case JSRegExp::NOT_COMPILED:
+      type_str = "NOT_COMPILED";
+      break;
+    case JSRegExp::ATOM:
+      type_str = "ATOM";
+      break;
+    case JSRegExp::IRREGEXP:
+      type_str = "IRREGEXP";
+      break;
+    case JSRegExp::EXPERIMENTAL:
+      type_str = "EXPERIMENTAL";
+      break;
+  }
+  return *isolate->factory()->NewStringFromAsciiChecked(type_str);
+}
+
 #define ELEMENTS_KIND_CHECK_RUNTIME_FUNCTION(Name)      \
   RUNTIME_FUNCTION(Runtime_Has##Name) {                 \
     CONVERT_ARG_CHECKED(JSObject, obj, 0);              \
@@ -1324,30 +1352,29 @@ RUNTIME_FUNCTION(Runtime_SerializeDeserializeNow) {
   return ReadOnlyRoots(isolate).undefined_value();
 }
 
-// Take a compiled wasm module and serialize it into an array buffer, which is
-// then returned.
+// Wait until the given module is fully tiered up, then serialize it into an
+// array buffer.
 RUNTIME_FUNCTION(Runtime_SerializeWasmModule) {
   HandleScope scope(isolate);
   DCHECK_EQ(1, args.length());
   CONVERT_ARG_HANDLE_CHECKED(WasmModuleObject, module_obj, 0);
 
   wasm::NativeModule* native_module = module_obj->native_module();
+  native_module->compilation_state()->WaitForTopTierFinished();
+  DCHECK(!native_module->compilation_state()->failed());
+
   wasm::WasmSerializer wasm_serializer(native_module);
   size_t byte_length = wasm_serializer.GetSerializedNativeModuleSize();
 
-  MaybeHandle<JSArrayBuffer> result =
-      isolate->factory()->NewJSArrayBufferAndBackingStore(
-          byte_length, InitializedFlag::kUninitialized);
+  Handle<JSArrayBuffer> array_buffer =
+      isolate->factory()
+          ->NewJSArrayBufferAndBackingStore(byte_length,
+                                            InitializedFlag::kUninitialized)
+          .ToHandleChecked();
 
-  Handle<JSArrayBuffer> array_buffer;
-  if (result.ToHandle(&array_buffer) &&
-      wasm_serializer.SerializeNativeModule(
-          {reinterpret_cast<uint8_t*>(array_buffer->backing_store()),
-           byte_length})) {
-    return *array_buffer;
-  }
-
-  UNREACHABLE();
+  CHECK(wasm_serializer.SerializeNativeModule(
+      {static_cast<uint8_t*>(array_buffer->backing_store()), byte_length}));
+  return *array_buffer;
 }
 
 // Take an array buffer and attempt to reconstruct a compiled wasm module.
@@ -1575,7 +1602,6 @@ RUNTIME_FUNCTION(Runtime_EnableCodeLoggingForTesting) {
                                Handle<String> source) final {}
     void CodeMoveEvent(AbstractCode from, AbstractCode to) final {}
     void SharedFunctionInfoMoveEvent(Address from, Address to) final {}
-    void NativeContextMoveEvent(Address from, Address to) final {}
     void CodeMovingGCEvent() final {}
     void CodeDisableOptEvent(Handle<AbstractCode> code,
                              Handle<SharedFunctionInfo> shared) final {}

@@ -25,7 +25,6 @@ class Heap;
 class HeapObject;
 class Isolate;
 class LocalSpace;
-class OffThreadSpace;
 class ObjectVisitor;
 
 // -----------------------------------------------------------------------------
@@ -42,9 +41,6 @@ class V8_EXPORT_PRIVATE PagedSpaceObjectIterator : public ObjectIterator {
   // Creates a new object iterator in a given space.
   PagedSpaceObjectIterator(Heap* heap, PagedSpace* space);
   PagedSpaceObjectIterator(Heap* heap, PagedSpace* space, Page* page);
-
-  // Creates a new object iterator in a given off-thread space.
-  explicit PagedSpaceObjectIterator(OffThreadSpace* space);
 
   // Advance to the next object, skipping free spaces and other fillers and
   // skipping the special garbage section of which there is one per space.
@@ -112,7 +108,7 @@ class V8_EXPORT_PRIVATE PagedSpace
   // The bytes in the linear allocation area are not included in this total
   // because updating the stats would slow down allocation.  New pages are
   // immediately added to the free list so they show up here.
-  size_t Available() override { return free_list_->Available(); }
+  size_t Available() override;
 
   // Allocated bytes in this space.  Garbage bytes that were not found due to
   // concurrent sweeping are counted as being allocated!  The bytes in the
@@ -262,10 +258,6 @@ class V8_EXPORT_PRIVATE PagedSpace
 
   bool is_local_space() { return local_space_kind_ != LocalSpaceKind::kNone; }
 
-  bool is_off_thread_space() {
-    return local_space_kind_ == LocalSpaceKind::kOffThreadSpace;
-  }
-
   bool is_compaction_space() {
     return base::IsInRange(local_space_kind_,
                            LocalSpaceKind::kFirstCompactionSpace,
@@ -309,6 +301,21 @@ class V8_EXPORT_PRIVATE PagedSpace
   void SetLinearAllocationArea(Address top, Address limit);
 
  private:
+  class ConcurrentAllocationMutex {
+   public:
+    explicit ConcurrentAllocationMutex(PagedSpace* space) {
+      if (space->SupportsConcurrentAllocation()) {
+        guard_.emplace(&space->space_mutex_);
+      }
+    }
+
+    base::Optional<base::MutexGuard> guard_;
+  };
+
+  bool SupportsConcurrentAllocation() {
+    return FLAG_concurrent_allocation && !is_local_space();
+  }
+
   // Set space linear allocation area.
   void SetTopAndLimit(Address top, Address limit);
   void DecreaseLimit(Address new_limit);
@@ -334,7 +341,7 @@ class V8_EXPORT_PRIVATE PagedSpace
   // Expands the space by allocating a fixed number of pages. Returns false if
   // it cannot allocate requested number of pages from OS, or if the hard heap
   // size limit has been hit.
-  Page* Expand();
+  virtual Page* Expand();
   Page* ExpandBackground(LocalHeap* local_heap);
   Page* AllocatePage();
 
@@ -391,9 +398,6 @@ class V8_EXPORT_PRIVATE PagedSpace
   // Mutex guarding any concurrent access to the space.
   base::Mutex space_mutex_;
 
-  // Mutex guarding concurrent allocation.
-  base::Mutex allocation_mutex_;
-
   friend class IncrementalMarking;
   friend class MarkCompactCollector;
 
@@ -413,9 +417,15 @@ class V8_EXPORT_PRIVATE LocalSpace : public PagedSpace {
     DCHECK_NE(local_space_kind, LocalSpaceKind::kNone);
   }
 
+  const std::vector<Page*>& GetNewPages() { return new_pages_; }
+
  protected:
+  Page* Expand() override;
   // The space is temporary and not included in any snapshots.
   bool snapshotable() override { return false; }
+  // Pages that were allocated in this local space and need to be merged
+  // to the main space.
+  std::vector<Page*> new_pages_;
 };
 
 // -----------------------------------------------------------------------------
@@ -478,8 +488,7 @@ class OldSpace : public PagedSpace {
   }
 
   size_t ExternalBackingStoreBytes(ExternalBackingStoreType type) const final {
-    if (V8_ARRAY_BUFFER_EXTENSION_BOOL &&
-        type == ExternalBackingStoreType::kArrayBuffer)
+    if (type == ExternalBackingStoreType::kArrayBuffer)
       return heap()->OldArrayBufferBytes();
     return external_backing_store_bytes_[type];
   }
@@ -503,7 +512,8 @@ class MapSpace : public PagedSpace {
  public:
   // Creates a map space object.
   explicit MapSpace(Heap* heap)
-      : PagedSpace(heap, MAP_SPACE, NOT_EXECUTABLE, new FreeListMap()) {}
+      : PagedSpace(heap, MAP_SPACE, NOT_EXECUTABLE,
+                   FreeList::CreateFreeList()) {}
 
   int RoundSizeDownToObjectAlignment(int size) override {
     if (base::bits::IsPowerOfTwo(Map::kSize)) {
@@ -518,27 +528,6 @@ class MapSpace : public PagedSpace {
 #ifdef VERIFY_HEAP
   void VerifyObject(HeapObject obj) override;
 #endif
-};
-
-// -----------------------------------------------------------------------------
-// Off-thread space that is used for folded allocation on a different thread.
-
-class V8_EXPORT_PRIVATE OffThreadSpace : public LocalSpace {
- public:
-  explicit OffThreadSpace(Heap* heap)
-      : LocalSpace(heap, OLD_SPACE, NOT_EXECUTABLE,
-                   LocalSpaceKind::kOffThreadSpace) {
-#ifdef V8_ENABLE_THIRD_PARTY_HEAP
-    // OffThreadSpace doesn't work with third-party heap.
-    UNREACHABLE();
-#endif
-  }
-
- protected:
-  V8_WARN_UNUSED_RESULT bool RefillLabMain(int size_in_bytes,
-                                           AllocationOrigin origin) override;
-
-  void RefillFreeList() override;
 };
 
 // Iterates over the chunks (pages and large object pages) that can contain

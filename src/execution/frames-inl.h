@@ -124,17 +124,8 @@ inline Object BuiltinExitFrame::receiver_slot_object() const {
   // fp[4]: argc.
   // fp[5]: hole.
   // ------- JS stack arguments ------
-  // fp[6]: receiver, if V8_REVERSE_JSARGS.
-  // fp[2 + argc - 1]: receiver, if not V8_REVERSE_JSARGS.
-#ifdef V8_REVERSE_JSARGS
+  // fp[6]: receiver
   const int receiverOffset = BuiltinExitFrameConstants::kFirstArgumentOffset;
-#else
-  Object argc_slot = argc_slot_object();
-  DCHECK(argc_slot.IsSmi());
-  int argc = Smi::ToInt(argc_slot);
-  const int receiverOffset = BuiltinExitFrameConstants::kNewTargetOffset +
-                             (argc - 1) * kSystemPointerSize;
-#endif
   return Object(base::Memory<Address>(fp() + receiverOffset));
 }
 
@@ -202,15 +193,15 @@ inline JavaScriptFrame::JavaScriptFrame(StackFrameIteratorBase* iterator)
     : StandardFrame(iterator) {}
 
 Address JavaScriptFrame::GetParameterSlot(int index) const {
-  DCHECK(-1 <= index &&
-         (index < ComputeParametersCount() ||
-          ComputeParametersCount() == kDontAdaptArgumentsSentinel));
-#ifdef V8_REVERSE_JSARGS
-  int parameter_offset = (index + 1) * kSystemPointerSize;
+  DCHECK_LE(-1, index);
+#ifdef V8_NO_ARGUMENTS_ADAPTOR
+  DCHECK_LT(index,
+            std::max(GetActualArgumentCount(), ComputeParametersCount()));
 #else
-  int param_count = ComputeParametersCount();
-  int parameter_offset = (param_count - index - 1) * kSystemPointerSize;
+  DCHECK(index < ComputeParametersCount() ||
+         ComputeParametersCount() == kDontAdaptArgumentsSentinel);
 #endif
+  int parameter_offset = (index + 1) * kSystemPointerSize;
   return caller_sp() + parameter_offset;
 }
 
@@ -335,7 +326,7 @@ inline StackFrame* SafeStackFrameIterator::frame() const {
   DCHECK(!done());
   DCHECK(frame_->is_java_script() || frame_->is_exit() ||
          frame_->is_builtin_exit() || frame_->is_wasm() ||
-         frame_->is_wasm_to_js());
+         frame_->is_wasm_to_js() || frame_->is_js_to_wasm());
   return frame_;
 }
 

@@ -177,12 +177,6 @@ void InterpreterCEntry2Descriptor::InitializePlatformSpecific(
   InterpreterCEntryDescriptor_InitializePlatformSpecific(data);
 }
 
-void FastNewFunctionContextDescriptor::InitializePlatformSpecific(
-    CallInterfaceDescriptorData* data) {
-  Register registers[] = {ScopeInfoRegister(), SlotsRegister()};
-  data->InitializePlatformSpecific(arraysize(registers), registers);
-}
-
 void FastNewObjectDescriptor::InitializePlatformSpecific(
     CallInterfaceDescriptorData* data) {
   Register registers[] = {TargetRegister(), NewTargetRegister()};
@@ -225,6 +219,16 @@ void LoadGlobalWithVectorDescriptor::InitializePlatformSpecific(
     CallInterfaceDescriptorData* data) {
   Register registers[] = {NameRegister(), SlotRegister(), VectorRegister()};
   data->InitializePlatformSpecific(arraysize(registers), registers);
+}
+
+void LoadWithReceiverAndVectorDescriptor::InitializePlatformSpecific(
+    CallInterfaceDescriptorData* data) {
+  DCHECK(!AreAliased(ReceiverRegister(), LookupStartObjectRegister(),
+                     NameRegister(), SlotRegister(), VectorRegister()));
+  Register registers[] = {ReceiverRegister(), LookupStartObjectRegister(),
+                          NameRegister(), SlotRegister(), VectorRegister()};
+  int len = arraysize(registers) - kStackArgumentsCount;
+  data->InitializePlatformSpecific(len, registers);
 }
 
 void StoreGlobalDescriptor::InitializePlatformSpecific(
@@ -280,6 +284,12 @@ void StringSubstringDescriptor::InitializePlatformSpecific(
 void TypeConversionDescriptor::InitializePlatformSpecific(
     CallInterfaceDescriptorData* data) {
   Register registers[] = {ArgumentRegister()};
+  data->InitializePlatformSpecific(arraysize(registers), registers);
+}
+
+void TypeConversionNoContextDescriptor::InitializePlatformSpecific(
+    CallInterfaceDescriptorData* data) {
+  Register registers[] = {TypeConversionDescriptor::ArgumentRegister()};
   data->InitializePlatformSpecific(arraysize(registers), registers);
 }
 

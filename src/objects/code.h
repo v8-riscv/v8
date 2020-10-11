@@ -27,7 +27,7 @@ class CodeDesc;
 
 namespace interpreter {
 class Register;
-}
+}  // namespace interpreter
 
 // CodeDataContainer is a container for all mutable fields associated with its
 // referencing {Code} object. Since {Code} objects reside on write-protected
@@ -109,11 +109,13 @@ class Code : public HeapObject {
 
   // [source_position_table]: ByteArray for the source positions table.
   DECL_ACCESSORS(source_position_table, Object)
+
+  // If source positions have not been collected or an exception has been thrown
+  // this will return empty_byte_array.
   inline ByteArray SourcePositionTable() const;
-  inline ByteArray SourcePositionTableIfCollected() const;
 
   // [code_data_container]: A container indirection for all mutable fields.
-  DECL_ACCESSORS(code_data_container, CodeDataContainer)
+  DECL_RELEASE_ACQUIRE_ACCESSORS(code_data_container, CodeDataContainer)
 
   // [next_code_link]: Link for lists of optimized or deoptimized code.
   // Note that this field is stored in the {CodeDataContainer} to be mutable.
@@ -387,7 +389,6 @@ class Code : public HeapObject {
   DECL_PRINTER(Code)
   DECL_VERIFIER(Code)
 
-  void PrintDeoptLocation(FILE* out, const char* str, Address pc);
   bool CanDeoptAt(Address pc);
 
   void SetMarkedForDeoptimization(const char* reason);
@@ -777,17 +778,14 @@ class BytecodeArray : public FixedArrayBase {
   // * ByteArray (when source positions have been collected for the bytecode)
   // * exception (when an error occurred while explicitly collecting source
   // positions for pre-existing bytecode).
-  DECL_ACCESSORS(source_position_table, Object)
+  DECL_RELEASE_ACQUIRE_ACCESSORS(source_position_table, Object)
 
-  // This must only be called if source position collection has already been
-  // attempted. (If it failed because of an exception then it will return
-  // empty_byte_array).
-  inline ByteArray SourcePositionTable() const;
-  // If source positions have not been collected or an exception has been thrown
-  // this will return empty_byte_array.
-  inline ByteArray SourcePositionTableIfCollected() const;
   inline bool HasSourcePositionTable() const;
   inline bool DidSourcePositionGenerationFail() const;
+
+  // If source positions have not been collected or an exception has been thrown
+  // this will return empty_byte_array.
+  inline ByteArray SourcePositionTable() const;
 
   // Indicates that an attempt was made to collect source positions, but that it
   // failed most likely due to stack exhaustion. When in this state

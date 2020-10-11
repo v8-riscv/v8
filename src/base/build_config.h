@@ -180,7 +180,7 @@
 #endif
 #if (V8_TARGET_ARCH_RISCV && \
      !(V8_HOST_ARCH_X64 || V8_HOST_ARCH_RISCV || V8_HOST_ARCH_RISCV64))
-#error Target architecture riscv (32) is only supported on riscv(32), riscv64, and x64 host
+#error Target architecture riscv is only supported on riscv[64], and x64 host
 #endif
 
 // Determine architecture endianness.
@@ -227,6 +227,8 @@
 #else
 #define V8_TARGET_ARCH_STORES_RETURN_ADDRESS_ON_STACK false
 #endif
+constexpr int kReturnAddressStackSlotCount =
+    V8_TARGET_ARCH_STORES_RETURN_ADDRESS_ON_STACK ? 1 : 0;
 
 // Number of bits to represent the page size for paged spaces.
 #if defined(V8_TARGET_ARCH_PPC) || defined(V8_TARGET_ARCH_PPC64)

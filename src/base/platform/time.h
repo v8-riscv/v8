@@ -37,7 +37,7 @@ class TimeTicks;
 namespace time_internal {
 template<class TimeClass>
 class TimeBase;
-}
+}  // namespace time_internal
 
 class TimeConstants {
  public:
@@ -91,6 +91,9 @@ class V8_BASE_EXPORT TimeDelta final {
     return TimeDelta(nanoseconds / TimeConstants::kNanosecondsPerMicrosecond);
   }
 
+  static TimeDelta FromSecondsD(double seconds) {
+    return FromDouble(seconds * TimeConstants::kMicrosecondsPerSecond);
+  }
   static TimeDelta FromMillisecondsD(double milliseconds) {
     return FromDouble(milliseconds *
                       TimeConstants::kMicrosecondsPerMillisecond);

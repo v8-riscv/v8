@@ -11,20 +11,21 @@
 #include "src/date/date.h"
 #include "src/debug/debug.h"
 #include "src/deoptimizer/deoptimizer.h"
-#include "src/heap/heap.h"
-#include "src/logging/counters.h"
-#include "src/numbers/hash-seed-inl.h"
-#include "src/objects/elements.h"
-#include "src/objects/ordered-hash-table.h"
 #include "src/execution/isolate.h"
 #include "src/execution/microtask-queue.h"
 #include "src/execution/simulator-base.h"
 #include "src/heap/heap-inl.h"
+#include "src/heap/heap.h"
 #include "src/ic/stub-cache.h"
 #include "src/interpreter/interpreter.h"
+#include "src/logging/counters.h"
 #include "src/logging/log.h"
+#include "src/numbers/hash-seed-inl.h"
 #include "src/numbers/math-random.h"
+#include "src/objects/elements.h"
 #include "src/objects/objects-inl.h"
+#include "src/objects/ordered-hash-table.h"
+#include "src/regexp/experimental/experimental.h"
 #include "src/regexp/regexp-interpreter.h"
 #include "src/regexp/regexp-macro-assembler-arch.h"
 #include "src/regexp/regexp-stack.h"
@@ -119,6 +120,13 @@ ExternalReference ExternalReference::handle_scope_implementer_address(
     Isolate* isolate) {
   return ExternalReference(isolate->handle_scope_implementer_address());
 }
+
+#ifdef V8_HEAP_SANDBOX
+ExternalReference ExternalReference::external_pointer_table_address(
+    Isolate* isolate) {
+  return ExternalReference(isolate->external_pointer_table_address());
+}
+#endif
 
 ExternalReference ExternalReference::interpreter_dispatch_table_address(
     Isolate* isolate) {
@@ -513,8 +521,11 @@ FUNCTION_REFERENCE_WITH_ISOLATE(re_check_stack_guard_state, re_stack_check_func)
 FUNCTION_REFERENCE_WITH_ISOLATE(re_grow_stack,
                                 NativeRegExpMacroAssembler::GrowStack)
 
-FUNCTION_REFERENCE_WITH_ISOLATE(re_match_for_call_from_js,
-                                IrregexpInterpreter::MatchForCallFromJs)
+FUNCTION_REFERENCE(re_match_for_call_from_js,
+                   IrregexpInterpreter::MatchForCallFromJs)
+
+FUNCTION_REFERENCE(re_experimental_match_for_call_from_js,
+                   ExperimentalRegExp::MatchForCallFromJs)
 
 FUNCTION_REFERENCE_WITH_ISOLATE(
     re_case_insensitive_compare_unicode,
@@ -673,8 +684,8 @@ FUNCTION_REFERENCE(copy_fast_number_jsarray_elements_to_typed_array,
 FUNCTION_REFERENCE(copy_typed_array_elements_to_typed_array,
                    CopyTypedArrayElementsToTypedArray)
 FUNCTION_REFERENCE(copy_typed_array_elements_slice, CopyTypedArrayElementsSlice)
-FUNCTION_REFERENCE(try_internalize_string_function,
-                   StringTable::LookupStringIfExists_NoAllocate)
+FUNCTION_REFERENCE(try_string_to_index_or_lookup_existing,
+                   StringTable::TryStringToIndexOrLookupExisting)
 FUNCTION_REFERENCE(string_to_array_index_function, String::ToArrayIndex)
 
 static Address LexicographicCompareWrapper(Isolate* isolate, Address smi_x,
@@ -938,6 +949,11 @@ FUNCTION_REFERENCE(call_enter_context_function, EnterMicrotaskContextWrapper)
 FUNCTION_REFERENCE(
     js_finalization_registry_remove_cell_from_unregister_token_map,
     JSFinalizationRegistry::RemoveCellFromUnregisterTokenMap)
+
+#ifdef V8_HEAP_SANDBOX
+FUNCTION_REFERENCE(external_pointer_table_grow_table_function,
+                   ExternalPointerTable::GrowTable)
+#endif
 
 bool operator==(ExternalReference lhs, ExternalReference rhs) {
   return lhs.address() == rhs.address();

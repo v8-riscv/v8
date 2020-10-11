@@ -126,9 +126,12 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kX64Lea:
     case kX64Dec32:
     case kX64Inc32:
+    case kX64Pinsrb:
+    case kX64Pinsrw:
+    case kX64Pinsrd:
+    case kX64Pinsrq:
     case kX64F64x2Splat:
     case kX64F64x2ExtractLane:
-    case kX64F64x2ReplaceLane:
     case kX64F64x2Abs:
     case kX64F64x2Neg:
     case kX64F64x2Sqrt:
@@ -175,27 +178,17 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kX64F32x4Round:
     case kX64I64x2Splat:
     case kX64I64x2ExtractLane:
-    case kX64I64x2ReplaceLane:
     case kX64I64x2Neg:
+    case kX64I64x2BitMask:
     case kX64I64x2Shl:
     case kX64I64x2ShrS:
     case kX64I64x2Add:
     case kX64I64x2Sub:
     case kX64I64x2Mul:
-    case kX64I64x2MinS:
-    case kX64I64x2MaxS:
     case kX64I64x2Eq:
-    case kX64I64x2Ne:
-    case kX64I64x2GtS:
-    case kX64I64x2GeS:
     case kX64I64x2ShrU:
-    case kX64I64x2MinU:
-    case kX64I64x2MaxU:
-    case kX64I64x2GtU:
-    case kX64I64x2GeU:
     case kX64I32x4Splat:
     case kX64I32x4ExtractLane:
-    case kX64I32x4ReplaceLane:
     case kX64I32x4SConvertF32x4:
     case kX64I32x4SConvertI16x8Low:
     case kX64I32x4SConvertI16x8High:
@@ -226,7 +219,6 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kX64I16x8Splat:
     case kX64I16x8ExtractLaneU:
     case kX64I16x8ExtractLaneS:
-    case kX64I16x8ReplaceLane:
     case kX64I16x8SConvertI8x16Low:
     case kX64I16x8SConvertI8x16High:
     case kX64I16x8Neg:
@@ -261,7 +253,6 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kX64I8x16Splat:
     case kX64I8x16ExtractLaneU:
     case kX64I8x16ExtractLaneS:
-    case kX64I8x16ReplaceLane:
     case kX64I8x16SConvertI16x8:
     case kX64I8x16Neg:
     case kX64I8x16Shl:
@@ -297,14 +288,12 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kX64S128Zero:
     case kX64S128AllOnes:
     case kX64S128AndNot:
-    case kX64V64x2AnyTrue:
-    case kX64V64x2AllTrue:
     case kX64V32x4AnyTrue:
     case kX64V32x4AllTrue:
     case kX64V16x8AnyTrue:
     case kX64V16x8AllTrue:
-    case kX64S8x16Swizzle:
-    case kX64S8x16Shuffle:
+    case kX64I8x16Swizzle:
+    case kX64I8x16Shuffle:
     case kX64S32x4Swizzle:
     case kX64S32x4Shuffle:
     case kX64S16x8Blend:
@@ -378,16 +367,16 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kX64Movsd:
     case kX64Movss:
     case kX64Movdqu:
-    case kX64S8x16LoadSplat:
-    case kX64S16x8LoadSplat:
-    case kX64S32x4LoadSplat:
-    case kX64S64x2LoadSplat:
-    case kX64I16x8Load8x8S:
-    case kX64I16x8Load8x8U:
-    case kX64I32x4Load16x4S:
-    case kX64I32x4Load16x4U:
-    case kX64I64x2Load32x2S:
-    case kX64I64x2Load32x2U:
+    case kX64S128Load8Splat:
+    case kX64S128Load16Splat:
+    case kX64S128Load32Splat:
+    case kX64S128Load64Splat:
+    case kX64S128Load8x8S:
+    case kX64S128Load8x8U:
+    case kX64S128Load16x4S:
+    case kX64S128Load16x4U:
+    case kX64S128Load32x2S:
+    case kX64S128Load32x2U:
     case kX64S128LoadMem32Zero:
     case kX64S128LoadMem64Zero:
       return instr->HasOutput() ? kIsLoadOperation : kHasSideEffect;

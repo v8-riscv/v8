@@ -32,14 +32,15 @@ class CWasmEntryArgTester {
  public:
   CWasmEntryArgTester(std::initializer_list<uint8_t> wasm_function_bytes,
                       std::function<ReturnType(Args...)> expected_fn)
-      : runner_(ExecutionTier::kTurbofan),
+      : runner_(TestExecutionTier::kTurbofan),
         isolate_(runner_.main_isolate()),
         expected_fn_(expected_fn),
         sig_(runner_.template CreateSig<ReturnType, Args...>()) {
     std::vector<uint8_t> code{wasm_function_bytes};
     runner_.Build(code.data(), code.data() + code.size());
     wasm_code_ = runner_.builder().GetFunctionCode(0);
-    c_wasm_entry_ = compiler::CompileCWasmEntry(isolate_, sig_);
+    c_wasm_entry_ = compiler::CompileCWasmEntry(
+        isolate_, sig_, wasm_code_->native_module()->module());
   }
 
   template <typename... Rest>
@@ -114,7 +115,12 @@ TEST(TestCWasmEntryArgPassing_int64_double) {
        WASM_I64_SCONVERT_F64(WASM_GET_LOCAL(0))},
       [](double d) { return static_cast<int64_t>(d); });
 
-  FOR_INT64_INPUTS(i) { tester.CheckCall(i); }
+  FOR_FLOAT64_INPUTS(d) {
+    if (d < static_cast<double>(std::numeric_limits<int64_t>::max()) &&
+        d >= static_cast<double>(std::numeric_limits<int64_t>::min())) {
+      tester.CheckCall(d);
+    }
+  }
 }
 
 // Pass float, return double.

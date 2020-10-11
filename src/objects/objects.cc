@@ -34,11 +34,10 @@
 #include "src/execution/isolate-utils-inl.h"
 #include "src/execution/isolate-utils.h"
 #include "src/execution/microtask-queue.h"
-#include "src/execution/off-thread-isolate.h"
 #include "src/execution/protectors-inl.h"
 #include "src/heap/factory-inl.h"
 #include "src/heap/heap-inl.h"
-#include "src/heap/off-thread-factory-inl.h"
+#include "src/heap/local-factory-inl.h"
 #include "src/heap/read-only-heap.h"
 #include "src/ic/ic.h"
 #include "src/init/bootstrapper.h"
@@ -64,6 +63,7 @@
 #include "src/objects/free-space-inl.h"
 #include "src/objects/function-kind.h"
 #include "src/objects/hash-table-inl.h"
+#include "src/objects/instance-type.h"
 #include "src/objects/js-array-inl.h"
 #include "src/objects/keys.h"
 #include "src/objects/lookup-inl.h"
@@ -72,6 +72,7 @@
 #include "src/objects/objects-inl.h"
 #include "src/objects/property-details.h"
 #include "src/roots/roots.h"
+#include "src/snapshot/deserializer.h"
 #include "src/utils/identity-map.h"
 #ifdef V8_INTL_SUPPORT
 #include "src/objects/js-break-iterator.h"
@@ -110,6 +111,7 @@
 #include "src/objects/slots-atomic-inl.h"
 #include "src/objects/stack-frame-info-inl.h"
 #include "src/objects/string-comparator.h"
+#include "src/objects/string-set-inl.h"
 #include "src/objects/struct-inl.h"
 #include "src/objects/template-objects-inl.h"
 #include "src/objects/transitions-inl.h"
@@ -125,9 +127,9 @@
 #include "src/wasm/wasm-engine.h"
 #include "src/wasm/wasm-objects.h"
 #include "src/zone/zone.h"
-#include "torque-generated/class-definitions-tq-inl.h"
-#include "torque-generated/exported-class-definitions-tq-inl.h"
-#include "torque-generated/internal-class-definitions-tq-inl.h"
+#include "torque-generated/class-definitions-inl.h"
+#include "torque-generated/exported-class-definitions-inl.h"
+#include "torque-generated/internal-class-definitions-inl.h"
 
 namespace v8 {
 namespace internal {
@@ -670,12 +672,18 @@ Maybe<ComparisonResult> Object::Compare(Isolate* isolate, Handle<Object> x,
                                 Handle<String>::cast(y)));
   }
   if (x->IsBigInt() && y->IsString()) {
-    return Just(BigInt::CompareToString(isolate, Handle<BigInt>::cast(x),
-                                        Handle<String>::cast(y)));
+    return BigInt::CompareToString(isolate, Handle<BigInt>::cast(x),
+                                   Handle<String>::cast(y));
   }
   if (x->IsString() && y->IsBigInt()) {
-    return Just(Reverse(BigInt::CompareToString(
-        isolate, Handle<BigInt>::cast(y), Handle<String>::cast(x))));
+    Maybe<ComparisonResult> maybe_result = BigInt::CompareToString(
+        isolate, Handle<BigInt>::cast(y), Handle<String>::cast(x));
+    ComparisonResult result;
+    if (maybe_result.To(&result)) {
+      return Just(Reverse(result));
+    } else {
+      return Nothing<ComparisonResult>();
+    }
   }
   // ES6 section 7.2.11 Abstract Relational Comparison step 6.
   if (!Object::ToNumeric(isolate, x).ToHandle(&x) ||
@@ -734,8 +742,8 @@ Maybe<bool> Object::Equals(Isolate* isolate, Handle<Object> x,
         return Just(
             StrictNumberEquals(*x, Handle<Oddball>::cast(y)->to_number()));
       } else if (y->IsBigInt()) {
-        return Just(BigInt::EqualToString(isolate, Handle<BigInt>::cast(y),
-                                          Handle<String>::cast(x)));
+        return BigInt::EqualToString(isolate, Handle<BigInt>::cast(y),
+                                     Handle<String>::cast(x));
       } else if (y->IsJSReceiver()) {
         if (!JSReceiver::ToPrimitive(Handle<JSReceiver>::cast(y))
                  .ToHandle(&y)) {
@@ -1297,7 +1305,7 @@ bool FunctionTemplateInfo::IsTemplateFor(Map map) {
   Object type;
   if (cons_obj.IsJSFunction()) {
     JSFunction fun = JSFunction::cast(cons_obj);
-    type = fun.shared().function_data();
+    type = fun.shared().function_data(kAcquireLoad);
   } else if (cons_obj.IsFunctionTemplateInfo()) {
     type = FunctionTemplateInfo::cast(cons_obj);
   } else {
@@ -1452,7 +1460,7 @@ MaybeHandle<Object> Object::GetPropertyWithAccessor(LookupIterator* it) {
     if (info->replace_on_access() && receiver->IsJSReceiver()) {
       RETURN_ON_EXCEPTION(isolate,
                           Accessors::ReplaceAccessorWithDataProperty(
-                              receiver, holder, name, result),
+                              isolate, receiver, holder, name, result),
                           Object);
     }
     return reboxed_result;
@@ -1938,9 +1946,6 @@ void HeapObject::HeapObjectShortPrint(std::ostream& os) {  // NOLINT
       os << "<SimpleNumberDictionary[" << FixedArray::cast(*this).length()
          << "]>";
       break;
-    case STRING_TABLE_TYPE:
-      os << "<StringTable[" << FixedArray::cast(*this).length() << "]>";
-      break;
     case FIXED_ARRAY_TYPE:
       os << "<FixedArray[" << FixedArray::cast(*this).length() << "]>";
       break;
@@ -2237,7 +2242,8 @@ int HeapObject::SizeFromMap(Map map) const {
     return FeedbackMetadata::SizeFor(
         FeedbackMetadata::unchecked_cast(*this).synchronized_slot_count());
   }
-  if (instance_type == DESCRIPTOR_ARRAY_TYPE) {
+  if (base::IsInRange(instance_type, FIRST_DESCRIPTOR_ARRAY_TYPE,
+                      LAST_DESCRIPTOR_ARRAY_TYPE)) {
     return DescriptorArray::SizeFor(
         DescriptorArray::unchecked_cast(*this).number_of_all_descriptors());
   }
@@ -2300,8 +2306,14 @@ int HeapObject::SizeFromMap(Map map) const {
 }
 
 bool HeapObject::NeedsRehashing() const {
-  switch (map().instance_type()) {
+  return NeedsRehashing(map().instance_type());
+}
+
+bool HeapObject::NeedsRehashing(InstanceType instance_type) const {
+  DCHECK_EQ(instance_type, map().instance_type());
+  switch (instance_type) {
     case DESCRIPTOR_ARRAY_TYPE:
+    case STRONG_DESCRIPTOR_ARRAY_TYPE:
       return DescriptorArray::cast(*this).number_of_descriptors() > 1;
     case TRANSITION_ARRAY_TYPE:
       return TransitionArray::cast(*this).number_of_entries() > 1;
@@ -2312,7 +2324,6 @@ bool HeapObject::NeedsRehashing() const {
     case GLOBAL_DICTIONARY_TYPE:
     case NUMBER_DICTIONARY_TYPE:
     case SIMPLE_NUMBER_DICTIONARY_TYPE:
-    case STRING_TABLE_TYPE:
     case HASH_TABLE_TYPE:
     case SMALL_ORDERED_HASH_MAP_TYPE:
     case SMALL_ORDERED_HASH_SET_TYPE:
@@ -2340,9 +2351,9 @@ bool HeapObject::CanBeRehashed() const {
     case GLOBAL_DICTIONARY_TYPE:
     case NUMBER_DICTIONARY_TYPE:
     case SIMPLE_NUMBER_DICTIONARY_TYPE:
-    case STRING_TABLE_TYPE:
       return true;
     case DESCRIPTOR_ARRAY_TYPE:
+    case STRONG_DESCRIPTOR_ARRAY_TYPE:
       return true;
     case TRANSITION_ARRAY_TYPE:
       return true;
@@ -2358,25 +2369,21 @@ bool HeapObject::CanBeRehashed() const {
   return false;
 }
 
-void HeapObject::RehashBasedOnMap(LocalIsolateWrapper isolate) {
-  const Isolate* ptr_cmp_isolate = GetIsolateForPtrCompr(isolate);
+void HeapObject::RehashBasedOnMap(Isolate* isolate) {
   switch (map().instance_type()) {
     case HASH_TABLE_TYPE:
       UNREACHABLE();
     case NAME_DICTIONARY_TYPE:
-      NameDictionary::cast(*this).Rehash(ptr_cmp_isolate);
+      NameDictionary::cast(*this).Rehash(isolate);
       break;
     case GLOBAL_DICTIONARY_TYPE:
-      GlobalDictionary::cast(*this).Rehash(ptr_cmp_isolate);
+      GlobalDictionary::cast(*this).Rehash(isolate);
       break;
     case NUMBER_DICTIONARY_TYPE:
-      NumberDictionary::cast(*this).Rehash(ptr_cmp_isolate);
+      NumberDictionary::cast(*this).Rehash(isolate);
       break;
     case SIMPLE_NUMBER_DICTIONARY_TYPE:
-      SimpleNumberDictionary::cast(*this).Rehash(ptr_cmp_isolate);
-      break;
-    case STRING_TABLE_TYPE:
-      StringTable::cast(*this).Rehash(ptr_cmp_isolate);
+      SimpleNumberDictionary::cast(*this).Rehash(isolate);
       break;
     case DESCRIPTOR_ARRAY_TYPE:
       DCHECK_LE(1, DescriptorArray::cast(*this).number_of_descriptors());
@@ -2395,13 +2402,11 @@ void HeapObject::RehashBasedOnMap(LocalIsolateWrapper isolate) {
     case ORDERED_HASH_SET_TYPE:
       UNREACHABLE();  // We'll rehash from the JSMap or JSSet referencing them.
     case JS_MAP_TYPE: {
-      DCHECK(isolate.is_main_thread());
-      JSMap::cast(*this).Rehash(isolate.main_thread());
+      JSMap::cast(*this).Rehash(isolate);
       break;
     }
     case JS_SET_TYPE: {
-      DCHECK(isolate.is_main_thread());
-      JSSet::cast(*this).Rehash(isolate.main_thread());
+      JSSet::cast(*this).Rehash(isolate);
       break;
     }
     case SMALL_ORDERED_NAME_DICTIONARY_TYPE:
@@ -4305,7 +4310,7 @@ template Handle<DescriptorArray> DescriptorArray::Allocate(
     Isolate* isolate, int nof_descriptors, int slack,
     AllocationType allocation);
 template Handle<DescriptorArray> DescriptorArray::Allocate(
-    OffThreadIsolate* isolate, int nof_descriptors, int slack,
+    LocalIsolate* isolate, int nof_descriptors, int slack,
     AllocationType allocation);
 
 void DescriptorArray::Initialize(EnumCache enum_cache,
@@ -4761,7 +4766,7 @@ void Script::InitLineEnds(LocalIsolate* isolate, Handle<Script> script) {
 template EXPORT_TEMPLATE_DEFINE(V8_EXPORT_PRIVATE) void Script::InitLineEnds(
     Isolate* isolate, Handle<Script> script);
 template EXPORT_TEMPLATE_DEFINE(V8_EXPORT_PRIVATE) void Script::InitLineEnds(
-    OffThreadIsolate* isolate, Handle<Script> script);
+    LocalIsolate* isolate, Handle<Script> script);
 
 bool Script::GetPositionInfo(Handle<Script> script, int position,
                              PositionInfo* info, OffsetFlag offset_flag) {
@@ -4946,7 +4951,7 @@ MaybeHandle<SharedFunctionInfo> Script::FindSharedFunctionInfo(
 template MaybeHandle<SharedFunctionInfo> Script::FindSharedFunctionInfo(
     Isolate* isolate, int function_literal_id);
 template MaybeHandle<SharedFunctionInfo> Script::FindSharedFunctionInfo(
-    OffThreadIsolate* isolate, int function_literal_id);
+    LocalIsolate* isolate, int function_literal_id);
 
 Script::Iterator::Iterator(Isolate* isolate)
     : iterator_(isolate->heap()->script_list()) {}
@@ -5113,9 +5118,11 @@ bool JSArray::MayHaveReadOnlyLength(Map js_array_map) {
   // dictionary properties. Since it's not configurable, it's guaranteed to be
   // the first in the descriptor array.
   InternalIndex first(0);
-  DCHECK(js_array_map.instance_descriptors().GetKey(first) ==
+  DCHECK(js_array_map.instance_descriptors(kRelaxedLoad).GetKey(first) ==
          js_array_map.GetReadOnlyRoots().length_string());
-  return js_array_map.instance_descriptors().GetDetails(first).IsReadOnly();
+  return js_array_map.instance_descriptors(kRelaxedLoad)
+      .GetDetails(first)
+      .IsReadOnly();
 }
 
 bool JSArray::HasReadOnlyLength(Handle<JSArray> array) {
@@ -5148,7 +5155,7 @@ bool JSArray::WouldChangeReadOnlyLength(Handle<JSArray> array, uint32_t index) {
 template <typename Derived, typename Shape>
 void Dictionary<Derived, Shape>::Print(std::ostream& os) {
   DisallowHeapAllocation no_gc;
-  const Isolate* isolate = GetIsolateForPtrCompr(*this);
+  IsolateRoot isolate = GetIsolateForPtrCompr(*this);
   ReadOnlyRoots roots = this->GetReadOnlyRoots(isolate);
   Derived dictionary = Derived::cast(*this);
   for (InternalIndex i : dictionary.IterateEntries()) {
@@ -5338,6 +5345,8 @@ static void MoveMessageToPromise(Isolate* isolate, Handle<JSPromise> promise) {
 Handle<Object> JSPromise::Reject(Handle<JSPromise> promise,
                                  Handle<Object> reason, bool debug_event) {
   Isolate* const isolate = promise->GetIsolate();
+  DCHECK(
+      !reinterpret_cast<v8::Isolate*>(isolate)->GetCurrentContext().IsEmpty());
 
   if (isolate->debug()->is_active()) MoveMessageToPromise(isolate, promise);
 
@@ -5375,6 +5384,8 @@ Handle<Object> JSPromise::Reject(Handle<JSPromise> promise,
 MaybeHandle<Object> JSPromise::Resolve(Handle<JSPromise> promise,
                                        Handle<Object> resolution) {
   Isolate* const isolate = promise->GetIsolate();
+  DCHECK(
+      !reinterpret_cast<v8::Isolate*>(isolate)->GetCurrentContext().IsEmpty());
 
   isolate->RunPromiseHook(PromiseHookType::kResolve, promise,
                           isolate->factory()->undefined_value());
@@ -5604,50 +5615,6 @@ class CodeKey : public HashTableKey {
   Handle<SharedFunctionInfo> key_;
 };
 
-// InternalizedStringKey carries a string/internalized-string object as key.
-class InternalizedStringKey final : public StringTableKey {
- public:
-  explicit InternalizedStringKey(Handle<String> string)
-      : StringTableKey(0, string->length()), string_(string) {
-    DCHECK(!string->IsInternalizedString());
-    DCHECK(string->IsFlat());
-    // Make sure hash_field is computed.
-    string->Hash();
-    set_hash_field(string->hash_field());
-  }
-
-  bool IsMatch(String string) override { return string_->SlowEquals(string); }
-
-  Handle<String> AsHandle(Isolate* isolate) override {
-    // Internalize the string if possible.
-    MaybeHandle<Map> maybe_map =
-        isolate->factory()->InternalizedStringMapForString(string_);
-    Handle<Map> map;
-    if (maybe_map.ToHandle(&map)) {
-      string_->set_map_no_write_barrier(*map);
-      DCHECK(string_->IsInternalizedString());
-      return string_;
-    }
-    if (FLAG_thin_strings) {
-      // External strings get special treatment, to avoid copying their
-      // contents.
-      if (string_->IsExternalOneByteString()) {
-        return isolate->factory()
-            ->InternalizeExternalString<ExternalOneByteString>(string_);
-      } else if (string_->IsExternalTwoByteString()) {
-        return isolate->factory()
-            ->InternalizeExternalString<ExternalTwoByteString>(string_);
-      }
-    }
-    // Otherwise allocate a new internalized string.
-    return isolate->factory()->NewInternalizedStringImpl(
-        string_, string_->length(), string_->hash_field());
-  }
-
- private:
-  Handle<String> string_;
-};
-
 template <typename Derived, typename Shape>
 void HashTable<Derived, Shape>::IteratePrefix(ObjectVisitor* v) {
   BodyDescriptorBase::IteratePointers(*this, 0, kElementsStartOffset, v);
@@ -5694,8 +5661,7 @@ Handle<Derived> HashTable<Derived, Shape>::NewInternal(
 }
 
 template <typename Derived, typename Shape>
-void HashTable<Derived, Shape>::Rehash(const Isolate* isolate,
-                                       Derived new_table) {
+void HashTable<Derived, Shape>::Rehash(IsolateRoot isolate, Derived new_table) {
   DisallowHeapAllocation no_gc;
   WriteBarrierMode mode = new_table.GetWriteBarrierMode(no_gc);
 
@@ -5759,7 +5725,7 @@ void HashTable<Derived, Shape>::Swap(InternalIndex entry1, InternalIndex entry2,
 }
 
 template <typename Derived, typename Shape>
-void HashTable<Derived, Shape>::Rehash(const Isolate* isolate) {
+void HashTable<Derived, Shape>::Rehash(IsolateRoot isolate) {
   DisallowHeapAllocation no_gc;
   WriteBarrierMode mode = GetWriteBarrierMode(no_gc);
   ReadOnlyRoots roots = GetReadOnlyRoots(isolate);
@@ -5826,7 +5792,7 @@ Handle<Derived> HashTable<Derived, Shape>::EnsureCapacity(
       isolate, new_nof,
       should_pretenure ? AllocationType::kOld : AllocationType::kYoung);
 
-  table->Rehash(GetIsolateForPtrCompr(isolate), *new_table);
+  table->Rehash(isolate, *new_table);
   return new_table;
 }
 
@@ -5892,8 +5858,9 @@ Handle<Derived> HashTable<Derived, Shape>::Shrink(Isolate* isolate,
 }
 
 template <typename Derived, typename Shape>
-InternalIndex HashTable<Derived, Shape>::FindInsertionEntry(
-    const Isolate* isolate, ReadOnlyRoots roots, uint32_t hash) {
+InternalIndex HashTable<Derived, Shape>::FindInsertionEntry(IsolateRoot isolate,
+                                                            ReadOnlyRoots roots,
+                                                            uint32_t hash) {
   uint32_t capacity = Capacity();
   uint32_t count = 1;
   // EnsureCapacity will guarantee the hash table is never full.
@@ -5907,361 +5874,6 @@ template <typename Derived, typename Shape>
 InternalIndex HashTable<Derived, Shape>::FindInsertionEntry(Isolate* isolate,
                                                             uint32_t hash) {
   return FindInsertionEntry(isolate, ReadOnlyRoots(isolate), hash);
-}
-
-template <typename Derived, typename Shape>
-InternalIndex HashTable<Derived, Shape>::FindEntryOrInsertionEntry(
-    const Isolate* isolate, ReadOnlyRoots roots, Key key, uint32_t hash) {
-  uint32_t capacity = Capacity();
-  InternalIndex insertion_entry = InternalIndex::NotFound();
-  uint32_t count = 1;
-  // EnsureCapacity will guarantee the hash table is never full.
-  Object undefined = roots.undefined_value();
-  Object the_hole = roots.the_hole_value();
-  for (InternalIndex entry = FirstProbe(hash, capacity);;
-       entry = NextProbe(entry, count++, capacity)) {
-    Object element = KeyAt(isolate, entry);
-    if (element == undefined) {
-      // Empty entry, it's out insertion entry if there was no previous Hole.
-      if (insertion_entry.is_not_found()) return entry;
-      return insertion_entry;
-    }
-
-    if (element == the_hole) {
-      // Holes are potential insertion candidates, but we continue the search
-      // in case we find the actual matching entry.
-      if (insertion_entry.is_not_found()) insertion_entry = entry;
-      continue;
-    }
-
-    if (Shape::IsMatch(key, element)) return entry;
-  }
-}
-void StringTable::EnsureCapacityForDeserialization(Isolate* isolate,
-                                                   int expected) {
-  // TODO(crbug.com/v8/10729): Add concurrent string table support.
-  Handle<StringTable> table = isolate->factory()->string_table();
-  // We need a key instance for the virtual hash function.
-  table = EnsureCapacity(isolate, table, expected);
-  isolate->heap()->SetRootStringTable(*table);
-}
-
-// static
-Handle<String> StringTable::LookupString(Isolate* isolate,
-                                         Handle<String> string) {
-  string = String::Flatten(isolate, string);
-  if (string->IsInternalizedString()) return string;
-
-  InternalizedStringKey key(string);
-  Handle<String> result = LookupKey(isolate, &key);
-
-  if (FLAG_thin_strings) {
-    if (!string->IsInternalizedString()) {
-      string->MakeThin(isolate, *result);
-    }
-  } else {  // !FLAG_thin_strings
-    if (string->IsConsString()) {
-      Handle<ConsString> cons = Handle<ConsString>::cast(string);
-      cons->set_first(*result);
-      cons->set_second(ReadOnlyRoots(isolate).empty_string());
-    } else if (string->IsSlicedString()) {
-      STATIC_ASSERT(static_cast<int>(ConsString::kSize) ==
-                    static_cast<int>(SlicedString::kSize));
-      DisallowHeapAllocation no_gc;
-      bool one_byte = result->IsOneByteRepresentation();
-      Handle<Map> map = one_byte
-                            ? isolate->factory()->cons_one_byte_string_map()
-                            : isolate->factory()->cons_string_map();
-      string->set_map(*map);
-      Handle<ConsString> cons = Handle<ConsString>::cast(string);
-      cons->set_first(*result);
-      cons->set_second(ReadOnlyRoots(isolate).empty_string());
-    }
-  }
-  return result;
-}
-
-// static
-template <typename StringTableKey>
-Handle<String> StringTable::LookupKey(Isolate* isolate, StringTableKey* key) {
-  // String table lookups are allowed to be concurrent, assuming that:
-  //
-  //   - The Heap access is allowed to be concurrent (using LocalHeap or
-  //     similar),
-  //   - All writes to the string table are guarded by the Isolate string table
-  //     mutex,
-  //   - Resizes of the string table first copies the old contents to the new
-  //     table, and only then sets the new string table pointer to the new
-  //     table,
-  //   - Only GCs can remove elements from the string table.
-  //
-  // These assumptions allow us to make the following statement:
-  //
-  //   "Reads are allowed when not holding the lock, as long as false negatives
-  //    (misses) are ok. We will never get a false positive (hit of an entry no
-  //    longer in the table)"
-  //
-  // This is because we _know_ that if we find an entry in the string table, any
-  // entry will also be in all reallocations of that tables. This is required
-  // for strong consistency of internalized string equality implying reference
-  // equality.
-  //
-  // We therefore try to optimistically read from the string table without
-  // taking the lock (both here and in the NoAllocate version of the lookup),
-  // and on a miss we take the lock and try to write the entry, with a second
-  // read lookup in case the non-locked read missed a write.
-  //
-  // One complication is allocation -- we don't want to allocate while holding
-  // the string table lock. This applies to both allocation of new strings, and
-  // re-allocation of the string table on resize. So, we optimistically allocate
-  // (without copying values) outside the lock, and potentially discard the
-  // allocation if another write also did an allocation. This assumes that
-  // writes are rarer than reads.
-
-  ReadOnlyRoots roots(isolate);
-  // Take the explicit slot to the string table, so that we can read/write it
-  // with acquire/release semantics.
-  FullObjectSlot string_table_slot =
-      isolate->roots_table().slot(RootIndex::kStringTable);
-
-  Handle<String> new_string;
-  while (true) {
-    // Load the string table slot, creating a new Handle for the table to cache
-    // the current slot value in case another thread updates it.
-    Handle<StringTable> table =
-        handle(StringTable::cast(string_table_slot.Acquire_Load()), isolate);
-
-    // First try to find the string in the table. This is safe to do even if the
-    // table is now reallocated; we won't find a stale entry in the old table
-    // because the new table won't delete it's corresponding entry until the
-    // string is dead, in which case it will die in this table too and worst
-    // case we'll have a false miss.
-    InternalIndex entry = table->FindEntry(isolate, roots, key, key->hash());
-    if (entry.is_found()) {
-      return handle(String::cast(table->KeyAt(isolate, entry)), isolate);
-    }
-
-    // No entry found, so adding new string.
-
-    // Allocate the string before the first insertion attempt, reuse this
-    // allocated value on insertion retries. If another thread concurrently
-    // allocates the same string, the insert will fail, the lookup above will
-    // succeed, and this string will be discarded.
-    if (new_string.is_null()) new_string = key->AsHandle(isolate);
-
-    // Grow or shrink table if needed. We first try to shrink the table, if it
-    // is sufficiently empty; otherwise we make sure to grow it so that it has
-    // enough space.
-    int current_capacity = table->Capacity();
-    int current_nof = table->NumberOfElements();
-    int capacity_after_shrinking =
-        ComputeCapacityWithCautiousShrink(current_capacity, current_nof + 1);
-
-    int new_capacity = -1;
-    if (capacity_after_shrinking < current_capacity) {
-      DCHECK(HasSufficientCapacityToAdd(capacity_after_shrinking, current_nof,
-                                        0, 1));
-      new_capacity = capacity_after_shrinking;
-    } else if (!HasSufficientCapacityToAdd(current_capacity, current_nof,
-                                           table->NumberOfDeletedElements(),
-                                           1)) {
-      new_capacity = ComputeCapacity(current_nof + 1);
-    }
-
-    // Maybe re-allocate the table outside of the lock, delay copying the
-    // contents until the lock is held.
-    MaybeHandle<StringTable> maybe_new_table;
-    if (new_capacity != -1) {
-      bool pretenure = (new_capacity > kMinCapacityForPretenure) &&
-                       !Heap::InYoungGeneration(*table);
-      maybe_new_table = HashTable::New(
-          isolate, new_capacity,
-          pretenure ? AllocationType::kOld : AllocationType::kYoung,
-          USE_CUSTOM_MINIMUM_CAPACITY);
-    }
-
-    {
-      base::MutexGuard table_write_guard(isolate->string_table_mutex());
-
-      // Reload the table, now as a Handle, in case someone else changed it.
-      Handle<StringTable> reloaded_table = isolate->factory()->string_table();
-
-      // Someone else updated the table slot, they probably resized so we should
-      // invalidate our new table if there is one.
-      if (*reloaded_table != *table) {
-        table = reloaded_table;
-        maybe_new_table = kNullMaybeHandle;
-      } else {
-        // Copy the old table if necessary -- this is in the lock so that we
-        // don’t miss any writes to the old table (which is guaranteed to).
-        Handle<StringTable> new_table;
-        if (maybe_new_table.ToHandle(&new_table)) {
-          // Make sure the new table is still large enough, in case the old
-          // table was mutated.
-          if (!HasSufficientCapacityToAdd(new_table->Capacity(), 0, 0,
-                                          table->NumberOfElements() + 1)) {
-            continue;
-          }
-          table->Rehash(isolate, *new_table);
-          string_table_slot.Release_Store(*new_table);
-          table = new_table;
-        }
-      }
-
-      if (!table->HasSufficientCapacityToAdd(1)) {
-        // The table is too small to insert our entry, which means someone else
-        // added new entries since we last checked. Loop around again to retry
-        // the lookup (and possibly resize).
-        continue;
-      }
-
-      InternalIndex entry =
-          table->FindEntryOrInsertionEntry(isolate, roots, key, key->hash());
-
-      // Check one last time if the key is present in the table, in case it was
-      // added after the check
-      Object element = table->KeyAt(isolate, entry);
-      if (IsKey(roots, element)) {
-        return handle(String::cast(element), isolate);
-      }
-
-      // Add the new string and return it.
-      table->set(EntryToIndex(entry), *new_string);
-      table->ElementAdded();
-      return new_string;
-    }
-  }
-}
-
-template Handle<String> StringTable::LookupKey(Isolate* isolate,
-                                               OneByteStringKey* key);
-template Handle<String> StringTable::LookupKey(Isolate* isolate,
-                                               TwoByteStringKey* key);
-template Handle<String> StringTable::LookupKey(Isolate* isolate,
-                                               SeqOneByteSubStringKey* key);
-template Handle<String> StringTable::LookupKey(Isolate* isolate,
-                                               SeqTwoByteSubStringKey* key);
-
-// static
-Handle<String> StringTable::AddKeyNoResize(Isolate* isolate,
-                                           Handle<StringTable> table,
-                                           StringTableKey* key) {
-  DCHECK(table->HasSufficientCapacityToAdd(1));
-  // Create string object.
-  Handle<String> string = key->AsHandle(isolate);
-  // There must be no attempts to internalize strings that could throw
-  // InvalidStringLength error.
-  CHECK(!string.is_null());
-  DCHECK(string->HasHashCode());
-  DCHECK(table->FindEntry(isolate, key).is_not_found());
-
-  // Add the new string and return it along with the string table.
-  InternalIndex entry = table->FindInsertionEntry(isolate, key->hash());
-  table->set(EntryToIndex(entry), *string);
-  table->ElementAdded();
-
-  return Handle<String>::cast(string);
-}
-
-int StringTable::ComputeCapacityWithCautiousShrink(int current_capacity,
-                                                   int at_least_room_for) {
-  // Only shrink if the table is very empty to avoid performance penalty.
-  if (current_capacity <= StringTable::kMinCapacity) return current_capacity;
-  if (at_least_room_for > (current_capacity / kMaxEmptyFactor))
-    return current_capacity;
-  return ComputeCapacityWithShrink(current_capacity, at_least_room_for);
-}
-
-namespace {
-
-template <typename Char>
-Address LookupString(Isolate* isolate, String string, String source,
-                     size_t start) {
-  DisallowHeapAllocation no_gc;
-  // Take the explicit slot to the string table, so that we can read it with
-  // acquire/release semantics.
-  FullObjectSlot string_table_slot =
-      isolate->roots_table().slot(RootIndex::kStringTable);
-  StringTable table = StringTable::cast(string_table_slot.Acquire_Load());
-  uint64_t seed = HashSeed(isolate);
-
-  int length = string.length();
-
-  std::unique_ptr<Char[]> buffer;
-  const Char* chars;
-
-  if (source.IsConsString()) {
-    DCHECK(!source.IsFlat());
-    buffer.reset(new Char[length]);
-    String::WriteToFlat(source, buffer.get(), 0, length);
-    chars = buffer.get();
-  } else {
-    chars = source.GetChars<Char>(no_gc) + start;
-  }
-  // TODO(verwaest): Internalize to one-byte when possible.
-  SequentialStringKey<Char> key(Vector<const Char>(chars, length), seed);
-
-  // String could be an array index.
-  uint32_t hash_field = key.hash_field();
-
-  if (Name::ContainsCachedArrayIndex(hash_field)) {
-    return Smi::FromInt(String::ArrayIndexValueBits::decode(hash_field)).ptr();
-  }
-
-  if ((hash_field & Name::kIsNotIntegerIndexMask) == 0) {
-    // It is an index, but it's not cached.
-    return Smi::FromInt(ResultSentinel::kUnsupported).ptr();
-  }
-
-  InternalIndex entry =
-      table.FindEntry(isolate, ReadOnlyRoots(isolate), &key, key.hash());
-  if (entry.is_not_found()) {
-    // A string that's not an array index, and not in the string table,
-    // cannot have been used as a property name before.
-    return Smi::FromInt(ResultSentinel::kNotFound).ptr();
-  }
-
-  String internalized = String::cast(table.KeyAt(isolate, entry));
-  if (FLAG_thin_strings) {
-    string.MakeThin(isolate, internalized);
-  }
-  return internalized.ptr();
-}
-
-}  // namespace
-
-// static
-Address StringTable::LookupStringIfExists_NoAllocate(Isolate* isolate,
-                                                     Address raw_string) {
-  String string = String::cast(Object(raw_string));
-  DCHECK(!string.IsInternalizedString());
-
-  // Valid array indices are >= 0, so they cannot be mixed up with any of
-  // the result sentinels, which are negative.
-  STATIC_ASSERT(
-      !String::ArrayIndexValueBits::is_valid(ResultSentinel::kUnsupported));
-  STATIC_ASSERT(
-      !String::ArrayIndexValueBits::is_valid(ResultSentinel::kNotFound));
-
-  size_t start = 0;
-  String source = string;
-  if (source.IsSlicedString()) {
-    SlicedString sliced = SlicedString::cast(source);
-    start = sliced.offset();
-    source = sliced.parent();
-  } else if (source.IsConsString() && source.IsFlat()) {
-    source = ConsString::cast(source).first();
-  }
-  if (source.IsThinString()) {
-    source = ThinString::cast(source).actual();
-    if (string.length() == source.length()) {
-      return source.ptr();
-    }
-  }
-  if (source.IsOneByteRepresentation()) {
-    return i::LookupString<uint8_t>(isolate, string, source, start);
-  }
-  return i::LookupString<uint16_t>(isolate, string, source, start);
 }
 
 Handle<StringSet> StringSet::New(Isolate* isolate) {
@@ -6555,6 +6167,18 @@ Handle<CompilationCacheTable> CompilationCacheTable::PutCode(
     Isolate* isolate, Handle<CompilationCacheTable> cache,
     Handle<SharedFunctionInfo> key, Handle<Code> value) {
   CodeKey k(key);
+
+  {
+    InternalIndex entry = cache->FindEntry(isolate, &k);
+    if (entry.is_found()) {
+      // Update.
+      cache->set(EntryToIndex(entry), *key);
+      cache->set(EntryToIndex(entry) + 1, *value);
+      return cache;
+    }
+  }
+
+  // Insert.
   cache = EnsureCapacity(isolate, cache);
   InternalIndex entry = cache->FindInsertionEntry(isolate, k.Hash());
   cache->set(EntryToIndex(entry), *key);
@@ -6727,8 +6351,7 @@ Handle<Derived> Dictionary<Derived, Shape>::Add(LocalIsolate* isolate,
   // Compute the key object.
   Handle<Object> k = Shape::AsHandle(isolate, key);
 
-  InternalIndex entry = dictionary->FindInsertionEntry(
-      GetIsolateForPtrCompr(isolate), roots, hash);
+  InternalIndex entry = dictionary->FindInsertionEntry(isolate, roots, hash);
   dictionary->SetEntry(entry, *k, *value, details);
   DCHECK(dictionary->KeyAt(isolate, entry).IsNumber() ||
          Shape::Unwrap(dictionary->KeyAt(isolate, entry)).IsUniqueName());
@@ -6996,7 +6619,7 @@ void ObjectHashTableBase<Derived, Shape>::FillEntriesWithHoles(
 }
 
 template <typename Derived, typename Shape>
-Object ObjectHashTableBase<Derived, Shape>::Lookup(const Isolate* isolate,
+Object ObjectHashTableBase<Derived, Shape>::Lookup(IsolateRoot isolate,
                                                    Handle<Object> key,
                                                    int32_t hash) {
   DisallowHeapAllocation no_gc;
@@ -7012,7 +6635,7 @@ template <typename Derived, typename Shape>
 Object ObjectHashTableBase<Derived, Shape>::Lookup(Handle<Object> key) {
   DisallowHeapAllocation no_gc;
 
-  const Isolate* isolate = GetIsolateForPtrCompr(*this);
+  IsolateRoot isolate = GetIsolateForPtrCompr(*this);
   ReadOnlyRoots roots = this->GetReadOnlyRoots(isolate);
   DCHECK(this->IsKey(roots, *key));
 
@@ -7555,15 +7178,15 @@ Address Smi::LexicographicCompare(Isolate* isolate, Smi x, Smi y) {
   HashTable<DERIVED, SHAPE>::New(Isolate*, int, AllocationType,             \
                                  MinimumCapacity);                          \
   template EXPORT_TEMPLATE_DEFINE(V8_EXPORT_PRIVATE) Handle<DERIVED>        \
-  HashTable<DERIVED, SHAPE>::New(OffThreadIsolate*, int, AllocationType,    \
+  HashTable<DERIVED, SHAPE>::New(LocalIsolate*, int, AllocationType,        \
                                  MinimumCapacity);                          \
                                                                             \
   template EXPORT_TEMPLATE_DEFINE(V8_EXPORT_PRIVATE) Handle<DERIVED>        \
   HashTable<DERIVED, SHAPE>::EnsureCapacity(Isolate*, Handle<DERIVED>, int, \
                                             AllocationType);                \
   template EXPORT_TEMPLATE_DEFINE(V8_EXPORT_PRIVATE) Handle<DERIVED>        \
-  HashTable<DERIVED, SHAPE>::EnsureCapacity(                                \
-      OffThreadIsolate*, Handle<DERIVED>, int, AllocationType);
+  HashTable<DERIVED, SHAPE>::EnsureCapacity(LocalIsolate*, Handle<DERIVED>, \
+                                            int, AllocationType);
 
 #define EXTERN_DEFINE_OBJECT_BASE_HASH_TABLE(DERIVED, SHAPE) \
   EXTERN_DEFINE_HASH_TABLE(DERIVED, SHAPE)                   \
@@ -7579,7 +7202,7 @@ Address Smi::LexicographicCompare(Isolate* isolate, Smi x, Smi y) {
       Isolate* isolate, Handle<DERIVED>, Key, Handle<Object>, PropertyDetails, \
       InternalIndex*);                                                         \
   template V8_EXPORT_PRIVATE Handle<DERIVED> Dictionary<DERIVED, SHAPE>::Add(  \
-      OffThreadIsolate* isolate, Handle<DERIVED>, Key, Handle<Object>,         \
+      LocalIsolate* isolate, Handle<DERIVED>, Key, Handle<Object>,             \
       PropertyDetails, InternalIndex*);
 
 #define EXTERN_DEFINE_BASE_NAME_DICTIONARY(DERIVED, SHAPE)                     \
@@ -7591,8 +7214,8 @@ Address Smi::LexicographicCompare(Isolate* isolate, Smi x, Smi y) {
   BaseNameDictionary<DERIVED, SHAPE>::New(Isolate*, int, AllocationType,       \
                                           MinimumCapacity);                    \
   template V8_EXPORT_PRIVATE Handle<DERIVED>                                   \
-  BaseNameDictionary<DERIVED, SHAPE>::New(OffThreadIsolate*, int,              \
-                                          AllocationType, MinimumCapacity);    \
+  BaseNameDictionary<DERIVED, SHAPE>::New(LocalIsolate*, int, AllocationType,  \
+                                          MinimumCapacity);                    \
                                                                                \
   template Handle<DERIVED>                                                     \
   BaseNameDictionary<DERIVED, SHAPE>::AddNoUpdateNextEnumerationIndex(         \
@@ -7600,10 +7223,9 @@ Address Smi::LexicographicCompare(Isolate* isolate, Smi x, Smi y) {
       InternalIndex*);                                                         \
   template Handle<DERIVED>                                                     \
   BaseNameDictionary<DERIVED, SHAPE>::AddNoUpdateNextEnumerationIndex(         \
-      OffThreadIsolate* isolate, Handle<DERIVED>, Key, Handle<Object>,         \
+      LocalIsolate* isolate, Handle<DERIVED>, Key, Handle<Object>,             \
       PropertyDetails, InternalIndex*);
 
-EXTERN_DEFINE_HASH_TABLE(StringTable, StringTableShape)
 EXTERN_DEFINE_HASH_TABLE(StringSet, StringSetShape)
 EXTERN_DEFINE_HASH_TABLE(CompilationCacheTable, CompilationCacheShape)
 EXTERN_DEFINE_HASH_TABLE(ObjectHashSet, ObjectHashSetShape)

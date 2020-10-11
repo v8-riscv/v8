@@ -60,16 +60,16 @@ size_t hash_value(LoadKind);
 V8_EXPORT_PRIVATE std::ostream& operator<<(std::ostream&, LoadKind);
 
 enum class LoadTransformation {
-  kS8x16LoadSplat,
-  kS16x8LoadSplat,
-  kS32x4LoadSplat,
-  kS64x2LoadSplat,
-  kI16x8Load8x8S,
-  kI16x8Load8x8U,
-  kI32x4Load16x4S,
-  kI32x4Load16x4U,
-  kI64x2Load32x2S,
-  kI64x2Load32x2U,
+  kS128Load8Splat,
+  kS128Load16Splat,
+  kS128Load32Splat,
+  kS128Load64Splat,
+  kS128Load8x8S,
+  kS128Load8x8U,
+  kS128Load16x4S,
+  kS128Load16x4U,
+  kS128Load32x2S,
+  kS128Load32x2U,
   kS128LoadMem32Zero,
   kS128LoadMem64Zero,
 };
@@ -89,6 +89,17 @@ V8_EXPORT_PRIVATE std::ostream& operator<<(std::ostream&,
                                            LoadTransformParameters);
 
 V8_EXPORT_PRIVATE LoadTransformParameters const& LoadTransformParametersOf(
+    Operator const*) V8_WARN_UNUSED_RESULT;
+
+struct LoadLaneParameters {
+  LoadKind kind;
+  LoadRepresentation rep;
+  uint8_t laneidx;
+};
+
+V8_EXPORT_PRIVATE std::ostream& operator<<(std::ostream&, LoadLaneParameters);
+
+V8_EXPORT_PRIVATE LoadLaneParameters const& LoadLaneParametersOf(
     Operator const*) V8_WARN_UNUSED_RESULT;
 
 // A Store needs a MachineType and a WriteBarrierKind in order to emit the
@@ -197,6 +208,8 @@ ShiftKind ShiftKindOf(Operator const*) V8_WARN_UNUSED_RESULT;
 // makes it easier to detect an overflow. This parameter is ignored on platforms
 // like x64 and ia32 where a range overflow does not result in INT_MAX.
 enum class TruncateKind { kArchitectureDefault, kSetOverflowToMin };
+std::ostream& operator<<(std::ostream& os, TruncateKind kind);
+size_t hash_value(TruncateKind kind);
 
 // Interface for building machine-level operators. These operators are
 // machine-level but machine-independent and thus define a language suitable
@@ -635,22 +648,18 @@ class V8_EXPORT_PRIVATE MachineOperatorBuilder final
   const Operator* I64x2ReplaceLane(int32_t);
   const Operator* I64x2ReplaceLaneI32Pair(int32_t);
   const Operator* I64x2Neg();
+  const Operator* I64x2SConvertI32x4Low();
+  const Operator* I64x2SConvertI32x4High();
+  const Operator* I64x2UConvertI32x4Low();
+  const Operator* I64x2UConvertI32x4High();
+  const Operator* I64x2BitMask();
   const Operator* I64x2Shl();
   const Operator* I64x2ShrS();
   const Operator* I64x2Add();
   const Operator* I64x2Sub();
   const Operator* I64x2Mul();
-  const Operator* I64x2MinS();
-  const Operator* I64x2MaxS();
   const Operator* I64x2Eq();
-  const Operator* I64x2Ne();
-  const Operator* I64x2GtS();
-  const Operator* I64x2GeS();
   const Operator* I64x2ShrU();
-  const Operator* I64x2MinU();
-  const Operator* I64x2MaxU();
-  const Operator* I64x2GtU();
-  const Operator* I64x2GeU();
 
   const Operator* I32x4Splat();
   const Operator* I32x4ExtractLane(int32_t);
@@ -718,6 +727,7 @@ class V8_EXPORT_PRIVATE MachineOperatorBuilder final
   const Operator* I16x8GtU();
   const Operator* I16x8GeU();
   const Operator* I16x8RoundingAverageU();
+  const Operator* I16x8Q15MulRSatS();
   const Operator* I16x8Abs();
   const Operator* I16x8BitMask();
 
@@ -750,6 +760,7 @@ class V8_EXPORT_PRIVATE MachineOperatorBuilder final
   const Operator* I8x16GtU();
   const Operator* I8x16GeU();
   const Operator* I8x16RoundingAverageU();
+  const Operator* I8x16Popcnt();
   const Operator* I8x16Abs();
   const Operator* I8x16BitMask();
 
@@ -765,11 +776,9 @@ class V8_EXPORT_PRIVATE MachineOperatorBuilder final
   const Operator* S128Select();
   const Operator* S128AndNot();
 
-  const Operator* S8x16Swizzle();
-  const Operator* S8x16Shuffle(const uint8_t shuffle[16]);
+  const Operator* I8x16Swizzle();
+  const Operator* I8x16Shuffle(const uint8_t shuffle[16]);
 
-  const Operator* V64x2AnyTrue();
-  const Operator* V64x2AllTrue();
   const Operator* V32x4AnyTrue();
   const Operator* V32x4AllTrue();
   const Operator* V16x8AnyTrue();
@@ -783,6 +792,10 @@ class V8_EXPORT_PRIVATE MachineOperatorBuilder final
   const Operator* ProtectedLoad(LoadRepresentation rep);
 
   const Operator* LoadTransform(LoadKind kind, LoadTransformation transform);
+
+  // SIMD load: replace a specified lane with [base + index].
+  const Operator* LoadLane(LoadKind kind, LoadRepresentation rep,
+                           uint8_t laneidx);
 
   // store [base + index], value
   const Operator* Store(StoreRepresentation rep);

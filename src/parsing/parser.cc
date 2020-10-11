@@ -2507,7 +2507,7 @@ FunctionLiteral* Parser::ParseFunctionLiteral(
         event_name, flags().script_id(), ms, scope->start_position(),
         scope->end_position(),
         reinterpret_cast<const char*>(function_name->raw_data()),
-        function_name->byte_length());
+        function_name->byte_length(), function_name->is_one_byte());
   }
   if (V8_UNLIKELY(TracingFlags::is_runtime_stats_enabled()) &&
       did_preparse_successfully) {
@@ -3092,7 +3092,7 @@ void Parser::HandleSourceURLComments(LocalIsolate* isolate,
 
 template void Parser::HandleSourceURLComments(Isolate* isolate,
                                               Handle<Script> script);
-template void Parser::HandleSourceURLComments(OffThreadIsolate* isolate,
+template void Parser::HandleSourceURLComments(LocalIsolate* isolate,
                                               Handle<Script> script);
 
 void Parser::UpdateStatistics(Isolate* isolate, Handle<Script> script) {

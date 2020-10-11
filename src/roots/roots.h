@@ -8,7 +8,6 @@
 #include "src/base/macros.h"
 #include "src/builtins/accessors.h"
 #include "src/common/globals.h"
-#include "src/execution/local-isolate-wrapper.h"
 #include "src/handles/handles.h"
 #include "src/init/heap-symbols.h"
 #include "src/objects/objects-definitions.h"
@@ -20,8 +19,6 @@ namespace internal {
 
 // Forward declarations.
 enum ElementsKind : uint8_t;
-class OffThreadHeap;
-class OffThreadIsolate;
 template <typename T>
 class Handle;
 class Heap;
@@ -89,6 +86,7 @@ class Symbol;
   V(Map, code_data_container_map, CodeDataContainerMap)                        \
   V(Map, coverage_info_map, CoverageInfoMap)                                   \
   V(Map, descriptor_array_map, DescriptorArrayMap)                             \
+  V(Map, strong_descriptor_array_map, StrongDescriptorArrayMap)                \
   V(Map, fixed_double_array_map, FixedDoubleArrayMap)                          \
   V(Map, global_dictionary_map, GlobalDictionaryMap)                           \
   V(Map, many_closures_cell_map, ManyClosuresCellMap)                          \
@@ -112,7 +110,6 @@ class Symbol;
   V(Map, small_ordered_hash_set_map, SmallOrderedHashSetMap)                   \
   V(Map, small_ordered_name_dictionary_map, SmallOrderedNameDictionaryMap)     \
   V(Map, source_text_module_map, SourceTextModuleMap)                          \
-  V(Map, string_table_map, StringTableMap)                                     \
   V(Map, synthetic_module_map, SyntheticModuleMap)                             \
   V(Map, uncompiled_data_without_preparse_data_map,                            \
     UncompiledDataWithoutPreparseDataMap)                                      \
@@ -368,7 +365,6 @@ class Symbol;
 #define MUTABLE_ROOT_LIST(V)                \
   STRONG_MUTABLE_IMMOVABLE_ROOT_LIST(V)     \
   STRONG_MUTABLE_MOVABLE_ROOT_LIST(V)       \
-  V(StringTable, string_table, StringTable) \
   SMI_ROOT_LIST(V)
 
 #define ROOT_LIST(V)     \
@@ -398,9 +394,13 @@ enum class RootIndex : uint16_t {
 
   // The strong roots visited by the garbage collector (not including read-only
   // roots).
+#define ROOT(...) +1
+  kMutableRootsCount = 0
+      STRONG_MUTABLE_IMMOVABLE_ROOT_LIST(ROOT)
+      STRONG_MUTABLE_MOVABLE_ROOT_LIST(ROOT),
+#undef ROOT
   kFirstStrongRoot = kLastReadOnlyRoot + 1,
-  // (kStringTable is not a strong root).
-  kLastStrongRoot = kStringTable - 1,
+  kLastStrongRoot = kFirstStrongRoot + kMutableRootsCount - 1,
 
   // All of the strong roots plus the read-only roots.
   kFirstStrongOrReadOnlyRoot = kFirstRoot,
@@ -411,7 +411,7 @@ enum class RootIndex : uint16_t {
   kLastImmortalImmovableRoot =
       kFirstImmortalImmovableRoot + kImmortalImmovableRootsCount - 1,
 
-  kFirstSmiRoot = kStringTable + 1,
+  kFirstSmiRoot = kLastStrongRoot + 1,
   kLastSmiRoot = kLastRoot
 };
 // clang-format on
@@ -540,11 +540,8 @@ class ReadOnlyRoots {
       static_cast<size_t>(RootIndex::kReadOnlyRootsCount);
 
   V8_INLINE explicit ReadOnlyRoots(Heap* heap);
-  V8_INLINE explicit ReadOnlyRoots(OffThreadHeap* heap);
   V8_INLINE explicit ReadOnlyRoots(Isolate* isolate);
-  V8_INLINE explicit ReadOnlyRoots(OffThreadIsolate* isolate);
-  V8_INLINE explicit ReadOnlyRoots(LocalIsolateWrapper wrapper);
-  V8_INLINE explicit ReadOnlyRoots(LocalHeapWrapper wrapper);
+  V8_INLINE explicit ReadOnlyRoots(LocalIsolate* isolate);
 
 #define ROOT_ACCESSOR(Type, name, CamelName)     \
   V8_INLINE class Type name() const;             \

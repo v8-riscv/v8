@@ -619,7 +619,7 @@ def load_fields_from_file(filename):
         #
         prefixes = [ 'ACCESSORS', 'ACCESSORS2', 'ACCESSORS_GCSAFE',
                      'SMI_ACCESSORS', 'ACCESSORS_TO_SMI',
-                     'SYNCHRONIZED_ACCESSORS', 'WEAK_ACCESSORS' ];
+                     'RELEASE_ACQUIRE_ACCESSORS', 'WEAK_ACCESSORS' ];
         prefixes += ([ prefix + "_CHECKED" for prefix in prefixes ] +
                      [ prefix + "_CHECKED2" for prefix in prefixes ])
         current = '';
@@ -667,13 +667,18 @@ def load_fields_from_file(filename):
 # Emit a block of constants.
 #
 def emit_set(out, consts):
+        lines = set()  # To remove duplicates.
+
         # Fix up overzealous parses.  This could be done inside the
         # parsers but as there are several, it's easiest to do it here.
         ws = re.compile('\s+')
         for const in consts:
                 name = ws.sub('', const['name'])
                 value = ws.sub('', str(const['value']))  # Can be a number.
-                out.write('int v8dbg_%s = %s;\n' % (name, value))
+                lines.add('int v8dbg_%s = %s;\n' % (name, value))
+
+        for line in lines:
+                out.write(line);
         out.write('\n');
 
 #

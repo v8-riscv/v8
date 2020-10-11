@@ -1713,11 +1713,7 @@ void VisitWordCompare(InstructionSelector* selector, Node* node,
 
   // If one of the two inputs is an immediate, make sure it's on the right, or
   // if one of the two inputs is a memory operand, make sure it's on the left.
-  int effect_level = selector->GetEffectLevel(node);
-  if (cont->IsBranch()) {
-    effect_level = selector->GetEffectLevel(
-        cont->true_block()->PredecessorAt(0)->control_input());
-  }
+  int effect_level = selector->GetEffectLevel(node, cont);
 
   if ((!g.CanBeImmediate(right, immediate_mode) &&
        g.CanBeImmediate(left, immediate_mode)) ||
@@ -1815,11 +1811,7 @@ void VisitLoadAndTest(InstructionSelector* selector, InstructionCode opcode,
   size_t output_count = 0;
   bool use_value = false;
 
-  int effect_level = selector->GetEffectLevel(node);
-  if (cont->IsBranch()) {
-    effect_level = selector->GetEffectLevel(
-        cont->true_block()->PredecessorAt(0)->control_input());
-  }
+  int effect_level = selector->GetEffectLevel(node, cont);
 
   if (g.CanBeMemoryOperand(opcode, node, value, effect_level)) {
     // generate memory operand
@@ -2209,6 +2201,10 @@ void InstructionSelector::VisitFloat64LessThanOrEqual(Node* node) {
   VisitFloat64Compare(this, node, &cont);
 }
 
+bool InstructionSelector::ZeroExtendsWord32ToWord64NoPhis(Node* node) {
+  UNIMPLEMENTED();
+}
+
 void InstructionSelector::EmitPrepareArguments(
     ZoneVector<PushParameter>* arguments, const CallDescriptor* call_descriptor,
     Node* node) {
@@ -2563,15 +2559,6 @@ void InstructionSelector::VisitWord64AtomicStore(Node* node) {
   V(I64x2Sub)              \
   V(I64x2Mul)              \
   V(I64x2Eq)               \
-  V(I64x2Ne)               \
-  V(I64x2GtS)              \
-  V(I64x2GeS)              \
-  V(I64x2GtU)              \
-  V(I64x2GeU)              \
-  V(I64x2MinS)             \
-  V(I64x2MinU)             \
-  V(I64x2MaxS)             \
-  V(I64x2MaxU)             \
   V(I32x4Add)              \
   V(I32x4AddHoriz)         \
   V(I32x4Sub)              \
@@ -2681,11 +2668,9 @@ void InstructionSelector::VisitWord64AtomicStore(Node* node) {
   V(I8x16ShrU)
 
 #define SIMD_BOOL_LIST(V) \
-  V(V64x2AnyTrue)         \
   V(V32x4AnyTrue)         \
   V(V16x8AnyTrue)         \
   V(V8x16AnyTrue)         \
-  V(V64x2AllTrue)         \
   V(V32x4AllTrue)         \
   V(V16x8AllTrue)         \
   V(V8x16AllTrue)
@@ -2828,7 +2813,7 @@ SIMD_VISIT_PMIN_MAX(F32x4Pmax)
 #undef SIMD_VISIT_PMIN_MAX
 #undef SIMD_TYPES
 
-void InstructionSelector::VisitS8x16Shuffle(Node* node) {
+void InstructionSelector::VisitI8x16Shuffle(Node* node) {
   uint8_t shuffle[kSimd128Size];
   uint8_t* shuffle_p = &shuffle[0];
   bool is_swizzle;
@@ -2849,7 +2834,7 @@ void InstructionSelector::VisitS8x16Shuffle(Node* node) {
   }
   shuffle_p = &shuffle_remapped[0];
 #endif
-  Emit(kS390_S8x16Shuffle, g.DefineAsRegister(node),
+  Emit(kS390_I8x16Shuffle, g.DefineAsRegister(node),
        g.UseUniqueRegister(input0), g.UseUniqueRegister(input1),
        g.UseImmediate(wasm::SimdShuffle::Pack4Lanes(shuffle_p)),
        g.UseImmediate(wasm::SimdShuffle::Pack4Lanes(shuffle_p + 4)),
@@ -2857,11 +2842,12 @@ void InstructionSelector::VisitS8x16Shuffle(Node* node) {
        g.UseImmediate(wasm::SimdShuffle::Pack4Lanes(shuffle_p + 12)));
 }
 
-void InstructionSelector::VisitS8x16Swizzle(Node* node) {
+void InstructionSelector::VisitI8x16Swizzle(Node* node) {
   S390OperandGenerator g(this);
-  Emit(kS390_S8x16Swizzle, g.DefineAsRegister(node),
+  InstructionOperand temps[] = {g.TempSimd128Register()};
+  Emit(kS390_I8x16Swizzle, g.DefineAsRegister(node),
        g.UseUniqueRegister(node->InputAt(0)),
-       g.UseUniqueRegister(node->InputAt(1)));
+       g.UseUniqueRegister(node->InputAt(1)), arraysize(temps), temps);
 }
 
 void InstructionSelector::VisitS128Const(Node* node) {
@@ -2909,7 +2895,7 @@ void InstructionSelector::EmitPrepareResults(
     Node* node) {
   S390OperandGenerator g(this);
 
-  int reverse_slot = 0;
+  int reverse_slot = 1;
   for (PushParameter output : *results) {
     if (!output.location.IsCallerFrameSlot()) continue;
     // Skip any alignment holes in nodes.
@@ -2919,6 +2905,8 @@ void InstructionSelector::EmitPrepareResults(
         MarkAsFloat32(output.node);
       } else if (output.location.GetType() == MachineType::Float64()) {
         MarkAsFloat64(output.node);
+      } else if (output.location.GetType() == MachineType::Simd128()) {
+        MarkAsSimd128(output.node);
       }
       Emit(kS390_Peek, g.DefineAsRegister(output.node),
            g.UseImmediate(reverse_slot));

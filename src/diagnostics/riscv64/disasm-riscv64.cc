@@ -91,6 +91,7 @@ class Decoder {
   void PrintRvcImm5D(Instruction* instr);
   void PrintRvcImm8Addi4spn(Instruction* instr);
   void PrintRvcImm11CJ(Instruction* instr);
+  void PrintRvcImm8B(Instruction* instr);
   void PrintAcquireRelease(Instruction* instr);
   void PrintBranchOffset(Instruction* instr);
   void PrintStoreOffset(Instruction* instr);
@@ -110,6 +111,7 @@ class Decoder {
   void DecodeJType(Instruction* instr);
   void DecodeCRType(Instruction* instr);
   void DecodeCAType(Instruction* instr);
+  void DecodeCBType(Instruction* instr);
   void DecodeCIType(Instruction* instr);
   void DecodeCIWType(Instruction* instr);
   void DecodeCSSType(Instruction* instr);
@@ -215,8 +217,10 @@ void Decoder::PrintImm12(Instruction* instr) {
 
 void Decoder::PrintBranchOffset(Instruction* instr) {
   int32_t imm = instr->BranchOffset();
-  const char* target = converter_.NameOfAddress(reinterpret_cast<byte*>(instr) + imm);
-  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d -> %s", imm, target);
+  const char* target =
+      converter_.NameOfAddress(reinterpret_cast<byte*>(instr) + imm);
+  out_buffer_pos_ +=
+      SNPrintF(out_buffer_ + out_buffer_pos_, "%d -> %s", imm, target);
 }
 
 void Decoder::PrintStoreOffset(Instruction* instr) {
@@ -231,8 +235,10 @@ void Decoder::PrintImm20U(Instruction* instr) {
 
 void Decoder::PrintImm20J(Instruction* instr) {
   int32_t imm = instr->Imm20JValue();
-  const char* target = converter_.NameOfAddress(reinterpret_cast<byte*>(instr) + imm);
-  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d -> %s", imm, target);
+  const char* target =
+      converter_.NameOfAddress(reinterpret_cast<byte*>(instr) + imm);
+  out_buffer_pos_ +=
+      SNPrintF(out_buffer_ + out_buffer_pos_, "%d -> %s", imm, target);
 }
 
 void Decoder::PrintShamt(Instruction* instr) {
@@ -297,6 +303,11 @@ void Decoder::PrintRvcImm5D(Instruction* instr) {
 
 void Decoder::PrintRvcImm8Addi4spn(Instruction* instr) {
   int32_t imm = instr->RvcImm8Addi4spnValue();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvcImm8B(Instruction* instr) {
+  int32_t imm = instr->RvcImm8BValue();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
 }
 
@@ -460,14 +471,14 @@ int Decoder::FormatFPURegisterOrRoundMode(Instruction* instr,
   UNREACHABLE();
 }
 
-// Handle all C extension register based formatting in this function to reduce the
-// complexity of FormatOption.
+// Handle all C extension register based formatting in this function to reduce
+// the complexity of FormatOption.
 int Decoder::FormatRvcRegister(Instruction* instr, const char* format) {
   DCHECK_EQ(format[0], 'C');
   DCHECK(format[1] == 'r' || format[1] == 'f');
   if (format[2] == 's') {  // 'Crs[12]: Rs register.
     if (format[3] == '1') {
-      if (format[4] == 's') {   // 'Crs1s: 3-bits register
+      if (format[4] == 's') {  // 'Crs1s: 3-bits register
         int reg = instr->RvcRs1sValue();
         if (format[1] == 'r') {
           PrintRegister(reg);
@@ -484,7 +495,7 @@ int Decoder::FormatRvcRegister(Instruction* instr, const char* format) {
       }
       return 4;
     } else if (format[3] == '2') {
-      if (format[4] == 's') {   // 'Crs2s: 3-bits register
+      if (format[4] == 's') {  // 'Crs2s: 3-bits register
         int reg = instr->RvcRs2sValue();
         if (format[1] == 'r') {
           PrintRegister(reg);
@@ -514,10 +525,10 @@ int Decoder::FormatRvcRegister(Instruction* instr, const char* format) {
   UNREACHABLE();
 }
 
-// Handle all C extension immediates based formatting in this function to reduce the
-// complexity of FormatOption.
+// Handle all C extension immediates based formatting in this function to reduce
+// the complexity of FormatOption.
 int Decoder::FormatRvcImm(Instruction* instr, const char* format) {
-  // TODO: add other rvc imm format
+  // TODO(riscv): add other rvc imm format
   DCHECK(STRING_STARTS_WITH(format, "Cimm"));
   if (format[4] == '6') {
     if (format[5] == 'U') {
@@ -560,30 +571,31 @@ int Decoder::FormatRvcImm(Instruction* instr, const char* format) {
     }
     PrintRvcImm6(instr);
     return 5;
-  }
-  else if (format[4] == '5') {
+  } else if (format[4] == '5') {
     DCHECK(STRING_STARTS_WITH(format, "Cimm5"));
-    if (format[5] == 'W'){
+    if (format[5] == 'W') {
       DCHECK(STRING_STARTS_WITH(format, "Cimm5W"));
       PrintRvcImm5W(instr);
       return 6;
-    } else if (format[5] =='D') {
+    } else if (format[5] == 'D') {
       DCHECK(STRING_STARTS_WITH(format, "Cimm5D"));
       PrintRvcImm5D(instr);
       return 6;
     }
     UNREACHABLE();
-  }
-  else if (format[4] == '8') {
+  } else if (format[4] == '8') {
     DCHECK(STRING_STARTS_WITH(format, "Cimm8"));
-    if (format[5] == 'A'){
+    if (format[5] == 'A') {
       DCHECK(STRING_STARTS_WITH(format, "Cimm8Addi4spn"));
       PrintRvcImm8Addi4spn(instr);
       return 13;
+    } else if (format[5] == 'B') {
+      DCHECK(STRING_STARTS_WITH(format, "Cimm8B"));
+      PrintRvcImm8B(instr);
+      return 6;
     }
     UNREACHABLE();
-  }
-  else if (format[4] == '1') {
+  } else if (format[4] == '1') {
     DCHECK(STRING_STARTS_WITH(format, "Cimm1"));
     if (format[5] == '1') {
       DCHECK(STRING_STARTS_WITH(format, "Cimm11CJ"));
@@ -786,7 +798,7 @@ void Decoder::DecodeRType(Instruction* instr) {
       Format(instr, "sraw      'rd, 'rs1, 'rs2");
       break;
 #endif /* V8_TARGET_ARCH_64_BIT */
-    // TODO: Add RISCV M extension macro
+    // TODO(riscv): Add RISCV M extension macro
     case RO_MUL:
       Format(instr, "mul       'rd, 'rs1, 'rs2");
       break;
@@ -828,7 +840,7 @@ void Decoder::DecodeRType(Instruction* instr) {
       Format(instr, "remuw     'rd, 'rs1, 'rs2");
       break;
 #endif /*V8_TARGET_ARCH_64_BIT*/
-    // TODO: End Add RISCV M extension macro
+    // TODO(riscv): End Add RISCV M extension macro
     default: {
       switch (instr->BaseOpcode()) {
         case AMO:
@@ -845,7 +857,7 @@ void Decoder::DecodeRType(Instruction* instr) {
 }
 
 void Decoder::DecodeRAType(Instruction* instr) {
-  // TODO: Add macro for RISCV A extension
+  // TODO(riscv): Add macro for RISCV A extension
   // Special handling for A extension instructions because it uses func5
   // For all A extension instruction, V8 simulator is pure sequential. No
   // Memory address lock or other synchronizaiton behaviors.
@@ -918,7 +930,7 @@ void Decoder::DecodeRAType(Instruction* instr) {
       Format(instr, "amomaxu.d'a 'rd, 'rs2, ('rs1)");
       break;
 #endif /*V8_TARGET_ARCH_64_BIT*/
-    // TODO: End Add macro for RISCV A extension
+    // TODO(riscv): End Add macro for RISCV A extension
     default: {
       UNSUPPORTED_RISCV();
     }
@@ -930,7 +942,7 @@ void Decoder::DecodeRFPType(Instruction* instr) {
 
   // kRATypeMask is only for func7
   switch (instr->InstructionBits() & kRFPTypeMask) {
-    // TODO: Add macro for RISCV F extension
+    // TODO(riscv): Add macro for RISCV F extension
     case RO_FADD_S:
       Format(instr, "fadd.s    'fd, 'fs1, 'fs2");
       break;
@@ -1067,7 +1079,7 @@ void Decoder::DecodeRFPType(Instruction* instr) {
       }
       break;
     }
-    // TODO: Add macro for RISCV D extension
+    // TODO(riscv): Add macro for RISCV D extension
     case RO_FADD_D:
       Format(instr, "fadd.d    'fd, 'fs1, 'fs2");
       break;
@@ -1237,7 +1249,7 @@ void Decoder::DecodeRFPType(Instruction* instr) {
 
 void Decoder::DecodeR4Type(Instruction* instr) {
   switch (instr->InstructionBits() & kR4TypeMask) {
-    // TODO: use F Extension macro block
+    // TODO(riscv): use F Extension macro block
     case RO_FMADD_S:
       Format(instr, "fmadd.s   'fd, 'fs1, 'fs2, 'fs3");
       break;
@@ -1250,7 +1262,7 @@ void Decoder::DecodeR4Type(Instruction* instr) {
     case RO_FNMADD_S:
       Format(instr, "fnmadd.s   'fd, 'fs1, 'fs2, 'fs3");
       break;
-    // TODO: use F Extension macro block
+    // TODO(riscv): use F Extension macro block
     case RO_FMADD_D:
       Format(instr, "fmadd.d   'fd, 'fs1, 'fs2, 'fs3");
       break;
@@ -1385,11 +1397,11 @@ void Decoder::DecodeIType(Instruction* instr) {
       }
       break;
     }
-    // TODO: use Zifencei Standard Extension macro block
+    // TODO(riscv): use Zifencei Standard Extension macro block
     case RO_FENCE_I:
       Format(instr, "fence.i");
       break;
-    // TODO: use Zicsr Standard Extension macro block
+    // TODO(riscv): use Zicsr Standard Extension macro block
     // FIXME(RISC-V): Add special formatting for CSR registers
     case RO_CSRRW:
       if (instr->CsrValue() == csr_fcsr) {
@@ -1450,8 +1462,9 @@ void Decoder::DecodeIType(Instruction* instr) {
         Format(instr, "csrr      'rd, 'csr");
       } else if (instr->RdValue() == zero_reg.code()) {
         Format(instr, "csrs      'csr, 'rs1");
-      } else
+      } else {
         Format(instr, "csrrs     'rd, 'csr, 'rs1");
+      }
       break;
     case RO_CSRRC:
       if (instr->RdValue() == zero_reg.code())
@@ -1477,11 +1490,11 @@ void Decoder::DecodeIType(Instruction* instr) {
       else
         Format(instr, "csrrci    'rd, 'csr, 'vs1");
       break;
-    // TODO: use F Extension macro block
+    // TODO(riscv): use F Extension macro block
     case RO_FLW:
       Format(instr, "flw       'fd, 'imm12('rs1)");
       break;
-    // TODO: use D Extension macro block
+    // TODO(riscv): use D Extension macro block
     case RO_FLD:
       Format(instr, "fld       'fd, 'imm12('rs1)");
       break;
@@ -1506,11 +1519,11 @@ void Decoder::DecodeSType(Instruction* instr) {
       Format(instr, "sd        'rs2, 'offS('rs1)");
       break;
 #endif /*V8_TARGET_ARCH_64_BIT*/
-    // TODO: use F Extension macro block
+    // TODO(riscv): use F Extension macro block
     case RO_FSW:
       Format(instr, "fsw       'fs2, 'offS('rs1)");
       break;
-    // TODO: use D Extension macro block
+    // TODO(riscv): use D Extension macro block
     case RO_FSD:
       Format(instr, "fsd       'fs2, 'offS('rs1)");
       break;
@@ -1574,7 +1587,7 @@ void Decoder::DecodeJType(Instruction* instr) {
 
 void Decoder::DecodeCRType(Instruction* instr) {
   switch (instr->RvcFunct4Value()) {
-    case 0b1000:  
+    case 0b1000:
       if (instr->RvcRs1Value() != 0 && instr->RvcRs2Value() == 0)
         Format(instr, "jr        'Crs1");
       else if (instr->RvcRdValue() != 0 && instr->RvcRs2Value() != 0)
@@ -1582,7 +1595,7 @@ void Decoder::DecodeCRType(Instruction* instr) {
       else
         UNSUPPORTED_RISCV();
       break;
-    case 0b1001:  
+    case 0b1001:
       if (instr->RvcRs1Value() == 0 && instr->RvcRs2Value() == 0)
         Format(instr, "ebreak");
       else if (instr->RvcRdValue() != 0 && instr->RvcRs2Value() == 0)
@@ -1616,6 +1629,29 @@ void Decoder::DecodeCAType(Instruction* instr) {
       break;
     case RO_C_ADDW:
       Format(instr, "addw       'Crs1s, 'Crs1s, 'Crs2s");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+
+void Decoder::DecodeCBType(Instruction* instr) {
+  switch (instr->RvcOpcode()) {
+    case RO_C_BNEZ:
+      Format(instr, "bnez       'Crs1s, x0, 'Cimm8B");
+      break;
+    case RO_C_BEQZ:
+      Format(instr, "beqz       'Crs1s, x0, 'Cimm8B");
+      break;
+    case RO_C_MISC_ALU:
+      if(instr->RvcFunct2BValue() == 0b00)
+        Format(instr, "srli       'Crs1s, 'Crs1s, 'Cshamt");
+      else if (instr->RvcFunct2BValue() == 0b01)
+        Format(instr, "srai       'Crs1s, 'Crs1s, 'Cshamt");
+      else if (instr->RvcFunct2BValue() == 0b10)
+        Format(instr, "andi       'Crs1s, 'Crs1s, 'Cimm6");
+      else
+        UNSUPPORTED_RISCV();
       break;
     default:
       UNSUPPORTED_RISCV();
@@ -1662,7 +1698,7 @@ void Decoder::DecodeCIType(Instruction* instr) {
 }
 
 void Decoder::DecodeCIWType(Instruction* instr) {
-  switch(instr->RvcOpcode()) {
+  switch (instr->RvcOpcode()) {
     case RO_C_ADDI4SPN:
       Format(instr, "addi       'Crs2s, sp, 'Cimm8Addi4spn");
       break;
@@ -1672,7 +1708,7 @@ void Decoder::DecodeCIWType(Instruction* instr) {
 }
 
 void Decoder::DecodeCSSType(Instruction* instr) {
-  switch(instr->RvcOpcode()) {
+  switch (instr->RvcOpcode()) {
     case RO_C_SWSP:
       Format(instr, "sw        'Crs2, 'Cimm6Swsp(sp)");
       break;
@@ -1688,7 +1724,7 @@ void Decoder::DecodeCSSType(Instruction* instr) {
 }
 
 void Decoder::DecodeCLType(Instruction* instr) {
-  switch(instr->RvcOpcode()) {
+  switch (instr->RvcOpcode()) {
     case RO_C_FLD:
       Format(instr, "fld       'Cfs2s, 'Cimm5D('Crs1s)");
       break;
@@ -1704,7 +1740,7 @@ void Decoder::DecodeCLType(Instruction* instr) {
 }
 
 void Decoder::DecodeCSType(Instruction* instr) {
-  switch(instr->RvcOpcode()) {
+  switch (instr->RvcOpcode()) {
     case RO_C_FSD:
       Format(instr, "fsd       'Cfs2s, 'Cimm5D('Crs1s)");
       break;
@@ -1720,7 +1756,7 @@ void Decoder::DecodeCSType(Instruction* instr) {
 }
 
 void Decoder::DecodeCJType(Instruction* instr) {
-  switch(instr->RvcOpcode()) {
+  switch (instr->RvcOpcode()) {
     case RO_C_J:
       Format(instr, "j       'Cimm11CJ");
       break;
@@ -1768,6 +1804,9 @@ int Decoder::InstructionDecode(byte* instr_ptr) {
       break;
     case Instruction::kCJType:
       DecodeCJType(instr);
+      break;
+    case Instruction::kCBType:
+      DecodeCBType(instr);
       break;
     case Instruction::kCIType:
       DecodeCIType(instr);

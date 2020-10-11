@@ -372,6 +372,18 @@ char* Debug::RestoreDebug(char* storage) {
   ClearOneShot();
 
   if (thread_local_.last_step_action_ != StepNone) {
+    int current_frame_count = CurrentFrameCount();
+    int target_frame_count = thread_local_.target_frame_count_;
+    DCHECK(current_frame_count >= target_frame_count);
+    StackTraceFrameIterator frames_it(isolate_);
+    while (current_frame_count > target_frame_count) {
+      current_frame_count -= frames_it.FrameFunctionCount();
+      frames_it.Advance();
+    }
+    DCHECK(current_frame_count == target_frame_count);
+    // Set frame to what it was at Step break
+    thread_local_.break_frame_id_ = frames_it.frame()->id();
+
     // Reset the previous step action for this thread.
     PrepareStep(thread_local_.last_step_action_);
   }
@@ -437,12 +449,14 @@ void Debug::Break(JavaScriptFrame* frame, Handle<JSFunction> break_target) {
   MaybeHandle<FixedArray> break_points_hit =
       CheckBreakPoints(debug_info, &location);
   if (!break_points_hit.is_null() || break_on_next_function_call()) {
+    StepAction lastStepAction = last_step_action();
     // Clear all current stepping setup.
     ClearStepping();
     // Notify the debug event listeners.
     OnDebugBreak(!break_points_hit.is_null()
                      ? break_points_hit.ToHandleChecked()
-                     : isolate_->factory()->empty_fixed_array());
+                     : isolate_->factory()->empty_fixed_array(),
+                 lastStepAction);
     return;
   }
 
@@ -503,12 +517,13 @@ void Debug::Break(JavaScriptFrame* frame, Handle<JSFunction> break_target) {
     }
   }
 
+  StepAction lastStepAction = last_step_action();
   // Clear all current stepping setup.
   ClearStepping();
 
   if (step_break) {
     // Notify the debug event listeners.
-    OnDebugBreak(isolate_->factory()->empty_fixed_array());
+    OnDebugBreak(isolate_->factory()->empty_fixed_array(), lastStepAction);
   } else {
     // Re-prepare to continue.
     PrepareStep(step_action);
@@ -1312,7 +1327,8 @@ void Debug::InstallDebugBreakTrampoline() {
         }
       } else if (obj.IsJSObject()) {
         JSObject object = JSObject::cast(obj);
-        DescriptorArray descriptors = object.map().instance_descriptors();
+        DescriptorArray descriptors =
+            object.map().instance_descriptors(kRelaxedLoad);
 
         for (InternalIndex i : object.map().IterateOwnDescriptors()) {
           if (descriptors.GetDetails(i).kind() == PropertyKind::kAccessor) {
@@ -1871,7 +1887,8 @@ void Debug::OnException(Handle<Object> exception, Handle<Object> promise,
       v8::Utils::ToLocal(promise), uncaught, exception_type);
 }
 
-void Debug::OnDebugBreak(Handle<FixedArray> break_points_hit) {
+void Debug::OnDebugBreak(Handle<FixedArray> break_points_hit,
+                         StepAction lastStepAction) {
   DCHECK(!break_points_hit.is_null());
   // The caller provided for DebugScope.
   AssertDebugContext();
@@ -1886,6 +1903,13 @@ void Debug::OnDebugBreak(Handle<FixedArray> break_points_hit) {
   DCHECK(in_debug_scope());
   HandleScope scope(isolate_);
   DisableBreak no_recursive_break(this);
+
+  if ((lastStepAction == StepAction::StepNext ||
+       lastStepAction == StepAction::StepIn) &&
+      ShouldBeSkipped()) {
+    PrepareStep(lastStepAction);
+    return;
+  }
 
   std::vector<int> inspector_break_points_hit;
   int inspector_break_points_count = 0;
@@ -1938,6 +1962,27 @@ bool Debug::IsBlackboxed(Handle<SharedFunctionInfo> shared) {
     debug_info->set_computed_debug_is_blackboxed(true);
   }
   return debug_info->debug_is_blackboxed();
+}
+
+bool Debug::ShouldBeSkipped() {
+  SuppressDebug while_processing(this);
+  PostponeInterruptsScope no_interrupts(isolate_);
+  DisableBreak no_recursive_break(this);
+
+  StackTraceFrameIterator iterator(isolate_);
+  StandardFrame* frame = iterator.frame();
+  FrameSummary summary = FrameSummary::GetTop(frame);
+  Handle<Object> script_obj = summary.script();
+  if (!script_obj->IsScript()) return false;
+
+  Handle<Script> script = Handle<Script>::cast(script_obj);
+  summary.EnsureSourcePositionsAvailable();
+  int source_position = summary.SourcePosition();
+  int line = Script::GetLineNumber(script, source_position);
+  int column = Script::GetColumnNumber(script, source_position);
+
+  return debug_delegate_->ShouldBeSkipped(ToApiHandle<debug::Script>(script),
+                                          line, column);
 }
 
 bool Debug::AllFramesOnStackAreBlackboxed() {
@@ -2008,15 +2053,8 @@ int Debug::CurrentFrameCount() {
     while (!it.done() && it.frame()->id() != break_frame_id()) it.Advance();
   }
   int counter = 0;
-  while (!it.done()) {
-    if (it.frame()->is_optimized()) {
-      std::vector<SharedFunctionInfo> infos;
-      OptimizedFrame::cast(it.frame())->GetFunctions(&infos);
-      counter += infos.size();
-    } else {
-      counter++;
-    }
-    it.Advance();
+  for (; !it.done(); it.Advance()) {
+    counter += it.FrameFunctionCount();
   }
   return counter;
 }
@@ -2081,13 +2119,15 @@ void Debug::HandleDebugBreak(IgnoreBreakMode ignore_break_mode) {
     }
   }
 
+  StepAction lastStepAction = last_step_action();
+
   // Clear stepping to avoid duplicate breaks.
   ClearStepping();
 
   HandleScope scope(isolate_);
   DebugScope debug_scope(this);
 
-  OnDebugBreak(isolate_->factory()->empty_fixed_array());
+  OnDebugBreak(isolate_->factory()->empty_fixed_array(), lastStepAction);
 }
 
 #ifdef DEBUG

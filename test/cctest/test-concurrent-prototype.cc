@@ -55,11 +55,9 @@ class ConcurrentSearchThread final : public v8::base::Thread {
     }
 
     CHECK_EQ(handles_.size(), kNumHandles * 2);
-
-    CHECK(!ph_);
-    ph_ = local_heap.DetachPersistentHandles();
   }
 
+ private:
   Heap* heap_;
   std::vector<Handle<JSObject>> handles_;
   std::unique_ptr<PersistentHandles> ph_;
@@ -68,8 +66,8 @@ class ConcurrentSearchThread final : public v8::base::Thread {
 
 // Test to search on a background thread, while the main thread is idle.
 TEST(ProtoWalkBackground) {
+  heap::EnsureFlagLocalHeapsEnabled();
   CcTest::InitializeVM();
-  FLAG_local_heaps = true;
   Isolate* isolate = CcTest::i_isolate();
 
   std::unique_ptr<PersistentHandles> ph = isolate->NewPersistentHandles();
@@ -108,8 +106,8 @@ TEST(ProtoWalkBackground) {
 // Test to search on a background thread, while the main thread modifies the
 // descriptor array.
 TEST(ProtoWalkBackground_DescriptorArrayWrite) {
+  heap::EnsureFlagLocalHeapsEnabled();
   CcTest::InitializeVM();
-  FLAG_local_heaps = true;
   Isolate* isolate = CcTest::i_isolate();
 
   std::unique_ptr<PersistentHandles> ph = isolate->NewPersistentHandles();
@@ -155,8 +153,8 @@ TEST(ProtoWalkBackground_DescriptorArrayWrite) {
 }
 
 TEST(ProtoWalkBackground_PrototypeChainWrite) {
+  heap::EnsureFlagLocalHeapsEnabled();
   CcTest::InitializeVM();
-  FLAG_local_heaps = true;
   Isolate* isolate = CcTest::i_isolate();
 
   std::unique_ptr<PersistentHandles> ph = isolate->NewPersistentHandles();

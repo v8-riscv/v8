@@ -12,7 +12,6 @@
 #include "src/base/bounded-page-allocator.h"
 #include "src/base/macros.h"
 #include "src/common/globals.h"
-#include "src/heap/array-buffer-tracker-inl.h"
 #include "src/heap/combined-heap.h"
 #include "src/heap/concurrent-marking.h"
 #include "src/heap/gc-tracer.h"
@@ -114,15 +113,6 @@ void Page::MergeOldToNewRememberedSets() {
   CHECK_NULL(slot_set_[OLD_TO_NEW]);
   slot_set_[OLD_TO_NEW] = sweeping_slot_set_;
   sweeping_slot_set_ = nullptr;
-}
-
-void Page::AllocateLocalTracker() {
-  DCHECK_NULL(local_tracker_);
-  local_tracker_ = new LocalArrayBufferTracker(this);
-}
-
-bool Page::contains_array_buffers() {
-  return local_tracker_ != nullptr && !local_tracker_->IsEmpty();
 }
 
 size_t Page::AvailableInFreeList() {
@@ -359,10 +349,13 @@ void SpaceWithLinearArea::AddAllocationObserver(AllocationObserver* observer) {
 
 void SpaceWithLinearArea::RemoveAllocationObserver(
     AllocationObserver* observer) {
-  DCHECK(!allocation_counter_.IsStepInProgress());
-  AdvanceAllocationObservers();
-  Space::RemoveAllocationObserver(observer);
-  UpdateInlineAllocationLimit(0);
+  if (!allocation_counter_.IsStepInProgress()) {
+    AdvanceAllocationObservers();
+    Space::RemoveAllocationObserver(observer);
+    UpdateInlineAllocationLimit(0);
+  } else {
+    Space::RemoveAllocationObserver(observer);
+  }
 }
 
 void SpaceWithLinearArea::PauseAllocationObservers() {
@@ -372,7 +365,7 @@ void SpaceWithLinearArea::PauseAllocationObservers() {
 
 void SpaceWithLinearArea::ResumeAllocationObservers() {
   Space::ResumeAllocationObservers();
-  allocation_info_.MoveStartToTop();
+  MarkLabStartInitialized();
   UpdateInlineAllocationLimit(0);
 }
 
@@ -381,7 +374,18 @@ void SpaceWithLinearArea::AdvanceAllocationObservers() {
       allocation_info_.start() != allocation_info_.top()) {
     allocation_counter_.AdvanceAllocationObservers(allocation_info_.top() -
                                                    allocation_info_.start());
-    allocation_info_.MoveStartToTop();
+    MarkLabStartInitialized();
+  }
+}
+
+void SpaceWithLinearArea::MarkLabStartInitialized() {
+  allocation_info_.MoveStartToTop();
+  if (identity() == NEW_SPACE) {
+    heap()->new_space()->MoveOriginalTopForward();
+
+#if DEBUG
+    heap()->VerifyNewSpaceTop();
+#endif
   }
 }
 
@@ -436,8 +440,9 @@ void SpaceWithLinearArea::InvokeAllocationObservers(
     DCHECK_EQ(saved_allocation_info.limit(), allocation_info_.limit());
   }
 
-  DCHECK_LT(allocation_info_.limit() - allocation_info_.start(),
-            allocation_counter_.NextBytes());
+  DCHECK_IMPLIES(allocation_counter_.IsActive(),
+                 (allocation_info_.limit() - allocation_info_.start()) <
+                     allocation_counter_.NextBytes());
 }
 
 int MemoryChunk::FreeListsLength() {

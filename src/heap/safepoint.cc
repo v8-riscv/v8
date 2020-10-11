@@ -16,16 +16,12 @@ namespace internal {
 GlobalSafepoint::GlobalSafepoint(Heap* heap)
     : heap_(heap), local_heaps_head_(nullptr), active_safepoint_scopes_(0) {}
 
-void GlobalSafepoint::Start() { EnterSafepointScope(); }
-
-void GlobalSafepoint::End() { LeaveSafepointScope(); }
-
 void GlobalSafepoint::EnterSafepointScope() {
   if (!FLAG_local_heaps) return;
 
   if (++active_safepoint_scopes_ > 1) return;
 
-  TimedHistogramScope timer(heap_->isolate()->counters()->time_to_safepoint());
+  TimedHistogramScope timer(heap_->isolate()->counters()->stop_the_world());
   TRACE_GC(heap_->tracer(), GCTracer::Scope::STOP_THE_WORLD);
 
   local_heaps_mutex_.Lock();

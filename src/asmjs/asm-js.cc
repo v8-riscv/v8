@@ -201,7 +201,7 @@ class AsmJsCompilationJob final : public UnoptimizedCompilationJob {
   Status FinalizeJobImpl(Handle<SharedFunctionInfo> shared_info,
                          Isolate* isolate) final;
   Status FinalizeJobImpl(Handle<SharedFunctionInfo> shared_info,
-                         OffThreadIsolate* isolate) final {
+                         LocalIsolate* isolate) final {
     return CompilationJob::RETRY_ON_MAIN_THREAD;
   }
 
@@ -297,7 +297,7 @@ inline bool IsValidAsmjsMemorySize(size_t size) {
   // Enforce asm.js spec minimum size.
   if (size < (1u << 12u)) return false;
   // Enforce engine-limited and flag-limited maximum allocation size.
-  if (size > wasm::max_initial_mem_pages() * uint64_t{wasm::kWasmPageSize}) {
+  if (size > wasm::max_mem_pages() * uint64_t{wasm::kWasmPageSize}) {
     return false;
   }
   // Enforce power-of-2 sizes for 2^12 - 2^24.

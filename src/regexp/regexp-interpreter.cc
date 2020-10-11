@@ -521,8 +521,8 @@ IrregexpInterpreter::Result RawMatch(
     BYTECODE(POP_BT) {
       STATIC_ASSERT(JSRegExp::kNoBacktrackLimit == 0);
       if (++backtrack_count == backtrack_limit) {
-        // Exceeded limits are treated as a failed match.
-        return IrregexpInterpreter::FAILURE;
+        int return_code = LoadPacked24Signed(insn);
+        return static_cast<IrregexpInterpreter::Result>(return_code);
       }
 
       IrregexpInterpreter::Result return_code =
@@ -1114,6 +1114,8 @@ IrregexpInterpreter::Result IrregexpInterpreter::MatchForCallFromJs(
 
   DisallowHeapAllocation no_gc;
   DisallowJavascriptExecution no_js(isolate);
+  DisallowHandleAllocation no_handles;
+  DisallowHandleDereference no_deref;
 
   String subject_string = String::cast(Object(subject));
   JSRegExp regexp_obj = JSRegExp::cast(Object(regexp));

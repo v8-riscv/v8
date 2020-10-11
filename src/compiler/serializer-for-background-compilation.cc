@@ -86,9 +86,24 @@ namespace compiler {
   V(JumpIfUndefinedOrNullConstant)
 
 #define IGNORED_BYTECODE_LIST(V)      \
+  V(CallRuntimeForPair)               \
+  V(CollectTypeProfile)               \
+  V(DebugBreak0)                      \
+  V(DebugBreak1)                      \
+  V(DebugBreak2)                      \
+  V(DebugBreak3)                      \
+  V(DebugBreak4)                      \
+  V(DebugBreak5)                      \
+  V(DebugBreak6)                      \
+  V(DebugBreakExtraWide)              \
+  V(DebugBreakWide)                   \
+  V(Debugger)                         \
   V(IncBlockCounter)                  \
+  V(ResumeGenerator)                  \
+  V(SuspendGenerator)                 \
   V(ThrowSuperAlreadyCalledIfNotHole) \
-  V(ThrowSuperNotCalledIfHole)
+  V(ThrowSuperNotCalledIfHole)        \
+  V(ToObject)
 
 #define UNREACHABLE_BYTECODE_LIST(V) \
   V(ExtraWide)                       \
@@ -183,6 +198,7 @@ namespace compiler {
   V(LdaLookupSlot)                    \
   V(LdaLookupSlotInsideTypeof)        \
   V(LdaNamedProperty)                 \
+  V(LdaNamedPropertyFromSuper)        \
   V(LdaNamedPropertyNoFeedback)       \
   V(LdaNull)                          \
   V(Ldar)                             \
@@ -1093,7 +1109,8 @@ bool SerializerForBackgroundCompilation::BailoutOnUninitialized(
     // OSR entry point. TODO(neis): Support OSR?
     return false;
   }
-  if (FLAG_turboprop && feedback.slot_kind() == FeedbackSlotKind::kCall) {
+  if (broker()->is_turboprop() &&
+      feedback.slot_kind() == FeedbackSlotKind::kCall) {
     return false;
   }
   if (feedback.IsInsufficient()) {
@@ -1299,8 +1316,6 @@ void SerializerForBackgroundCompilation::TraverseBytecode() {
     break;
       SUPPORTED_BYTECODE_LIST(DEFINE_BYTECODE_CASE)
 #undef DEFINE_BYTECODE_CASE
-      default:
-        break;
     }
   }
 
@@ -2231,7 +2246,8 @@ void SerializerForBackgroundCompilation::ProcessApiCall(
           Builtins::kCallFunctionTemplate_CheckAccessAndCompatibleReceiver));
 
   FunctionTemplateInfoRef target_template_info(
-      broker(), handle(target->function_data(), broker()->isolate()));
+      broker(),
+      handle(target->function_data(kAcquireLoad), broker()->isolate()));
   if (!target_template_info.has_call_code()) return;
   target_template_info.SerializeCallCode();
 
@@ -3245,6 +3261,13 @@ void SerializerForBackgroundCompilation::VisitLdaNamedProperty(
                iterator->GetConstantForIndexOperand(1, broker()->isolate()));
   FeedbackSlot slot = iterator->GetSlotOperand(2);
   ProcessNamedPropertyAccess(receiver, name, slot, AccessMode::kLoad);
+}
+
+void SerializerForBackgroundCompilation::VisitLdaNamedPropertyFromSuper(
+    BytecodeArrayIterator* iterator) {
+  NameRef(broker(),
+          iterator->GetConstantForIndexOperand(1, broker()->isolate()));
+  // TODO(marja, v8:9237): Process feedback once it's added to the byte code.
 }
 
 // TODO(neis): Do feedback-independent serialization also for *NoFeedback
