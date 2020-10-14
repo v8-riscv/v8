@@ -626,6 +626,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   // Loads an immediate, always using 8 instructions, regardless of the value,
   // so that it can be modified later.
   void li_constant(Register rd, int64_t imm);
+  void li_ptr(Register rd, int64_t imm);
 
   void mv(Register rd, Register rs) { addi(rd, rs, 0); }
   void not_(Register rd, Register rs) { xori(rd, rs, -1); }
@@ -837,6 +838,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   static bool IsAuipc(Instr instr);
   static bool IsAddiw(Instr instr);
   static bool IsAddi(Instr instr);
+  static bool IsOri(Instr instr);
   static bool IsSlli(Instr instr);
   static bool IsLd(Instr instr);
 
