@@ -1462,16 +1462,15 @@ void TurboAssembler::li(Register rd, Operand j, LiFlags mode) {
     }
 
     RecordRelocInfo(j.rmode(), immediate);
-    // FIXME(RISC_V): Does this case need to be constant size?
-    li_constant(rd, immediate);
+    li_ptr(rd, immediate);
   } else if (mode == ADDRESS_LOAD) {
     // We always need the same number of instructions as we may need to patch
-    // this code to load another value which may need all 8 instructions.
+    // this code to load another value which may need all 6 instructions.
     RecordRelocInfo(j.rmode());
-    li_constant(rd, j.immediate());
-  } else {  // mode == CONSTANT_SIZE - always emit the same instruction
+    li_ptr(rd, j.immediate());
+  } else {  // Always emit the same 48 bit instruction
             // sequence.
-    li_constant(rd, j.immediate());
+    li_ptr(rd, j.immediate());
   }
 }
 

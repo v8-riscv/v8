@@ -1319,6 +1319,7 @@ TEST(RVC_CA) {
     auto res = GenAndRunTest<int64_t>(LARGE_INT_UNDER_32_BIT, fn);
     CHECK_EQ(LARGE_INT_UNDER_32_BIT - MIN_VAL_IMM12, res);
   }
+
   // Test c.addw
   {
     auto fn = [](MacroAssembler& assm) {
@@ -1449,16 +1450,14 @@ TEST(TARGET_ADDR) {
   Isolate* isolate = CcTest::i_isolate();
   HandleScope scope(isolate);
 
-  // This is the series of instructions to load 0x123456789abcdef0
-  uint32_t buffer[8] = {0x01234237, 0x5682021b, 0x00c21213, 0x89b20213,
-                        0x00c21213, 0xbce20213, 0x00c21213, 0xef020213};
-
+  // This is the series of instructions to load 48 bit address 0x0123456789ab
+  uint32_t buffer[6] = {0x091ab37, 0x2b330213, 0x00b21213, 0x62626213,
+                        0x00621213, 0x02b26213};
   MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
 
   uintptr_t addr = reinterpret_cast<uintptr_t>(&buffer[0]);
   Address res = __ target_address_at(static_cast<Address>(addr));
-
-  CHECK_EQ(0x123456789abcdef0L, res);
+  CHECK_EQ(0x0123456789abL, res);
 }
 
 TEST(SET_TARGET_ADDR) {
@@ -1466,18 +1465,17 @@ TEST(SET_TARGET_ADDR) {
   Isolate* isolate = CcTest::i_isolate();
   HandleScope scope(isolate);
 
-  // This is the series of instructions to load 0x123456789abcdef0
-  uint32_t buffer[8] = {0x01234237, 0x5682021b, 0x00c21213, 0x89b20213,
-                        0x00c21213, 0xbce20213, 0x00c21213, 0xef020213};
+  // This is the series of instructions to load 48 bit address 0xba9876543210
+  uint32_t buffer[6] = {0x091ab37, 0x2b330213, 0x00b21213, 0x62626213,
+                        0x00621213, 0x02b26213};
 
   MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
 
   uintptr_t addr = reinterpret_cast<uintptr_t>(&buffer[0]);
-  __ set_target_value_at(static_cast<Address>(addr), 0xfedcba9876543210,
+  __ set_target_value_at(static_cast<Address>(addr), 0xba9876543210L,
                          FLUSH_ICACHE_IF_NEEDED);
   Address res = __ target_address_at(static_cast<Address>(addr));
-
-  CHECK_EQ(0xfedcba9876543210, res);
+  CHECK_EQ(0xba9876543210L, res);
 }
 
 // pair.first is the F_TYPE input to test, pair.second is I_TYPE expected
