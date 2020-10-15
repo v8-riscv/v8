@@ -341,21 +341,21 @@ namespace compiler {
   V(RiscvS8x16InterleaveEven)               \
   V(RiscvS8x16InterleaveOdd)                \
   V(RiscvS8x16Shuffle)                      \
-  V(RiscvS8x16Swizzle)                      \
+  V(RiscvI8x16Swizzle)                      \
   V(RiscvS8x16Concat)                       \
   V(RiscvS8x8Reverse)                       \
   V(RiscvS8x4Reverse)                       \
   V(RiscvS8x2Reverse)                       \
-  V(RiscvS8x16LoadSplat)                    \
-  V(RiscvS16x8LoadSplat)                    \
-  V(RiscvS32x4LoadSplat)                    \
-  V(RiscvS64x2LoadSplat)                    \
-  V(RiscvI16x8Load8x8S)                     \
-  V(RiscvI16x8Load8x8U)                     \
-  V(RiscvI32x4Load16x4S)                    \
-  V(RiscvI32x4Load16x4U)                    \
-  V(RiscvI64x2Load32x2S)                    \
-  V(RiscvI64x2Load32x2U)                    \
+  V(RiscvS128Load8Splat)                    \
+  V(RiscvS128Load16Splat)                   \
+  V(RiscvS128Load32Splat)                   \
+  V(RiscvS128Load64Splat)                   \
+  V(RiscvS128Load8x8S)                      \
+  V(RiscvS128Load8x8U)                      \
+  V(RiscvS128Load16x4S)                     \
+  V(RiscvS128Load16x4U)                     \
+  V(RiscvS128Load32x2S)                     \
+  V(RiscvS128Load32x2U)                     \
   V(RiscvMsaLd)                             \
   V(RiscvMsaSt)                             \
   V(RiscvI32x4SConvertI16x8Low)             \

@@ -27,15 +27,13 @@
 
 #include <iostream>  // NOLINT(readability/streams)
 
-#include "src/init/v8.h"
-
 #include "src/base/utils/random-number-generator.h"
 #include "src/codegen/assembler-inl.h"
 #include "src/codegen/macro-assembler.h"
 #include "src/diagnostics/disassembler.h"
 #include "src/execution/simulator.h"
 #include "src/heap/factory.h"
-
+#include "src/init/v8.h"
 #include "test/cctest/cctest.h"
 
 namespace v8 {
@@ -64,7 +62,9 @@ TEST(RISCV_SIMPLE0) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
   auto f = GeneratedCode<F2>::FromCode(*code);
   int64_t res = reinterpret_cast<int64_t>(f.Call(0xAB0, 0xC, 0, 0, 0));
   CHECK_EQ(0xABCL, res);
@@ -83,7 +83,9 @@ TEST(RISCV_SIMPLE1) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
   auto f = GeneratedCode<F1>::FromCode(*code);
   int64_t res = reinterpret_cast<int64_t>(f.Call(100, 0, 0, 0, 0));
   CHECK_EQ(99L, res);
@@ -113,7 +115,9 @@ TEST(RISCV_SIMPLE2) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
 #ifdef DEBUG
   code->Print();
 #endif
@@ -136,7 +140,9 @@ TEST(RISCV_SIMPLE3) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
   auto f = GeneratedCode<F1>::FromCode(*code);
   int64_t res = reinterpret_cast<int64_t>(f.Call(255, 0, 0, 0, 0));
   CHECK_EQ(-1, res);
@@ -187,7 +193,9 @@ TEST(LI) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
   auto f = GeneratedCode<F1>::FromCode(*code);
   int64_t res = reinterpret_cast<int64_t>(f.Call(0xDEADBEEF, 0, 0, 0, 0));
   CHECK_EQ(0L, res);
@@ -237,7 +245,9 @@ TEST(LI_CONST) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code = Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
   auto f = GeneratedCode<F1>::FromCode(*code);
   int64_t res = reinterpret_cast<int64_t>(f.Call(0xDEADBEEF, 0, 0, 0, 0));
   CHECK_EQ(0L, res);
