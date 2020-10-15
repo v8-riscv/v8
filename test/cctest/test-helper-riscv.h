@@ -58,8 +58,9 @@ OUTPUT_T GenAndRunTest(INPUT_T input0, Func test_generator) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code =
-      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
 
   using OINT_T = typename std::conditional<
       std::is_integral<OUTPUT_T>::value, OUTPUT_T,
@@ -106,8 +107,9 @@ OUTPUT_T GenAndRunTest(INPUT_T input0, INPUT_T input1, Func test_generator) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code =
-      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
 
   using OINT_T = typename std::conditional<
       std::is_integral<OUTPUT_T>::value, OUTPUT_T,
@@ -157,8 +159,9 @@ OUTPUT_T GenAndRunTest(INPUT_T input0, INPUT_T input1, INPUT_T input2,
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code =
-      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
 
   using OINT_T = typename std::conditional<
       std::is_integral<OUTPUT_T>::value, OUTPUT_T,
@@ -201,8 +204,9 @@ void GenAndRunTestForLoadStore(T value, Func test_generator) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code =
-      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
 
   using INT_T = typename std::conditional<
       std::is_integral<T>::value, T,
@@ -246,8 +250,9 @@ void GenAndRunTestForLRSC(T value, Func test_generator) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code =
-      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
 #if defined(DEBUG)
   code->Print();
 #endif
@@ -309,8 +314,9 @@ OUTPUT_T GenAndRunTestForAMO(INPUT_T input0, INPUT_T input1,
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code =
-      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
 #if defined(DEBUG)
   code->Print();
 #endif
