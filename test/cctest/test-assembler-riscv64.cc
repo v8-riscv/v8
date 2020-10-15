@@ -1148,8 +1148,9 @@ TEST(RISCV9) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code =
-      Factory::CodeBuilder(isolate, desc, CodeKind::STUB).Build();
+  Handle<Code> code = Factory::CodeBuilder(
+                          isolate, desc, CodeKind::DEOPT_ENTRIES_OR_FOR_TESTING)
+                          .Build();
   USE(code);
 }
 
@@ -1219,9 +1220,9 @@ TEST(RVC_CI) {
 
   // Test c.addi16sp
   {
-    auto fn = [](MacroAssembler& assm) { 
+    auto fn = [](MacroAssembler& assm) {
       __ mv(sp, a0);
-      __ c_addi16sp(-432); 
+      __ c_addi16sp(-432);
       __ mv(a0, sp);
     };
     auto res = GenAndRunTest<int64_t>(66666, fn);
@@ -1248,11 +1249,9 @@ TEST(RVC_CI) {
     auto res = GenAndRunTest<int64_t>(0x1234'5678ULL, fn);
     CHECK_EQ(0x1234'5678ULL << 13, res);
   }
-
 }
 
 TEST(RVC_CIW) {
-
   CcTest::InitializeVM();
 
   // Test c.addi4spn
@@ -1351,32 +1350,31 @@ TEST(RVC_LOAD_STORE_SP) {
   CcTest::InitializeVM();
 
   {
-    auto fn = [](MacroAssembler& assm) { 
-      __ c_fsdsp(fa0, 80); 
-      __ c_fldsp(fa0, 80); 
+    auto fn = [](MacroAssembler& assm) {
+      __ c_fsdsp(fa0, 80);
+      __ c_fldsp(fa0, 80);
     };
     auto res = GenAndRunTest<double>(-3456.678, fn);
     CHECK_EQ(-3456.678, res);
   }
 
   {
-    auto fn = [](MacroAssembler& assm) { 
-      __ c_swsp(a0, 40); 
-      __ c_lwsp(a0, 40); 
+    auto fn = [](MacroAssembler& assm) {
+      __ c_swsp(a0, 40);
+      __ c_lwsp(a0, 40);
     };
     auto res = GenAndRunTest<int32_t>(0x456AF894, fn);
     CHECK_EQ(0x456AF894, res);
   }
 
   {
-    auto fn = [](MacroAssembler& assm) { 
-      __ c_sdsp(a0, 160); 
-      __ c_ldsp(a0, 160); 
+    auto fn = [](MacroAssembler& assm) {
+      __ c_sdsp(a0, 160);
+      __ c_ldsp(a0, 160);
     };
     auto res = GenAndRunTest<uint64_t>(0xFBB10A9C12345678, fn);
     CHECK_EQ(0xFBB10A9C12345678, res);
   }
-
 }
 
 TEST(RVC_LOAD_STORE_COMPRESSED) {
@@ -1466,8 +1464,8 @@ TEST(TARGET_ADDR) {
   HandleScope scope(isolate);
 
   // This is the series of instructions to load 48 bit address 0x0123456789ab
-  uint32_t buffer[6] = {0x091ab37, 0x2b330213, 0x00b21213, 0x62626213,
-                        0x00621213, 0x02b26213};
+  uint32_t buffer[6] = {0x091ab37,  0x2b330213, 0x00b21213,
+                        0x62626213, 0x00621213, 0x02b26213};
   MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
 
   uintptr_t addr = reinterpret_cast<uintptr_t>(&buffer[0]);
@@ -1481,8 +1479,8 @@ TEST(SET_TARGET_ADDR) {
   HandleScope scope(isolate);
 
   // This is the series of instructions to load 48 bit address 0xba9876543210
-  uint32_t buffer[6] = {0x091ab37, 0x2b330213, 0x00b21213, 0x62626213,
-                        0x00621213, 0x02b26213};
+  uint32_t buffer[6] = {0x091ab37,  0x2b330213, 0x00b21213,
+                        0x62626213, 0x00621213, 0x02b26213};
 
   MacroAssembler assm(isolate, v8::internal::CodeObjectRequired::kYes);
 
