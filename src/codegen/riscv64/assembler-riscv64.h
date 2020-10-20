@@ -852,7 +852,6 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   static bool IsOri(Instr instr);
   static bool IsSlli(Instr instr);
   static bool IsLd(Instr instr);
-
   void CheckTrampolinePool();
 
   inline int UnboundLabelsCount() { return unbound_labels_count_; }
