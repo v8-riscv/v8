@@ -794,6 +794,14 @@ class InstructionBase {
   // Get the encoding type of the instruction.
   inline Type InstructionType() const;
 
+  inline int32_t InstructionOpcodeType() const {
+    if (IsShortInstruction()) {
+      return InstructionBits() & kRvcOpcodeMask;
+    } else {
+      return InstructionBits() & kBaseOpcodeMask;
+    }
+  }
+
  protected:
   InstructionBase() {}
 };

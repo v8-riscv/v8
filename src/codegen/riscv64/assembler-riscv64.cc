@@ -338,71 +338,75 @@ int Assembler::target_at(int pos, bool is_internal) {
       return pos - delta;
     }
   }
-  Instr instr = instr_at(pos);
+  Instruction* instruction = Instruction::At(buffer_start_ + pos);
   DEBUG_PRINTF("target_at: %p (%d)\n\t",
                reinterpret_cast<Instr*>(buffer_start_ + pos), pos);
-  disassembleInstr(instr);
-  if (IsBranch(instr)) {
-    int32_t imm13 = BranchOffset(instr);
-    if (imm13 == kEndOfJumpChain) {
-      // EndOfChain sentinel is returned directly, not relative to pc or pos.
-      return kEndOfChain;
-    } else {
-      return pos + imm13;
-    }
-  } else if (IsJal(instr)) {
-    int32_t imm21 = JumpOffset(instr);
-    if (imm21 == kEndOfJumpChain) {
-      // EndOfChain sentinel is returned directly, not relative to pc or pos.
-      return kEndOfChain;
-    } else {
-      return pos + imm21;
-    }
-  } else if (IsJalr(instr)) {
-    int32_t imm12 = instr >> 20;
-    if (imm12 == kEndOfJumpChain) {
-      // EndOfChain sentinel is returned directly, not relative to pc or pos.
-      return kEndOfChain;
-    } else {
-      return pos + imm12;
-    }
-  } else if (IsLui(instr)) {
-    Address pc = reinterpret_cast<Address>(buffer_start_ + pos);
-    pc = target_address_at(pc);
-    uint64_t instr_address = reinterpret_cast<uint64_t>(buffer_start_ + pos);
-    uint64_t imm = reinterpret_cast<uint64_t>(pc);
-    if(imm == kEndOfJumpChain) {
-      return kEndOfChain;
-    } else {
-      DCHECK(instr_address - imm < INT_MAX);
-      int32_t delta = static_cast<int32_t>(instr_address - imm);
-      DCHECK(pos > delta);
-      return pos - delta;
-    }
-  } else if (IsAuipc(instr)) {
-    Instr instr_auipc = instr;
-    Instr instr_I = instr_at(pos + 4);
-    DCHECK(IsJalr(instr_I) || IsAddi(instr_I));
-    int32_t offset = BrachlongOffset(instr_auipc, instr_I);
-    if(offset == kEndOfJumpChain) 
-      return kEndOfChain;
-    return offset + pos;
-  } else if (IsCJal(instr)) {
-    int32_t imm12 = CJumpOffset(instr);
-    if (imm12 == kEndOfJumpChain) {
-      // EndOfChain sentinel is returned directly, not relative to pc or pos.
-      return kEndOfChain;
-    } else {
-      return pos + imm12;
-    }
-  } else {
-    // Emitted label constant, not part of a branch.
-    if (instr == kEndOfJumpChain) {
-      return kEndOfChain;
-    } else {
-      int32_t imm18 = ((instr & static_cast<int32_t>(kImm16Mask)) << 16) >> 14;
-      return (imm18 + pos);
-    }
+  Instr instr = instruction->InstructionBits();
+  disassembleInstr(instruction->InstructionBits());
+
+  switch(instruction->InstructionOpcodeType()) {
+    case BRANCH: {
+      int32_t imm13 = BranchOffset(instr);
+      if (imm13 == kEndOfJumpChain) {
+        // EndOfChain sentinel is returned directly, not relative to pc or pos.
+        return kEndOfChain;
+      } else {
+        return pos + imm13;
+      }
+    } break;
+    case JAL : {
+      int32_t imm21 = JumpOffset(instr);
+      if (imm21 == kEndOfJumpChain) {
+        // EndOfChain sentinel is returned directly, not relative to pc or pos.
+        return kEndOfChain;
+      } else {
+        return pos + imm21;
+      }
+    } break;
+    case JALR: {
+      int32_t imm12 = instr >> 20;
+      if (imm12 == kEndOfJumpChain) {
+        // EndOfChain sentinel is returned directly, not relative to pc or pos.
+        return kEndOfChain;
+      } else {
+        return pos + imm12;
+      }
+    } break;
+    case LUI: {
+      Address pc = reinterpret_cast<Address>(buffer_start_ + pos);
+      pc = target_address_at(pc);
+      uint64_t instr_address = reinterpret_cast<uint64_t>(buffer_start_ + pos);
+      uint64_t imm = reinterpret_cast<uint64_t>(pc);
+      if (imm == kEndOfJumpChain) {
+        return kEndOfChain;
+      } else {
+        DCHECK(instr_address - imm < INT_MAX);
+        int32_t delta = static_cast<int32_t>(instr_address - imm);
+        DCHECK(pos > delta);
+        return pos - delta;
+      }
+    } break;
+    case AUIPC:{
+      Instr instr_auipc = instr;
+      Instr instr_I = instr_at(pos + 4);
+      DCHECK(IsJalr(instr_I) || IsAddi(instr_I));
+      int32_t offset = BrachlongOffset(instr_auipc, instr_I);
+      if (offset == kEndOfJumpChain) return kEndOfChain;
+      return offset + pos;
+    } break;
+    case RO_C_J:{
+      int32_t offset = instruction->RvcImm11CJValue();
+      if (offset == kEndOfJumpChain) return kEndOfChain;
+      return offset + pos;
+    } break;
+    default: {
+      if (instr == kEndOfJumpChain) {
+        return kEndOfChain;
+      } else {
+        int32_t imm18 = ((instr & static_cast<int32_t>(kImm16Mask)) << 16) >> 14;
+        return (imm18 + pos);
+      }
+    } break;
   }
 }
 
@@ -456,14 +460,14 @@ static inline Instr SetCJalOffset(int32_t pos, int32_t target_pos, Instr instr) 
   int32_t imm = target_pos - pos;
   DCHECK_EQ(imm & 1, 0);
   DCHECK(is_intn(imm, Assembler::kCJalOffsetBits));
-
   instr &= ~kImm11Mask;
-  int16_t uimm11 = ((imm & 0x800) >> 1) | ((imm & 0x400) >> 4) |
+  int16_t imm11 = ((imm & 0x800) >> 1) | ((imm & 0x400) >> 4) |
                     ((imm & 0x300) >> 1) | ((imm & 0x80) >> 3) |
                     ((imm & 0x40) >> 1) | ((imm & 0x20) >> 5) |
                     ((imm & 0x10) << 5) | (imm & 0xe);
-  uimm11 = uimm11 << 2;
-  return (instr | (uimm11 & kImm11Mask));
+  imm11 = imm11 << kImm11Shift;
+  DCHECK(Assembler::IsCJal(instr | (imm11 & kImm11Mask)));
+  return instr | (imm11 & kImm11Mask);
 }
 
 void Assembler::target_at_put(int pos, int target_pos, bool is_internal) {
@@ -476,44 +480,52 @@ void Assembler::target_at_put(int pos, int target_pos, bool is_internal) {
                reinterpret_cast<Instr*>(buffer_start_ + pos), pos,
                reinterpret_cast<Instr*>(buffer_start_ + target_pos),
                target_pos);
-  Instr instr = instr_at(pos);
+  Instruction* instruction = Instruction::At(buffer_start_ + pos);
+  Instr instr = instruction->InstructionBits();
+  
+  switch(instruction->InstructionOpcodeType()) {
+    case BRANCH: {
+      instr = SetBranchOffset(pos, target_pos, instr);
+      instr_at_put(pos, instr);
+    } break;
+    case JAL : {
+      instr = SetJalOffset(pos, target_pos, instr);
+      instr_at_put(pos, instr);
+    } break;
+    case LUI: {
+      Address pc = reinterpret_cast<Address>(buffer_start_ + pos);
+      set_target_value_at(pc, reinterpret_cast<uint64_t>(buffer_start_ + target_pos));
+    } break;
+    case AUIPC:{
+      Instr instr_auipc = instr;
+      Instr instr_I = instr_at(pos + 4);
+      DCHECK(IsJalr(instr_I) || IsAddi(instr_I));
 
-  if (IsBranch(instr)) {
-    instr = SetBranchOffset(pos, target_pos, instr);
-    instr_at_put(pos, instr);
-  } else if (IsJal(instr)) {
-    instr = SetJalOffset(pos, target_pos, instr);
-    instr_at_put(pos, instr);
-  } else if (IsLui(instr)) {
-    Address pc = reinterpret_cast<Address>(buffer_start_ + pos);
-    set_target_value_at(pc, reinterpret_cast<uint64_t>(buffer_start_ + target_pos));
-  } else if (IsAuipc(instr)) {
-    Instr instr_auipc = instr;
-    Instr instr_I = instr_at(pos + 4);
-    DCHECK(IsJalr(instr_I) || IsAddi(instr_I));
+      int64_t offset = target_pos - pos;
+      DCHECK(is_int32(offset));
 
-    int64_t offset = target_pos - pos;
-    DCHECK(is_int32(offset));
+      int32_t Hi20 = (((int32_t)offset + 0x800) >> 12);
+      int32_t Lo12 = (int32_t)offset << 20 >> 20;
 
-    int32_t Hi20 = (((int32_t)offset + 0x800) >> 12);
-    int32_t Lo12 = (int32_t)offset << 20 >> 20;
+      instr_auipc = (instr_auipc & ~kImm31_12Mask) |
+              ((Hi20 & kImm19_0Mask) << 12);
+      instr_at_put(pos, instr_auipc);
 
-    instr_auipc = (instr_auipc & ~kImm31_12Mask) |
-                  ((Hi20 & kImm19_0Mask) << 12);
-    instr_at_put(pos, instr_auipc);
-
-    const int kImm31_20Mask = ((1 << 12) - 1) << 20;
-    const int kImm11_0Mask = ((1 << 12) - 1);
-    instr_I = (instr_I & ~kImm31_20Mask) |
-                 ((Lo12 & kImm11_0Mask) << 20);
-    instr_at_put(pos + 4, instr_I);
-  } else if (IsCJal(instr)) {
-    instr = SetCJalOffset(pos, target_pos, instr);
-    instr_at_put(pos, instr);
-  } else {
-    // Emitted label constant, not part of a branch.
-    // Make label relative to Code pointer of generated Code object.
-    instr_at_put(pos, target_pos + (Code::kHeaderSize - kHeapObjectTag));
+      const int kImm31_20Mask = ((1 << 12) - 1) << 20;
+      const int kImm11_0Mask = ((1 << 12) - 1);
+      instr_I = (instr_I & ~kImm31_20Mask) |
+              ((Lo12 & kImm11_0Mask) << 20);
+      instr_at_put(pos + 4, instr_I);
+    } break;
+    case RO_C_J:{
+      instr = SetCJalOffset(pos, target_pos, instr);
+      instr_at_put(pos, instr);
+    } break;
+    default: {
+      // Emitted label constant, not part of a branch.
+      // Make label relative to Code pointer of generated Code object.
+      instr_at_put(pos, target_pos + (Code::kHeaderSize - kHeapObjectTag));
+    } break;
   }
   disassembleInstr(instr);
 }
