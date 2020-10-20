@@ -455,7 +455,7 @@ static inline Instr SetJalOffset(int32_t pos, int32_t target_pos, Instr instr) {
   return instr | (imm20 & kImm20Mask);
 }
 
-static inline Instr SetCJalOffset(int32_t pos, int32_t target_pos, Instr instr) {
+static inline ShortInstr SetCJalOffset(int32_t pos, int32_t target_pos, Instr instr) {
   DCHECK(Assembler::IsCJal(instr));
   int32_t imm = target_pos - pos;
   DCHECK_EQ(imm & 1, 0);
@@ -518,8 +518,8 @@ void Assembler::target_at_put(int pos, int target_pos, bool is_internal) {
       instr_at_put(pos + 4, instr_I);
     } break;
     case RO_C_J:{
-      instr = SetCJalOffset(pos, target_pos, instr);
-      instr_at_put(pos, instr);
+      ShortInstr short_instr = SetCJalOffset(pos, target_pos, instr);
+      instr_at_put(pos, short_instr);
     } break;
     default: {
       // Emitted label constant, not part of a branch.
