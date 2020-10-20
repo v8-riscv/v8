@@ -791,8 +791,6 @@ class InstructionBase {
 
   inline int32_t ITypeBits() const { return InstructionBits() & kITypeMask; }
 
-  // Get the encoding type of the instruction.
-  inline Type InstructionType() const;
 
   inline int32_t InstructionOpcodeType() const {
     if (IsShortInstruction()) {
@@ -801,6 +799,9 @@ class InstructionBase {
       return InstructionBits() & kBaseOpcodeMask;
     }
   }
+
+  // Get the encoding type of the instruction.
+  Type InstructionType() const;
 
  protected:
   InstructionBase() {}
@@ -1157,92 +1158,6 @@ const int kBranchReturnOffset = 2 * kInstrSize;
 
 static const int kNegOffset = 0x00008000;
 
-InstructionBase::Type InstructionBase::InstructionType() const {
-  // RV64C Instruction
-  switch (InstructionBits() & kRvcOpcodeMask) {
-    case RO_C_ADDI4SPN:
-      return kCIWType;
-    case RO_C_FLD:
-    case RO_C_LW:
-    case RO_C_LD:
-      return kCLType;
-    case RO_C_FSD:
-    case RO_C_SW:
-    case RO_C_SD:
-      return kCSType;
-    case RO_C_NOP_ADDI:
-    case RO_C_ADDIW:
-    case RO_C_LI:
-    case RO_C_LUI_ADD:
-      return kCIType;
-    case RO_C_MISC_ALU:
-      if (Bits(11, 10) != 0b11)
-        return kCBType;
-      else
-        return kCAType;
-    case RO_C_J:
-      return kCJType;
-    case RO_C_BEQZ:
-    case RO_C_BNEZ:
-      return kCBType;
-    case RO_C_SLLI:
-    case RO_C_FLDSP:
-    case RO_C_LWSP:
-    case RO_C_LDSP:
-      return kCIType;
-    case RO_C_JR_MV_ADD:
-      return kCRType;
-    case RO_C_FSDSP:
-    case RO_C_SWSP:
-    case RO_C_SDSP:
-      return kCSSType;
-    default:
-      break;
-  }
-  // RISCV routine
-  switch (InstructionBits() & kBaseOpcodeMask) {
-    case LOAD:
-      return kIType;
-    case LOAD_FP:
-      return kIType;
-    case MISC_MEM:
-      return kIType;
-    case OP_IMM:
-      return kIType;
-    case AUIPC:
-      return kUType;
-    case OP_IMM_32:
-      return kIType;
-    case STORE:
-      return kSType;
-    case STORE_FP:
-      return kSType;
-    case AMO:
-      return kRType;
-    case OP:
-      return kRType;
-    case LUI:
-      return kUType;
-    case OP_32:
-      return kRType;
-    case MADD:
-    case MSUB:
-    case NMSUB:
-    case NMADD:
-      return kR4Type;
-    case OP_FP:
-      return kRType;
-    case BRANCH:
-      return kBType;
-    case JALR:
-      return kIType;
-    case JAL:
-      return kJType;
-    case SYSTEM:
-      return kIType;
-  }
-  return kUnsupported;
-}
 
 // -----------------------------------------------------------------------------
 // Instructions.
