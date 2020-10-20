@@ -243,7 +243,10 @@ void Assembler::emit(ShortInstr x) {
   if (!is_buffer_growth_blocked()) {
     CheckBuffer();
   }
+  DEBUG_PRINTF("%p: ", pc_);
+  disassembleInstr(x);
   EmitHelper(x);
+  CheckTrampolinePoolQuick();
 }
 
 void Assembler::emit(uint64_t data) {

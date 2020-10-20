@@ -835,6 +835,10 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     *reinterpret_cast<Instr*>(buffer_start_ + pos) = instr;
   }
 
+  void instr_at_put(int pos, ShortInstr instr) {
+    *reinterpret_cast<ShortInstr*>(buffer_start_ + pos) = instr;
+  }
+
   Address toAddress(int pos) {
     return reinterpret_cast<Address>(buffer_start_ + pos);
   }
