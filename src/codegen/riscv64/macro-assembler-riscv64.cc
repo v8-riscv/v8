@@ -146,10 +146,11 @@ void TurboAssembler::PushCommonFrame(Register marker_reg) {
 void TurboAssembler::PushStandardFrame(Register function_reg) {
   int offset = -StandardFrameConstants::kContextOffset;
   if (function_reg.is_valid()) {
-    Push(ra, fp, cp, function_reg);
-    offset += kPointerSize;
+    Push(ra, fp, cp, function_reg, kJavaScriptCallArgCountRegister);
+    offset += 2 * kPointerSize;
   } else {
-    Push(ra, fp, cp);
+    Push(ra, fp, cp, kJavaScriptCallArgCountRegister);
+    offset += kPointerSize;
   }
   Add64(fp, sp, Operand(offset));
 }
@@ -3202,6 +3203,33 @@ void TurboAssembler::Push(Smi smi) {
   push(scratch);
 }
 
+void TurboAssembler::PushArray(Register array, Register size, Register scratch,
+                               Register scratch2, PushArrayOrder order) {
+  DCHECK(!AreAliased(array, size, scratch, scratch2));
+  Label loop, entry;
+  if (order == PushArrayOrder::kReverse) {
+    mv(scratch, zero_reg);
+    jmp(&entry);
+    bind(&loop);
+    CalcScaledAddress(scratch2, array, scratch, kPointerSizeLog2);
+    Ld(scratch2, MemOperand(scratch2));
+    push(scratch2);
+    Add64(scratch, scratch, Operand(1));
+    bind(&entry);
+    Branch(&loop, less, scratch, Operand(size));
+  } else {
+    mv(scratch, size);
+    jmp(&entry);
+    bind(&loop);
+    CalcScaledAddress(scratch2, array, scratch, kPointerSizeLog2);
+    Ld(scratch2, MemOperand(scratch2));
+    push(scratch2);
+    bind(&entry);
+    Add64(scratch, scratch, Operand(-1));
+    Branch(&loop, greater_equal, scratch, Operand(zero_reg));
+  }
+}
+
 void TurboAssembler::Push(Handle<HeapObject> handle) {
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
@@ -3381,8 +3409,8 @@ void MacroAssembler::CheckDebugHook(Register fun, Register new_target,
 
   {
     // Load receiver to pass it later to DebugOnFunctionCall hook.
-    CalcScaledAddress(t0, sp, actual_parameter_count, kPointerSizeLog2);
-    Ld(t0, MemOperand(t0));
+    LoadReceiver(t0, actual_parameter_count);
+
     FrameScope frame(this,
                      has_frame() ? StackFrame::NONE : StackFrame::INTERNAL);
     SmiTag(expected_parameter_count);
