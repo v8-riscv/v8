@@ -1226,24 +1226,9 @@ bool InstructionSelector::ZeroExtendsWord32ToWord64NoPhis(Node* node) {
 void InstructionSelector::VisitChangeUint32ToUint64(Node* node) {
   RiscvOperandGenerator g(this);
   Node* value = node->InputAt(0);
-  switch (value->opcode()) {
-    case IrOpcode::kLoad: {
-      LoadRepresentation load_rep = LoadRepresentationOf(value->op());
-      if (load_rep.IsUnsigned()) {
-        switch (load_rep.representation()) {
-          case MachineRepresentation::kWord8:
-          case MachineRepresentation::kWord16:
-          case MachineRepresentation::kWord32:
-            Emit(kArchNop, g.DefineSameAsFirst(node), g.Use(value));
-            return;
-          default:
-            break;
-        }
-      }
-      break;
-    }
-    default:
-      break;
+  if (ZeroExtendsWord32ToWord64(value)) {
+    Emit(kArchNop, g.DefineSameAsFirst(node), g.Use(value));
+    return;
   }
   Emit(kRiscvZeroExtendWord, g.DefineAsRegister(node),
        g.UseRegister(node->InputAt(0)));
@@ -1521,7 +1506,7 @@ void InstructionSelector::EmitPrepareResults(
     Node* node) {
   RiscvOperandGenerator g(this);
 
-  int reverse_slot = 0;
+  int reverse_slot = 1;
   for (PushParameter output : *results) {
     if (!output.location.IsCallerFrameSlot()) continue;
     // Skip any alignment holes in nodes.
@@ -1557,9 +1542,9 @@ void InstructionSelector::VisitUnalignedLoad(Node* node) {
     case MachineRepresentation::kFloat64:
       opcode = kRiscvULoadDouble;
       break;
-    case MachineRepresentation::kBit:  // Fall through.
     case MachineRepresentation::kWord8:
-      UNREACHABLE();
+      opcode = load_rep.IsUnsigned() ? kRiscvLbu : kRiscvLb;
+      break;
     case MachineRepresentation::kWord16:
       opcode = load_rep.IsUnsigned() ? kRiscvUlhu : kRiscvUlh;
       break;
@@ -1575,6 +1560,7 @@ void InstructionSelector::VisitUnalignedLoad(Node* node) {
     case MachineRepresentation::kSimd128:
       opcode = kRiscvMsaLd;
       break;
+    case MachineRepresentation::kBit:                // Fall through.
     case MachineRepresentation::kCompressedPointer:  // Fall through.
     case MachineRepresentation::kCompressed:         // Fall through.
     case MachineRepresentation::kNone:
@@ -1609,9 +1595,9 @@ void InstructionSelector::VisitUnalignedStore(Node* node) {
     case MachineRepresentation::kFloat64:
       opcode = kRiscvUStoreDouble;
       break;
-    case MachineRepresentation::kBit:  // Fall through.
     case MachineRepresentation::kWord8:
-      UNREACHABLE();
+      opcode = kRiscvSb;
+      break;
     case MachineRepresentation::kWord16:
       opcode = kRiscvUsh;
       break;
@@ -1627,6 +1613,7 @@ void InstructionSelector::VisitUnalignedStore(Node* node) {
     case MachineRepresentation::kSimd128:
       opcode = kRiscvMsaSt;
       break;
+    case MachineRepresentation::kBit:                // Fall through.
     case MachineRepresentation::kCompressedPointer:  // Fall through.
     case MachineRepresentation::kCompressed:         // Fall through.
     case MachineRepresentation::kNone:
