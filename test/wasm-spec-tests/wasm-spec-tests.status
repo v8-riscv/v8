@@ -126,6 +126,9 @@
    # These tests need larger stack size on simulator.
    'skip-stack-guard-page': '--sim-stack-size=8192',
    'proposals/tail-call/skip-stack-guard-page': '--sim-stack-size=8192',
+
+   # SIMD is not fully implemented yet.
+   'proposals/simd/*': [SKIP],
 }],  # 'arch == riscv or arch == riscv64
 
 ['arch == ppc or arch == ppc64', {
