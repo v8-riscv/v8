@@ -1722,7 +1722,7 @@ void Decoder::DecodeCSType(Instruction* instr) {
 void Decoder::DecodeCJType(Instruction* instr) {
   switch(instr->RvcOpcode()) {
     case RO_C_J:
-      Format(instr, "jal       x0, 'Cimm11CJ");
+      Format(instr, "j       'Cimm11CJ");
       break;
     default:
       UNSUPPORTED_RISCV();
