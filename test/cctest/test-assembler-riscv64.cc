@@ -1220,10 +1220,12 @@ TEST(RVC_CI) {
 
   // Test c.addi16sp
   {
-    auto fn = [](MacroAssembler& assm) {
+    auto fn = [](MacroAssembler& assm) { 
+      __ mv(t1, sp);
       __ mv(sp, a0);
       __ c_addi16sp(-432);
       __ mv(a0, sp);
+      __ mv(sp, t1);
     };
     auto res = GenAndRunTest<int64_t>(66666, fn);
     CHECK_EQ(66666 - 432, res);
@@ -1257,8 +1259,10 @@ TEST(RVC_CIW) {
   // Test c.addi4spn
   {
     auto fn = [](MacroAssembler& assm) {
+      __ mv(t1, sp);
       __ mv(sp, a0);
       __ c_addi4spn(a0, 924);
+      __ mv(sp, t1);
     };
     auto res = GenAndRunTest<int64_t>(66666, fn);
     CHECK_EQ(66666 + 924, res);
