@@ -498,7 +498,7 @@ TEST(RV64C) {
   COMPARE(c_sd(a2, s1, 24), "0000ec90       sd       a2, 24(s1)");
   COMPARE(c_fsd(fa1, s1, 24), "0000ac8c       fsd       fa1, 24(s1)");
 
-  COMPARE(c_j(-12), "0000bfd5       jal       x0, -12");
+  COMPARE(c_j(-12), "0000bfd5       j       -12");
   VERIFY_RUN();
 }
 
