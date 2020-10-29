@@ -41,11 +41,11 @@
 #include <set>
 
 #include "src/codegen/assembler.h"
+#include "src/codegen/constant-pool.h"
 #include "src/codegen/external-reference.h"
 #include "src/codegen/label.h"
 #include "src/codegen/riscv64/constants-riscv64.h"
 #include "src/codegen/riscv64/register-riscv64.h"
-#include "src/codegen/constant-pool.h"
 #include "src/objects/contexts.h"
 #include "src/objects/smi.h"
 
@@ -153,9 +153,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   explicit Assembler(const AssemblerOptions&,
                      std::unique_ptr<AssemblerBuffer> = {});
 
-  virtual ~Assembler() {
-    CHECK(constpool_.IsEmpty()); 
-  }
+  virtual ~Assembler() { CHECK(constpool_.IsEmpty()); }
 
   // GetCode emits any pending (non-emitted) code and fills the descriptor desc.
   static constexpr int kNoHandlerTable = 0;
@@ -192,8 +190,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     kOffset21 = 21,  // RISCV jal
     kOffset12 = 12,  // RISCV imm12
     kOffset20 = 20,  // RISCV imm20
-    kOffset13 = 13,   // RISCV branch
-    kOffset32 = 32,   // RISCV auipc + instr_I
+    kOffset13 = 13,  // RISCV branch
+    kOffset32 = 32,  // RISCV auipc + instr_I
     kOffset11 = 11   // RISCV C_J
   };
 
@@ -222,7 +220,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     return branch_offset_helper(L, OffsetSize::kOffset21);
   }
   inline int16_t cjump_offset(Label* L) {
-    return (int16_t) branch_offset_helper(L, OffsetSize::kOffset11);
+    return (int16_t)branch_offset_helper(L, OffsetSize::kOffset11);
   }
 
   uint64_t jump_address(Label* L);
@@ -753,18 +751,18 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   int InstructionsGeneratedSince(Label* label) {
     return SizeOfCodeGeneratedSince(label) / kInstrSize;
   }
-  
+
   using BlockConstPoolScope = ConstantPool::BlockScope;
   // Class for scoping postponing the trampoline pool generation.
   class BlockTrampolinePoolScope {
    public:
     explicit BlockTrampolinePoolScope(Assembler* assem, int margin = 0)
-        : assem_(assem){
+        : assem_(assem) {
       assem_->StartBlockTrampolinePool();
     }
 
     explicit BlockTrampolinePoolScope(Assembler* assem, PoolEmissionCheck check)
-        : assem_(assem){
+        : assem_(assem) {
       assem_->StartBlockTrampolinePool();
     }
     ~BlockTrampolinePoolScope() { assem_->EndBlockTrampolinePool(); }
@@ -1063,21 +1061,24 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void GenInstrU(Opcode opcode, Register rd, int32_t imm20);
   void GenInstrJ(Opcode opcode, Register rd, int32_t imm20);
   void GenInstrCR(uint8_t funct4, Opcode opcode, Register rd, Register rs2);
-  void GenInstrCA(uint8_t funct6, Opcode opcode, Register rd, uint8_t funct, Register rs2);
+  void GenInstrCA(uint8_t funct6, Opcode opcode, Register rd, uint8_t funct,
+                  Register rs2);
   void GenInstrCI(uint8_t funct3, Opcode opcode, Register rd, int8_t imm6);
   void GenInstrCIU(uint8_t funct3, Opcode opcode, Register rd, uint8_t uimm6);
-  void GenInstrCIU(uint8_t funct3, Opcode opcode, FPURegister rd, uint8_t uimm6);
+  void GenInstrCIU(uint8_t funct3, Opcode opcode, FPURegister rd,
+                   uint8_t uimm6);
   void GenInstrCIW(uint8_t funct3, Opcode opcode, Register rd, uint8_t uimm8);
-  void GenInstrCSS(uint8_t funct3, Opcode opcode, FPURegister rs2, uint8_t uimm6);
+  void GenInstrCSS(uint8_t funct3, Opcode opcode, FPURegister rs2,
+                   uint8_t uimm6);
   void GenInstrCSS(uint8_t funct3, Opcode opcode, Register rs2, uint8_t uimm6);
-  void GenInstrCL(uint8_t funct3, Opcode opcode, Register rd,
-                  Register rs1, uint8_t uimm5);
-  void GenInstrCL(uint8_t funct3, Opcode opcode, FPURegister rd,
-                  Register rs1, uint8_t uimm5);
-  void GenInstrCS(uint8_t funct3, Opcode opcode, Register rs2,
-                  Register rs1, uint8_t uimm5);
-  void GenInstrCS(uint8_t funct3, Opcode opcode, FPURegister rs2,
-                  Register rs1, uint8_t uimm5);
+  void GenInstrCL(uint8_t funct3, Opcode opcode, Register rd, Register rs1,
+                  uint8_t uimm5);
+  void GenInstrCL(uint8_t funct3, Opcode opcode, FPURegister rd, Register rs1,
+                  uint8_t uimm5);
+  void GenInstrCS(uint8_t funct3, Opcode opcode, Register rs2, Register rs1,
+                  uint8_t uimm5);
+  void GenInstrCS(uint8_t funct3, Opcode opcode, FPURegister rs2, Register rs1,
+                  uint8_t uimm5);
   void GenInstrCJ(uint8_t funct3, Opcode opcode, uint16_t uint11);
 
   // ----- Instruction class templates match those in LLVM's RISCVInstrInfo.td
