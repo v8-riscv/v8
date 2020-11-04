@@ -211,7 +211,7 @@ int ConstantPoolBuilder::Emit(Assembler* assm) {
 
 #endif  // defined(V8_TARGET_ARCH_PPC) || defined(V8_TARGET_ARCH_PPC64)
 
-#if defined(V8_TARGET_ARCH_ARM64) 
+#if defined(V8_TARGET_ARCH_ARM64)
 
 // Constant Pool.
 
@@ -538,7 +538,7 @@ void ConstantPool::EmitAndClear(Jump require_jump) {
   if (require_jump == Jump::kRequired) assm_->b(&after_pool);
 
   assm_->RecordComment("[ Constant Pool");
-  
+
   EmitPrologue(require_alignment);
   if (require_alignment == Alignment::kRequired) assm_->DataAlign(kInt64Size);
   EmitEntries();

@@ -122,7 +122,7 @@
    'proposals/tail-call/float_exprs': [SKIP],
    'proposals/tail-call/f64': [SKIP],
    'proposals/tail-call/f32': [SKIP],
-   
+
    # These tests need larger stack size on simulator.
    'skip-stack-guard-page': '--sim-stack-size=8192',
    'proposals/tail-call/skip-stack-guard-page': '--sim-stack-size=8192',

@@ -60,7 +60,7 @@
   {Flag::TYPE_##ftype, #nam, &FLAG_##nam, &FLAGDEFAULT_##nam, cmt, false},
 #define FLAG_ALIAS(ftype, ctype, alias, nam)                     \
   {Flag::TYPE_##ftype,  #alias, &FLAG_##nam, &FLAGDEFAULT_##nam, \
-   "alias for --" #nam, false},
+    "alias for --" #nam, false},
 
 // We produce the code to set flags when it is implied by another flag.
 #elif defined(FLAG_MODE_DEFINE_IMPLICATIONS)
@@ -864,9 +864,8 @@ FOREACH_WASM_STAGING_FEATURE_FLAG(WASM_STAGING_IMPLICATION)
 #undef WASM_STAGING_IMPLICATION
 
 DEFINE_BOOL(wasm_opt, false, "enable wasm optimization")
-DEFINE_BOOL(
-    wasm_bounds_checks, true,
-    "enable bounds checks (disable for performance testing only)")
+DEFINE_BOOL(wasm_bounds_checks, true,
+            "enable bounds checks (disable for performance testing only)")
 DEFINE_BOOL(wasm_stack_checks, true,
             "enable stack checks (disable for performance testing only)")
 DEFINE_BOOL(wasm_math_intrinsics, true,
