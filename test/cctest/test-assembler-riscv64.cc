@@ -1220,7 +1220,7 @@ TEST(RVC_CI) {
 
   // Test c.addi16sp
   {
-    auto fn = [](MacroAssembler& assm) { 
+    auto fn = [](MacroAssembler& assm) {
       __ mv(t1, sp);
       __ mv(sp, a0);
       __ c_addi16sp(-432);

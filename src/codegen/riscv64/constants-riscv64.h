@@ -135,7 +135,7 @@ class FPURegisters {
 // Instructions encoding constants.
 
 // On RISCV all instructions are 32 bits, except for RVC.
-using Instr    = int32_t;
+using Instr = int32_t;
 using ShortInstr = int16_t;
 
 // Special Software Interrupt codes when used in the presence of the RISC-V
@@ -239,7 +239,8 @@ const int kImm12Mask = ((1 << kImm12Bits) - 1) << kImm12Shift;
 const int kImm11Mask = ((1 << kImm11Bits) - 1) << kImm11Shift;
 const int kImm31_12Mask = ((1 << 20) - 1) << 12;
 const int kImm19_0Mask = ((1 << 20) - 1);
-const int kRvcOpcodeMask = 0b11 | (((1 << kRvcFunct3Bits) - 1) << kRvcFunct3Shift);
+const int kRvcOpcodeMask =
+    0b11 | (((1 << kRvcFunct3Bits) - 1) << kRvcFunct3Shift);
 const int kRvcFunct3Mask = (((1 << kRvcFunct3Bits) - 1) << kRvcFunct3Shift);
 const int kRvcFunct4Mask = (((1 << kRvcFunct4Bits) - 1) << kRvcFunct4Shift);
 const int kRvcFunct6Mask = (((1 << kRvcFunct6Bits) - 1) << kRvcFunct6Shift);
@@ -266,9 +267,7 @@ const int kImm16Mask = ((1 << kImm16Bits) - 1) << kImm16Shift;
 
 // ----- RISCV Base Opcodes
 
-enum BaseOpcode : uint32_t {
-
-};
+enum BaseOpcode : uint32_t {};
 
 // ----- RISC-V Opcodes and Function Fields.
 enum Opcode : uint32_t {
@@ -296,7 +295,7 @@ enum Opcode : uint32_t {
   JAL = 0b1101111,     // J form: JAL
   SYSTEM = 0b1110011,  // I form: ECALL EBREAK Zicsr ext
   // C extension
-  C0 = 0b00,           
+  C0 = 0b00,
   C1 = 0b01,
   C2 = 0b10,
   FUNCT2_0 = 0b00,
@@ -504,8 +503,10 @@ enum Opcode : uint32_t {
   RO_C_XOR = C1 | (0b100011 << kRvcFunct6Shift) | (FUNCT2_1 << kRvcFunct2Shift),
   RO_C_OR = C1 | (0b100011 << kRvcFunct6Shift) | (FUNCT2_2 << kRvcFunct2Shift),
   RO_C_AND = C1 | (0b100011 << kRvcFunct6Shift) | (FUNCT2_3 << kRvcFunct2Shift),
-  RO_C_SUBW = C1 | (0b100111 << kRvcFunct6Shift) | (FUNCT2_0 << kRvcFunct2Shift),
-  RO_C_ADDW = C1 | (0b100111 << kRvcFunct6Shift) | (FUNCT2_1 << kRvcFunct2Shift),
+  RO_C_SUBW =
+      C1 | (0b100111 << kRvcFunct6Shift) | (FUNCT2_0 << kRvcFunct2Shift),
+  RO_C_ADDW =
+      C1 | (0b100111 << kRvcFunct6Shift) | (FUNCT2_1 << kRvcFunct2Shift),
   RO_C_LUI_ADD = C1 | (0b011 << kRvcFunct3Shift),
   RO_C_MISC_ALU = C1 | (0b100 << kRvcFunct3Shift),
   RO_C_J = C1 | (0b101 << kRvcFunct3Shift),
@@ -726,7 +727,6 @@ class InstructionBase {
     kUnsupported = -1
   };
 
-
   inline bool IsShortInstruction() const {
     uint8_t FirstByte = *reinterpret_cast<const uint8_t*>(this);
     return (FirstByte & 0x03) <= C2;
@@ -791,7 +791,6 @@ class InstructionBase {
 
   inline int32_t ITypeBits() const { return InstructionBits() & kITypeMask; }
 
-
   inline int32_t InstructionOpcodeType() const {
     if (IsShortInstruction()) {
       return InstructionBits() & kRvcOpcodeMask;
@@ -855,9 +854,7 @@ class InstructionGetters : public T {
     return this->Bits(kRvcRdShift + kRvcRdBits - 1, kRvcRdShift);
   }
 
-  inline int RvcRs1Value() const {
-    return this->RvcRdValue();
-  }
+  inline int RvcRs1Value() const { return this->RvcRdValue(); }
 
   inline int RvcRs2Value() const {
     DCHECK(this->IsShortInstruction());
@@ -1013,23 +1010,23 @@ class InstructionGetters : public T {
   inline int RvcImm6Value() const {
     DCHECK(this->IsShortInstruction());
     // | funct3 | imm[5] | rs1/rd | imm[4:0] | opcode |
-    //  15         12              6        2        
+    //  15         12              6        2
     // | funct3 | nzimm[17] | rs1/rd | nzimm[16:12] | opcode |
-    //  15         12                 6            2        
+    //  15         12                 6            2
     uint32_t Bits = this->InstructionBits();
     int32_t imm6 = ((Bits & 0x1000) >> 7) | ((Bits & 0x7c) >> 2);
     return imm6 << 26 >> 26;
   }
-  
+
   inline int RvcImm6Addi16spValue() const {
     DCHECK(this->IsShortInstruction());
     // | funct3 | nzimm[9] | 2 | nzimm[4|6|8:7|5] | opcode |
-    //  15         12           6                2        
+    //  15         12           6                2
     uint32_t Bits = this->InstructionBits();
-    int32_t imm10 = ((Bits & 0x1000) >> 3) | ((Bits & 0x40) >> 2) 
-                  | ((Bits & 0x20) << 1) | ((Bits & 0x18) << 4) 
-                  | ((Bits & 0x4) << 3);
-    DCHECK(imm10 != 0);
+    int32_t imm10 = ((Bits & 0x1000) >> 3) | ((Bits & 0x40) >> 2) |
+                    ((Bits & 0x20) << 1) | ((Bits & 0x18) << 4) |
+                    ((Bits & 0x4) << 3);
+    DCHECK_NE(imm10, 0);
     return imm10 << 22 >> 22;
   }
 
@@ -1038,16 +1035,16 @@ class InstructionGetters : public T {
     // | funct3 | nzimm[11]  | rd' | opcode |
     //  15      13           5     2
     uint32_t Bits = this->InstructionBits();
-    int32_t uimm10 = ((Bits & 0x20) >> 2) | ((Bits & 0x40) >> 4)
-                  | ((Bits & 0x780) >> 1) | ((Bits & 0x1800) >> 7);
-    DCHECK(uimm10 != 0);
+    int32_t uimm10 = ((Bits & 0x20) >> 2) | ((Bits & 0x40) >> 4) |
+                     ((Bits & 0x780) >> 1) | ((Bits & 0x1800) >> 7);
+    DCHECK_NE(uimm10, 0);
     return uimm10;
   }
 
   inline int RvcShamt6() const {
     DCHECK(this->IsShortInstruction());
     // | funct3 | nzuimm[5] | rs1/rd | nzuimm[4:0] | opcode |
-    //  15         12                 6           2        
+    //  15         12                 6           2
     int32_t imm6 = this->RvcImm6Value();
     return imm6 & 0x3f;
   }
@@ -1055,27 +1052,27 @@ class InstructionGetters : public T {
   inline int RvcImm6LwspValue() const {
     DCHECK(this->IsShortInstruction());
     // | funct3 | uimm[5] | rs1 | uimm[4:2|7:6] | opcode |
-    //  15         12            6             2        
+    //  15         12            6             2
     uint32_t Bits = this->InstructionBits();
-    int32_t imm8 = ((Bits & 0x1000) >> 7) | ((Bits & 0x70) >> 2)
-                   | ((Bits & 0xc) << 4);
+    int32_t imm8 =
+        ((Bits & 0x1000) >> 7) | ((Bits & 0x70) >> 2) | ((Bits & 0xc) << 4);
     return imm8;
   }
 
   inline int RvcImm6LdspValue() const {
     DCHECK(this->IsShortInstruction());
     // | funct3 | uimm[5] | rs1 | uimm[4:3|8:6] | opcode |
-    //  15         12            6             2        
+    //  15         12            6             2
     uint32_t Bits = this->InstructionBits();
-    int32_t imm9 = ((Bits & 0x1000) >> 7) | ((Bits & 0x60) >> 2)
-                   | ((Bits & 0x1c) << 4);
+    int32_t imm9 =
+        ((Bits & 0x1000) >> 7) | ((Bits & 0x60) >> 2) | ((Bits & 0x1c) << 4);
     return imm9;
   }
 
   inline int RvcImm6SwspValue() const {
     DCHECK(this->IsShortInstruction());
     // | funct3 | uimm[5:2|7:6] | rs2 | opcode |
-    //  15       12            7               
+    //  15       12            7
     uint32_t Bits = this->InstructionBits();
     int32_t imm8 = ((Bits & 0x1e00) >> 7) | ((Bits & 0x180) >> 1);
     return imm8;
@@ -1084,7 +1081,7 @@ class InstructionGetters : public T {
   inline int RvcImm6SdspValue() const {
     DCHECK(this->IsShortInstruction());
     // | funct3 | uimm[5:3|8:6] | rs2 | opcode |
-    //  15       12            7               
+    //  15       12            7
     uint32_t Bits = this->InstructionBits();
     int32_t imm9 = ((Bits & 0x1c00) >> 7) | ((Bits & 0x380) >> 1);
     return imm9;
@@ -1095,8 +1092,8 @@ class InstructionGetters : public T {
     // | funct3 | imm[5:3] | rs1 | imm[2|6] | rd | opcode |
     //  15       12       10     6          4     2
     uint32_t Bits = this->InstructionBits();
-    int32_t imm7 = ((Bits & 0x1c00) >> 7) | ((Bits & 0x40) >> 4) |
-                   ((Bits & 0x20) << 1);
+    int32_t imm7 =
+        ((Bits & 0x1c00) >> 7) | ((Bits & 0x40) >> 4) | ((Bits & 0x20) << 1);
     return imm7;
   }
 
@@ -1114,9 +1111,10 @@ class InstructionGetters : public T {
     // | funct3 | [11|4|9:8|10|6|7|3:1|5] | opcode |
     //  15      12                        2
     uint32_t Bits = this->InstructionBits();
-    int32_t imm12 = ((Bits & 0x4) << 3) | ((Bits & 0x38) >> 2) | ((Bits & 0x40) << 1) |
-                  ((Bits & 0x80) >> 1) | ((Bits & 0x100) << 2) | ((Bits & 0x600) >> 1) |
-                  ((Bits & 0x800) >> 7) | ((Bits & 0x1000) >> 1);
+    int32_t imm12 = ((Bits & 0x4) << 3) | ((Bits & 0x38) >> 2) |
+                    ((Bits & 0x40) << 1) | ((Bits & 0x80) >> 1) |
+                    ((Bits & 0x100) << 2) | ((Bits & 0x600) >> 1) |
+                    ((Bits & 0x800) >> 7) | ((Bits & 0x1000) >> 1);
     return imm12 << 20 >> 20;
   }
 
@@ -1157,7 +1155,6 @@ const int kInvalidStackOffset = -1;
 const int kBranchReturnOffset = 2 * kInstrSize;
 
 static const int kNegOffset = 0x00008000;
-
 
 // -----------------------------------------------------------------------------
 // Instructions.

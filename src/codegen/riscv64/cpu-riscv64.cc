@@ -16,7 +16,7 @@ namespace internal {
 
 void CpuFeatures::FlushICache(void* start, size_t size) {
 #if !defined(USE_SIMULATOR)
-  // FIXME(RISCV): builtin_clear_cache doesn't work yet, so use `fence.i` for now
+  // FIXME(RISCV): builtin_clear_cache doesn't work yet; use `fence.i` for now
   // __builtin___clear_cache(start, (char *)start + size);
   asm volatile("fence.i" ::: "memory");
 #endif  // !USE_SIMULATOR.

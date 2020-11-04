@@ -60,7 +60,7 @@
   {Flag::TYPE_##ftype, #nam, &FLAG_##nam, &FLAGDEFAULT_##nam, cmt, false},
 #define FLAG_ALIAS(ftype, ctype, alias, nam)                     \
   {Flag::TYPE_##ftype,  #alias, &FLAG_##nam, &FLAGDEFAULT_##nam, \
-   "alias for --" #nam, false},
+    "alias for --" #nam, false},
 
 // We produce the code to set flags when it is implied by another flag.
 #elif defined(FLAG_MODE_DEFINE_IMPLICATIONS)
