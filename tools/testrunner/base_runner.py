@@ -630,7 +630,7 @@ class BaseTestRunner(object):
       self.build_config.mips_use_msa)
 
     # FIXME (RISCV): add sim_riscv flags in base_runner.py
-    simd_riscv = False 
+    simd_riscv = False
       # (self.build_config.arch in ['riscv', 'riscv64'] and
       # self.build_config.riscv_use_simd)
 
