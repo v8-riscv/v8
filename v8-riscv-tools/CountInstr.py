@@ -9,7 +9,7 @@ import re
 import subprocess
 from collections import Counter
 import argparse
-from prettytable import PrettyTable 
+from prettytable import PrettyTable
 
 def Count(sub):
     couts = Counter()
