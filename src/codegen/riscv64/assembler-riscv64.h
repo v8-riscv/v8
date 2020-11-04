@@ -687,20 +687,19 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     bleu(rs1, rs2, branch_offset(L));
   }
 
-  // TODO: Replace uses of ToRegister with names once they are properly defined
   void j(int32_t imm21) { jal(zero_reg, imm21); }
   inline void j(Label* L) { j(jump_offset(L)); }
   inline void b(Label* L) { j(L); }
-  void jal(int32_t imm21) { jal(ToRegister(1), imm21); }
+  void jal(int32_t imm21) { jal(ra, imm21); }
   inline void jal(Label* L) { jal(jump_offset(L)); }
   void jr(Register rs) { jalr(zero_reg, rs, 0); }
   void jr(Register rs, int32_t imm12) { jalr(zero_reg, rs, imm12); }
-  void jalr(Register rs, int32_t imm12) { jalr(ToRegister(1), rs, imm12); }
-  void jalr(Register rs) { jalr(ToRegister(1), rs, 0); }
-  void ret() { jalr(zero_reg, ToRegister(1), 0); }
+  void jalr(Register rs, int32_t imm12) { jalr(ra, rs, imm12); }
+  void jalr(Register rs) { jalr(ra, rs, 0); }
+  void ret() { jalr(zero_reg, ra, 0); }
   void call(int32_t offset) {
-    auipc(ToRegister(1), (offset >> 12) + ((offset & 0x800) >> 11));
-    jalr(ToRegister(1), ToRegister(1), offset << 20 >> 20);
+    auipc(ra, (offset >> 12) + ((offset & 0x800) >> 11));
+    jalr(ra, ra, offset << 20 >> 20);
   }
 
   // Read instructions-retired counter
