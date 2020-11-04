@@ -21,9 +21,9 @@ namespace internal {
 
 #define ALLOCATABLE_GENERAL_REGISTERS(V)  \
   V(a0)  V(a1)  V(a2)  V(a3)              \
-	V(a4)  V(a5)  V(a6)  V(a7)  V(t0)  V(t1) V(t2) V(s7) V(t4)
+  V(a4)  V(a5)  V(a6)  V(a7)  V(t0)  V(t1) V(t2) V(s7) V(t4)
 
-#define DOUBLE_REGISTERS(V)																				\
+#define DOUBLE_REGISTERS(V)                                       \
   V(ft0)  V(ft1)  V(ft2)  V(ft3)  V(ft4)  V(ft5)  V(ft6)  V(ft7)  \
   V(fs0)  V(fs1)  V(fa0) V(fa1) V(fa2) V(fa3) V(fa4) V(fa5)       \
   V(fa6) V(fa7) V(fs2) V(fs3) V(fs4) V(fs5) V(fs6) V(fs7)         \
@@ -36,7 +36,7 @@ namespace internal {
   V(w16) V(w17) V(w18) V(w19) V(w20) V(w21) V(w22) V(w23)  \
   V(w24) V(w25) V(w26) V(w27) V(w28) V(w29) V(w30) V(w31)
 
-#define ALLOCATABLE_DOUBLE_REGISTERS(V)					                          \
+#define ALLOCATABLE_DOUBLE_REGISTERS(V)                                   \
   V(ft0)  V(ft1)  V(ft2) V(ft3)                                           \
   V(ft4)  V(ft5) V(ft6) V(ft7) V(fa0) V(fa1) V(fa2) V(fa3) V(fa4) V(fa5)  \
   V(fa6) V(fa7)
