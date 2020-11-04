@@ -230,7 +230,7 @@ void RiscvDebugger::PrintAllRegsIncludingFPU() {
 
   PrintF("\n\n");
   // f0, f1, f2, ... f31.
-  DCHECK(kNumFPURegisters % 2 == 0);
+  DCHECK_EQ(kNumFPURegisters % 2, 0);
   for (int i = 0; i < kNumFPURegisters; i += 2)
     PrintF("%3s: 0x%016" PRIx64 "  %16.4e \t%3s: 0x%016" PRIx64 "  %16.4e\n",
            FPU_REG_INFO(i), FPU_REG_INFO(i + 1));
@@ -470,21 +470,23 @@ void RiscvDebugger::Debug() {
         PrintF("relinquishing control to gdb\n");
         v8::base::OS::DebugBreak();
         PrintF("regaining control from gdb\n");
-      } else if (strcmp(cmd, "break") == 0 
-              || strcmp(cmd, "b") == 0
-              || strcmp(cmd, "tbreak") == 0) {
+      } else if (strcmp(cmd, "break") == 0 || strcmp(cmd, "b") == 0 ||
+                 strcmp(cmd, "tbreak") == 0) {
         bool is_tbreak = strcmp(cmd, "tbreak") == 0;
         if (argc == 2) {
           int64_t value;
           if (GetValue(arg1, &value)) {
-            sim_->SetBreakpoint(reinterpret_cast<Instruction*>(value), is_tbreak);
+            sim_->SetBreakpoint(reinterpret_cast<Instruction*>(value),
+                                is_tbreak);
           } else {
             PrintF("%s unrecognized\n", arg1);
           }
         } else {
           sim_->ListBreakpoints();
           PrintF("Use `break <address>` to set or disable a breakpoint\n");
-          PrintF("Use `tbreak <address>` to set or disable a temporary breakpoint\n");
+          PrintF(
+              "Use `tbreak <address>` to set or disable a temporary "
+              "breakpoint\n");
         }
       } else if (strcmp(cmd, "flags") == 0) {
         PrintF("No flags on RISC-V !\n");
@@ -604,7 +606,9 @@ void RiscvDebugger::Debug() {
         PrintF("  break <address> : set / enable / disable a breakpoint.\n");
         PrintF("tbreak\n");
         PrintF("  tbreak : list all breakpoints\n");
-        PrintF("  tbreak <address> : set / enable / disable a temporary breakpoint.\n");
+        PrintF(
+            "  tbreak <address> : set / enable / disable a temporary "
+            "breakpoint.\n");
         PrintF("  Set a breakpoint enabled only for one stop. \n");
         PrintF("stop feature:\n");
         PrintF("  Description:\n");
@@ -619,10 +623,10 @@ void RiscvDebugger::Debug() {
         PrintF("      are met. (See the info command.) Going over a\n");
         PrintF("      disabled stop still increases its counter. \n");
         PrintF("  Commands:\n");
-        PrintF("    stop info all/<code> : print infos about number <code>\n"); 
+        PrintF("    stop info all/<code> : print infos about number <code>\n");
         PrintF("      or all stop(s).\n");
-        PrintF("    stop enable/disable all/<code> : enables / disables\n"); 
-        PrintF("      all or number <code> stop(s)\n"); 
+        PrintF("    stop enable/disable all/<code> : enables / disables\n");
+        PrintF("      all or number <code> stop(s)\n");
       } else {
         PrintF("Unknown command: %s\n", cmd);
       }
@@ -641,8 +645,8 @@ void Simulator::SetBreakpoint(Instruction* location, bool is_tbreak) {
     if (breakpoints_.at(i).location == location) {
       if (breakpoints_.at(i).is_tbreak != is_tbreak) {
         PrintF("Change breakpoint at %p to %s breakpoint\n",
-              reinterpret_cast<void*>(location),
-              is_tbreak ? "temporary" : "regular");
+               reinterpret_cast<void*>(location),
+               is_tbreak ? "temporary" : "regular");
         breakpoints_.at(i).is_tbreak = is_tbreak;
         return;
       }
@@ -655,8 +659,7 @@ void Simulator::SetBreakpoint(Instruction* location, bool is_tbreak) {
   }
   Breakpoint new_breakpoint = {location, true, is_tbreak};
   breakpoints_.push_back(new_breakpoint);
-  PrintF("Set a %sbreakpoint at %p\n",
-         is_tbreak ? "temporary " : "",
+  PrintF("Set a %sbreakpoint at %p\n", is_tbreak ? "temporary " : "",
          reinterpret_cast<void*>(location));
 }
 
@@ -686,8 +689,7 @@ void Simulator::CheckBreakpoints() {
     }
   }
   if (hit_a_breakpoint) {
-    PrintF("Hit %sa breakpoint at %p.\n",
-           is_tbreak ? "and disabled " : "",
+    PrintF("Hit %sa breakpoint at %p.\n", is_tbreak ? "and disabled " : "",
            reinterpret_cast<void*>(pc_));
     RiscvDebugger dbg(this);
     dbg.Debug();
@@ -795,8 +797,8 @@ Simulator::Simulator(Isolate* isolate) : isolate_(isolate) {
   break_count_ = 0;
   // Reset debug helpers.
   breakpoints_.clear();
-  // TODO: 'next' command
-  //break_on_next_ = false;
+  // TODO(riscv): 'next' command
+  // break_on_next_ = false;
 
   // Set up architecture state.
   // All registers are initialized to zero to start with.
@@ -1086,7 +1088,7 @@ void Simulator::set_pc(int64_t value) {
   pc_modified_ = true;
   registers_[pc] = value;
   DCHECK(has_bad_pc() || ((value % kInstrSize) == 0) ||
-        ((value % kShortInstrSize) == 0));
+         ((value % kShortInstrSize) == 0));
 }
 
 bool Simulator::has_bad_pc() const {
@@ -1706,7 +1708,7 @@ void Simulator::DecodeRVRType() {
       break;
     }
 #endif /* V8_TARGET_ARCH_64_BIT */
-      // TODO: Add RISCV M extension macro
+      // TODO(riscv): Add RISCV M extension macro
     case RO_MUL: {
       set_rd(rs1() * rs2());
       break;
@@ -1817,7 +1819,7 @@ void Simulator::DecodeRVRType() {
       break;
     }
 #endif /*V8_TARGET_ARCH_64_BIT*/
-      // TODO: End Add RISCV M extension macro
+      // TODO(riscv): End Add RISCV M extension macro
     default: {
       switch (instr_.BaseOpcode()) {
         case AMO:
@@ -2045,7 +2047,7 @@ static inline bool is_invalid_fsqrt(T src1) {
 }
 
 void Simulator::DecodeRVRAType() {
-  // TODO: Add macro for RISCV A extension
+  // TODO(riscv): Add macro for RISCV A extension
   // Special handling for A extension instructions because it uses func5
   // For all A extension instruction, V8 simulator is pure sequential. No
   // Memory address lock or other synchronizaiton behaviors.
@@ -2211,7 +2213,7 @@ void Simulator::DecodeRVRAType() {
       break;
     }
 #endif /*V8_TARGET_ARCH_64_BIT*/
-    // TODO: End Add macro for RISCV A extension
+    // TODO(riscv): End Add macro for RISCV A extension
     default: {
       UNSUPPORTED();
     }
@@ -2224,9 +2226,9 @@ void Simulator::DecodeRVRFPType() {
 
   // kRATypeMask is only for func7
   switch (instr_.InstructionBits() & kRFPTypeMask) {
-    // TODO: Add macro for RISCV F extension
+    // TODO(riscv): Add macro for RISCV F extension
     case RO_FADD_S: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](float frs1, float frs2) {
         if (is_invalid_fadd(frs1, frs2)) {
           this->set_fflags(kInvalidOperation);
@@ -2239,7 +2241,7 @@ void Simulator::DecodeRVRFPType() {
       break;
     }
     case RO_FSUB_S: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](float frs1, float frs2) {
         if (is_invalid_fsub(frs1, frs2)) {
           this->set_fflags(kInvalidOperation);
@@ -2252,7 +2254,7 @@ void Simulator::DecodeRVRFPType() {
       break;
     }
     case RO_FMUL_S: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](float frs1, float frs2) {
         if (is_invalid_fmul(frs1, frs2)) {
           this->set_fflags(kInvalidOperation);
@@ -2265,7 +2267,7 @@ void Simulator::DecodeRVRFPType() {
       break;
     }
     case RO_FDIV_S: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](float frs1, float frs2) {
         if (is_invalid_fdiv(frs1, frs2)) {
           this->set_fflags(kInvalidOperation);
@@ -2284,7 +2286,7 @@ void Simulator::DecodeRVRFPType() {
     }
     case RO_FSQRT_S: {
       if (instr_.Rs2Value() == 0b00000) {
-        // TODO: use rm value (round mode)
+        // TODO(riscv): use rm value (round mode)
         auto fn = [this](float frs) {
           if (is_invalid_fsqrt(frs)) {
             this->set_fflags(kInvalidOperation);
@@ -2407,20 +2409,20 @@ void Simulator::DecodeRVRFPType() {
     case RO_FCVT_S_W: {  // RO_FCVT_S_WU , 64F RO_FCVT_S_L RO_FCVT_S_LU
       switch (instr_.Rs2Value()) {
         case 0b00000: {  // RO_FCVT_S_W
-          set_frd((float)(int32_t)rs1());
+          set_frd(static_cast<float>((int32_t)rs1()));
           break;
         }
         case 0b00001: {  // RO_FCVT_S_WU
-          set_frd((float)(uint32_t)rs1());
+          set_frd(static_cast<float>((uint32_t)rs1()));
           break;
         }
 #ifdef V8_TARGET_ARCH_64_BIT
         case 0b00010: {  // RO_FCVT_S_L
-          set_frd((float)(int64_t)rs1());
+          set_frd(static_cast<float>((int64_t)rs1()));
           break;
         }
         case 0b00011: {  // RO_FCVT_S_LU
-          set_frd((float)(uint64_t)rs1());
+          set_frd(static_cast<float>((uint64_t)rs1()));
           break;
         }
 #endif /* V8_TARGET_ARCH_64_BIT */
@@ -2439,9 +2441,9 @@ void Simulator::DecodeRVRFPType() {
       }
       break;
     }
-      // TODO: Add macro for RISCV D extension
+      // TODO(riscv): Add macro for RISCV D extension
     case RO_FADD_D: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](double drs1, double drs2) {
         if (is_invalid_fadd(drs1, drs2)) {
           this->set_fflags(kInvalidOperation);
@@ -2454,7 +2456,7 @@ void Simulator::DecodeRVRFPType() {
       break;
     }
     case RO_FSUB_D: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](double drs1, double drs2) {
         if (is_invalid_fsub(drs1, drs2)) {
           this->set_fflags(kInvalidOperation);
@@ -2467,7 +2469,7 @@ void Simulator::DecodeRVRFPType() {
       break;
     }
     case RO_FMUL_D: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](double drs1, double drs2) {
         if (is_invalid_fmul(drs1, drs2)) {
           this->set_fflags(kInvalidOperation);
@@ -2480,7 +2482,7 @@ void Simulator::DecodeRVRFPType() {
       break;
     }
     case RO_FDIV_D: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](double drs1, double drs2) {
         if (is_invalid_fdiv(drs1, drs2)) {
           this->set_fflags(kInvalidOperation);
@@ -2499,7 +2501,7 @@ void Simulator::DecodeRVRFPType() {
     }
     case RO_FSQRT_D: {
       if (instr_.Rs2Value() == 0b00000) {
-        // TODO: use rm value (round mode)
+        // TODO(riscv): use rm value (round mode)
         auto fn = [this](double drs) {
           if (is_invalid_fsqrt(drs)) {
             this->set_fflags(kInvalidOperation);
@@ -2552,7 +2554,7 @@ void Simulator::DecodeRVRFPType() {
     }
     case (RO_FCVT_S_D & kRFPTypeMask): {
       if (instr_.Rs2Value() == 0b00001) {
-        auto fn = [](double drs) { return (float)drs; };
+        auto fn = [](double drs) { return static_cast<float>(drs); };
         set_frd(CanonicalizeDoubleToFloatOperation(fn));
       } else {
         UNSUPPORTED();
@@ -2561,7 +2563,7 @@ void Simulator::DecodeRVRFPType() {
     }
     case RO_FCVT_D_S: {
       if (instr_.Rs2Value() == 0b00000) {
-        auto fn = [](float frs) { return (double)frs; };
+        auto fn = [](float frs) { return static_cast<double>(frs); };
         set_drd(CanonicalizeFloatToDoubleOperation(fn));
       } else {
         UNSUPPORTED();
@@ -2682,9 +2684,9 @@ void Simulator::DecodeRVRFPType() {
 
 void Simulator::DecodeRVR4Type() {
   switch (instr_.InstructionBits() & kR4TypeMask) {
-    // TODO: use F Extension macro block
+    // TODO(riscv): use F Extension macro block
     case RO_FMADD_S: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](float frs1, float frs2, float frs3) {
         if (is_invalid_fmul(frs1, frs2) || is_invalid_fadd(frs1 * frs2, frs3)) {
           this->set_fflags(kInvalidOperation);
@@ -2697,7 +2699,7 @@ void Simulator::DecodeRVR4Type() {
       break;
     }
     case RO_FMSUB_S: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](float frs1, float frs2, float frs3) {
         if (is_invalid_fmul(frs1, frs2) || is_invalid_fsub(frs1 * frs2, frs3)) {
           this->set_fflags(kInvalidOperation);
@@ -2710,7 +2712,7 @@ void Simulator::DecodeRVR4Type() {
       break;
     }
     case RO_FNMSUB_S: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](float frs1, float frs2, float frs3) {
         if (is_invalid_fmul(frs1, frs2) || is_invalid_fsub(frs3, frs1 * frs2)) {
           this->set_fflags(kInvalidOperation);
@@ -2723,7 +2725,7 @@ void Simulator::DecodeRVR4Type() {
       break;
     }
     case RO_FNMADD_S: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](float frs1, float frs2, float frs3) {
         if (is_invalid_fmul(frs1, frs2) || is_invalid_fadd(frs1 * frs2, frs3)) {
           this->set_fflags(kInvalidOperation);
@@ -2735,9 +2737,9 @@ void Simulator::DecodeRVR4Type() {
       set_frd(CanonicalizeFPUOp3<float>(fn));
       break;
     }
-    // TODO: use F Extension macro block
+    // TODO(riscv): use F Extension macro block
     case RO_FMADD_D: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](double drs1, double drs2, double drs3) {
         if (is_invalid_fmul(drs1, drs2) || is_invalid_fadd(drs1 * drs2, drs3)) {
           this->set_fflags(kInvalidOperation);
@@ -2750,7 +2752,7 @@ void Simulator::DecodeRVR4Type() {
       break;
     }
     case RO_FMSUB_D: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](double drs1, double drs2, double drs3) {
         if (is_invalid_fmul(drs1, drs2) || is_invalid_fsub(drs1 * drs2, drs3)) {
           this->set_fflags(kInvalidOperation);
@@ -2763,7 +2765,7 @@ void Simulator::DecodeRVR4Type() {
       break;
     }
     case RO_FNMSUB_D: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](double drs1, double drs2, double drs3) {
         if (is_invalid_fmul(drs1, drs2) || is_invalid_fsub(drs3, drs1 * drs2)) {
           this->set_fflags(kInvalidOperation);
@@ -2776,7 +2778,7 @@ void Simulator::DecodeRVR4Type() {
       break;
     }
     case RO_FNMADD_D: {
-      // TODO: use rm value (round mode)
+      // TODO(riscv): use rm value (round mode)
       auto fn = [this](double drs1, double drs2, double drs3) {
         if (is_invalid_fmul(drs1, drs2) || is_invalid_fadd(drs1 * drs2, drs3)) {
           this->set_fflags(kInvalidOperation);
@@ -2924,12 +2926,12 @@ void Simulator::DecodeRVIType() {
       }
       break;
     }
-      // TODO: use Zifencei Standard Extension macro block
+      // TODO(riscv): use Zifencei Standard Extension macro block
     case RO_FENCE_I: {
       // spike: flush icache.
       break;
     }
-      // TODO: use Zicsr Standard Extension macro block
+      // TODO(riscv): use Zicsr Standard Extension macro block
     case RO_CSRRW: {
       if (rd_reg() != zero_reg) {
         set_rd(zext_xlen(read_csr_value(csr_reg())));
@@ -2972,7 +2974,7 @@ void Simulator::DecodeRVIType() {
       }
       break;
     }
-    // TODO: use F Extension macro block
+    // TODO(riscv): use F Extension macro block
     case RO_FLW: {
       int64_t addr = rs1() + imm12();
       float val = ReadMem<float>(addr, instr_.instr());
@@ -2980,7 +2982,7 @@ void Simulator::DecodeRVIType() {
       TraceMemRd(addr, val, get_fpu_register(frd_reg()));
       break;
     }
-    // TODO: use D Extension macro block
+    // TODO(riscv): use D Extension macro block
     case RO_FLD: {
       int64_t addr = rs1() + imm12();
       double val = ReadMem<double>(addr, instr_.instr());
@@ -3009,14 +3011,14 @@ void Simulator::DecodeRVSType() {
       WriteMem<uint64_t>(rs1() + s_imm12(), (uint64_t)rs2(), instr_.instr());
       break;
 #endif /*V8_TARGET_ARCH_64_BIT*/
-    // TODO: use F Extension macro block
+    // TODO(riscv): use F Extension macro block
     case RO_FSW: {
-      WriteMem<uint32_t>(rs1() + s_imm12(), 
-                         (uint32_t)get_fpu_register_word(rs2_reg()), 
+      WriteMem<uint32_t>(rs1() + s_imm12(),
+                         (uint32_t)get_fpu_register_word(rs2_reg()),
                          instr_.instr());
       break;
     }
-    // TODO: use D Extension macro block
+    // TODO(riscv): use D Extension macro block
     case RO_FSD: {
       WriteMem<double>(rs1() + s_imm12(), drs2(), instr_.instr());
       break;
@@ -3096,25 +3098,30 @@ void Simulator::DecodeRVJType() {
 }
 void Simulator::DecodeCRType() {
   switch (instr_.RvcFunct4Value()) {
-    case 0b1000:  
+    case 0b1000:
       if (instr_.RvcRs1Value() != 0 && instr_.RvcRs2Value() == 0) {  // c.jr
         set_pc(rvc_rs1());
-      } else if (instr_.RvcRdValue() != 0 && instr_.RvcRs2Value() != 0) { // c.mv
+      } else if (instr_.RvcRdValue() != 0 &&
+                 instr_.RvcRs2Value() != 0) {  // c.mv
         set_rvc_rd(sext_xlen(rvc_rs2()));
-      } else
+      } else {
         UNSUPPORTED_RISCV();
+      }
       break;
-    case 0b1001:  
-      if (instr_.RvcRs1Value() == 0 && instr_.RvcRs2Value() == 0) {    // c.ebreak
+    case 0b1001:
+      if (instr_.RvcRs1Value() == 0 && instr_.RvcRs2Value() == 0) {  // c.ebreak
         RiscvDebugger dbg(this);
         dbg.Debug();
-      } else if (instr_.RvcRdValue() != 0 && instr_.RvcRs2Value() == 0) { // c.jalr
+      } else if (instr_.RvcRdValue() != 0 &&
+                 instr_.RvcRs2Value() == 0) {  // c.jalr
         set_register(ra, get_pc() + kShortInstrSize);
         set_pc(rvc_rs1());
-      } else if (instr_.RvcRdValue() != 0 && instr_.RvcRs2Value() != 0) // c.add
+      } else if (instr_.RvcRdValue() != 0 &&
+                 instr_.RvcRs2Value() != 0) {  // c.add
         set_rvc_rd(sext_xlen(rvc_rs1() + rvc_rs2()));
-      else
+      } else {
         UNSUPPORTED();
+      }
       break;
     default:
       UNSUPPORTED();
@@ -3149,9 +3156,9 @@ void Simulator::DecodeCAType() {
 void Simulator::DecodeCIType() {
   switch (instr_.RvcOpcode()) {
     case RO_C_NOP_ADDI:
-      if (instr_.RvcRdValue() == 0) // c.nop
+      if (instr_.RvcRdValue() == 0)  // c.nop
         break;
-      else                          // c.addi
+      else  // c.addi
         set_rvc_rd(sext_xlen(rvc_rs1() + rvc_imm6()));
       break;
     case RO_C_ADDIW:
@@ -3165,11 +3172,12 @@ void Simulator::DecodeCIType() {
         // c.addi16sp
         int64_t value = get_register(sp) + rvc_imm6_addi16sp();
         set_register(sp, value);
-      } else if (instr_.RvcRdValue() != 0 && instr_.RvcRdValue() != 2)
+      } else if (instr_.RvcRdValue() != 0 && instr_.RvcRdValue() != 2) {
         // c.lui
         set_rvc_rd(rvc_u_imm6());
-      else
+      } else {
         UNSUPPORTED();
+      }
       break;
     case RO_C_SLLI:
       set_rvc_rd(sext_xlen(rvc_rs1() << rvc_shamt6()));
@@ -3205,8 +3213,8 @@ void Simulator::DecodeCIWType() {
     case RO_C_ADDI4SPN: {
       set_rvc_rs2s(get_register(sp) + rvc_imm8_addi4spn());
       break;
-    default:
-      UNSUPPORTED();
+      default:
+        UNSUPPORTED();
     }
   }
 }
@@ -3215,7 +3223,7 @@ void Simulator::DecodeCSSType() {
   switch (instr_.RvcOpcode()) {
     case RO_C_FSDSP: {
       int64_t addr = get_register(sp) + rvc_imm6_sdsp();
-      WriteMem<double>(addr, (double)rvc_drs2(), instr_.instr());
+      WriteMem<double>(addr, static_cast<double>(rvc_drs2()), instr_.instr());
       break;
     }
     case RO_C_SWSP: {
@@ -3272,7 +3280,7 @@ void Simulator::DecodeCSType() {
     }
     case RO_C_FSD: {
       int64_t addr = rvc_rs1s() + rvc_imm5_d();
-      WriteMem<double>(addr, (double)rvc_drs2s(), instr_.instr());
+      WriteMem<double>(addr, static_cast<double>(rvc_drs2s()), instr_.instr());
       break;
     }
     default:
@@ -3374,7 +3382,8 @@ void Simulator::InstructionDecode(Instruction* instr) {
   }
 
   if (!pc_modified_) {
-    set_register(pc, reinterpret_cast<int64_t>(instr) + instr->InstructionSize());
+    set_register(pc,
+                 reinterpret_cast<int64_t>(instr) + instr->InstructionSize());
   }
 }
 

@@ -92,7 +92,7 @@ constexpr RegList kLiftoffAssemblerFpCacheRegs =
 
 #elif V8_TARGET_ARCH_RISCV
 
-#error RISCV (32) architecture not supported yet
+#error RISCV(32) architecture not supported yet
 
 #elif V8_TARGET_ARCH_RISCV
 
