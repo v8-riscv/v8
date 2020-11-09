@@ -44,10 +44,10 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
 
   // Push saved_regs (needed to populate FrameDescription::registers_).
   // Leave gaps for other registers.
-  __ Sub64(sp, sp, kNumberOfRegisters * kPointerSize);
+  __ Sub64(sp, sp, kNumberOfRegisters * kSystemPointerSize);
   for (int16_t i = kNumberOfRegisters - 1; i >= 0; i--) {
     if ((saved_regs & (1 << i)) != 0) {
-      __ Sd(ToRegister(i), MemOperand(sp, kPointerSize * i));
+      __ Sd(ToRegister(i), MemOperand(sp, kSystemPointerSize * i));
     }
   }
 
@@ -56,7 +56,7 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
   __ Sd(fp, MemOperand(a2));
 
   const int kSavedRegistersAreaSize =
-      (kNumberOfRegisters * kPointerSize) + kDoubleRegsSize;
+      (kNumberOfRegisters * kSystemPointerSize) + kDoubleRegsSize;
 
   // Get the bailout is passed as kRootRegister by the caller.
   __ mv(a2, kRootRegister);
@@ -98,9 +98,9 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
   // Copy core registers into FrameDescription::registers_[kNumRegisters].
   DCHECK_EQ(Register::kNumRegisters, kNumberOfRegisters);
   for (int i = 0; i < kNumberOfRegisters; i++) {
-    int offset = (i * kPointerSize) + FrameDescription::registers_offset();
+    int offset = (i * kSystemPointerSize) + FrameDescription::registers_offset();
     if ((saved_regs & (1 << i)) != 0) {
-      __ Ld(a2, MemOperand(sp, i * kPointerSize));
+      __ Ld(a2, MemOperand(sp, i * kSystemPointerSize));
       __ Sd(a2, MemOperand(a1, offset));
     } else if (FLAG_debug_code) {
       __ li(a2, kDebugZapValue);
@@ -114,7 +114,7 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
   for (int i = 0; i < config->num_allocatable_double_registers(); ++i) {
     int code = config->GetAllocatableDoubleCode(i);
     int dst_offset = code * kDoubleSize + double_regs_offset;
-    int src_offset = code * kDoubleSize + kNumberOfRegisters * kPointerSize;
+    int src_offset = code * kDoubleSize + kNumberOfRegisters * kSystemPointerSize;
     __ LoadDouble(ft0, MemOperand(sp, src_offset));
     __ StoreDouble(ft0, MemOperand(a1, dst_offset));
   }
@@ -159,7 +159,7 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
   // a1 = one past the last FrameDescription**.
   __ Lw(a1, MemOperand(a0, Deoptimizer::output_count_offset()));
   __ Ld(a4, MemOperand(a0, Deoptimizer::output_offset()));  // a4 is output_.
-  __ CalcScaledAddress(a1, a4, a1, kPointerSizeLog2);
+  __ CalcScaledAddress(a1, a4, a1, kSystemPointerSizeLog2);
   __ BranchShort(&outer_loop_header);
   __ bind(&outer_push_loop);
   // Inner loop state: a2 = current FrameDescription*, a3 = loop index.
@@ -174,7 +174,7 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
   __ bind(&inner_loop_header);
   __ BranchShort(&inner_push_loop, ne, a3, Operand(zero_reg));
 
-  __ Add64(a4, a4, Operand(kPointerSize));
+  __ Add64(a4, a4, Operand(kSystemPointerSize));
   __ bind(&outer_loop_header);
   __ BranchShort(&outer_push_loop, lt, a4, Operand(a1));
 
@@ -198,7 +198,7 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
   // Restore the registers from the last output frame.
   __ mv(t3, a2);
   for (int i = kNumberOfRegisters - 1; i >= 0; i--) {
-    int offset = (i * kPointerSize) + FrameDescription::registers_offset();
+    int offset = (i * kSystemPointerSize) + FrameDescription::registers_offset();
     if ((restored_regs & (1 << i)) != 0) {
       __ Ld(ToRegister(i), MemOperand(t3, offset));
     }

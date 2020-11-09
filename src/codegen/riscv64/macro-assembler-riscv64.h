@@ -67,7 +67,7 @@ Register GetRegisterThatIsNotOneOf(Register reg1, Register reg2 = no_reg,
 // Static helper functions.
 
 #if defined(V8_TARGET_LITTLE_ENDIAN)
-#define SmiWordOffset(offset) (offset + kPointerSize / 2)
+#define SmiWordOffset(offset) (offset + kSystemPointerSize / 2)
 #else
 #define SmiWordOffset(offset) offset
 #endif
@@ -85,7 +85,7 @@ inline MemOperand FieldMemOperand(Register object, int offset) {
 inline MemOperand CFunctionArgumentOperand(int index) {
   DCHECK_GT(index, kCArgSlotCount);
   // Argument 5 takes the slot just past the four Arg-slots.
-  int offset = (index - 5) * kPointerSize + kCArgsSlotsSize;
+  int offset = (index - 5) * kSystemPointerSize + kCArgsSlotsSize;
   return MemOperand(sp, offset);
 }
 
@@ -245,7 +245,7 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void Sd(Register rd, const MemOperand& rs);
 
   void push(Register src) {
-    Add64(sp, sp, Operand(-kPointerSize));
+    Add64(sp, sp, Operand(-kSystemPointerSize));
     Sd(src, MemOperand(sp, 0));
   }
   void Push(Register src) { push(src); }
@@ -254,43 +254,43 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
 
   // Push two registers. Pushes leftmost register first (to highest address).
   void Push(Register src1, Register src2) {
-    Sub64(sp, sp, Operand(2 * kPointerSize));
-    Sd(src1, MemOperand(sp, 1 * kPointerSize));
-    Sd(src2, MemOperand(sp, 0 * kPointerSize));
+    Sub64(sp, sp, Operand(2 * kSystemPointerSize));
+    Sd(src1, MemOperand(sp, 1 * kSystemPointerSize));
+    Sd(src2, MemOperand(sp, 0 * kSystemPointerSize));
   }
 
   // Push three registers. Pushes leftmost register first (to highest address).
   void Push(Register src1, Register src2, Register src3) {
-    Sub64(sp, sp, Operand(3 * kPointerSize));
-    Sd(src1, MemOperand(sp, 2 * kPointerSize));
-    Sd(src2, MemOperand(sp, 1 * kPointerSize));
-    Sd(src3, MemOperand(sp, 0 * kPointerSize));
+    Sub64(sp, sp, Operand(3 * kSystemPointerSize));
+    Sd(src1, MemOperand(sp, 2 * kSystemPointerSize));
+    Sd(src2, MemOperand(sp, 1 * kSystemPointerSize));
+    Sd(src3, MemOperand(sp, 0 * kSystemPointerSize));
   }
 
   // Push four registers. Pushes leftmost register first (to highest address).
   void Push(Register src1, Register src2, Register src3, Register src4) {
-    Sub64(sp, sp, Operand(4 * kPointerSize));
-    Sd(src1, MemOperand(sp, 3 * kPointerSize));
-    Sd(src2, MemOperand(sp, 2 * kPointerSize));
-    Sd(src3, MemOperand(sp, 1 * kPointerSize));
-    Sd(src4, MemOperand(sp, 0 * kPointerSize));
+    Sub64(sp, sp, Operand(4 * kSystemPointerSize));
+    Sd(src1, MemOperand(sp, 3 * kSystemPointerSize));
+    Sd(src2, MemOperand(sp, 2 * kSystemPointerSize));
+    Sd(src3, MemOperand(sp, 1 * kSystemPointerSize));
+    Sd(src4, MemOperand(sp, 0 * kSystemPointerSize));
   }
 
   // Push five registers. Pushes leftmost register first (to highest address).
   void Push(Register src1, Register src2, Register src3, Register src4,
             Register src5) {
-    Sub64(sp, sp, Operand(5 * kPointerSize));
-    Sd(src1, MemOperand(sp, 4 * kPointerSize));
-    Sd(src2, MemOperand(sp, 3 * kPointerSize));
-    Sd(src3, MemOperand(sp, 2 * kPointerSize));
-    Sd(src4, MemOperand(sp, 1 * kPointerSize));
-    Sd(src5, MemOperand(sp, 0 * kPointerSize));
+    Sub64(sp, sp, Operand(5 * kSystemPointerSize));
+    Sd(src1, MemOperand(sp, 4 * kSystemPointerSize));
+    Sd(src2, MemOperand(sp, 3 * kSystemPointerSize));
+    Sd(src3, MemOperand(sp, 2 * kSystemPointerSize));
+    Sd(src4, MemOperand(sp, 1 * kSystemPointerSize));
+    Sd(src5, MemOperand(sp, 0 * kSystemPointerSize));
   }
 
   void Push(Register src, Condition cond, Register tst1, Register tst2) {
     // Since we don't have conditional execution we use a Branch.
     Branch(3, cond, tst1, Operand(tst2));
-    Sub64(sp, sp, Operand(kPointerSize));
+    Sub64(sp, sp, Operand(kSystemPointerSize));
     Sd(src, MemOperand(sp, 0));
   }
 
@@ -336,27 +336,27 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
 
   void pop(Register dst) {
     Ld(dst, MemOperand(sp, 0));
-    Add64(sp, sp, Operand(kPointerSize));
+    Add64(sp, sp, Operand(kSystemPointerSize));
   }
   void Pop(Register dst) { pop(dst); }
 
   // Pop two registers. Pops rightmost register first (from lower address).
   void Pop(Register src1, Register src2) {
     DCHECK(src1 != src2);
-    Ld(src2, MemOperand(sp, 0 * kPointerSize));
-    Ld(src1, MemOperand(sp, 1 * kPointerSize));
-    Add64(sp, sp, 2 * kPointerSize);
+    Ld(src2, MemOperand(sp, 0 * kSystemPointerSize));
+    Ld(src1, MemOperand(sp, 1 * kSystemPointerSize));
+    Add64(sp, sp, 2 * kSystemPointerSize);
   }
 
   // Pop three registers. Pops rightmost register first (from lower address).
   void Pop(Register src1, Register src2, Register src3) {
-    Ld(src3, MemOperand(sp, 0 * kPointerSize));
-    Ld(src2, MemOperand(sp, 1 * kPointerSize));
-    Ld(src1, MemOperand(sp, 2 * kPointerSize));
-    Add64(sp, sp, 3 * kPointerSize);
+    Ld(src3, MemOperand(sp, 0 * kSystemPointerSize));
+    Ld(src2, MemOperand(sp, 1 * kSystemPointerSize));
+    Ld(src1, MemOperand(sp, 2 * kSystemPointerSize));
+    Add64(sp, sp, 3 * kSystemPointerSize);
   }
 
-  void Pop(uint32_t count = 1) { Add64(sp, sp, Operand(count * kPointerSize)); }
+  void Pop(uint32_t count = 1) { Add64(sp, sp, Operand(count * kSystemPointerSize)); }
 
   // Pops multiple values from the stack and load them in the
   // registers specified in regs. Pop order is the opposite as in MultiPush.
@@ -1176,7 +1176,7 @@ void TurboAssembler::GenerateSwitchTable(Register index, size_t case_count,
   // Load the address from the jump table at index and jump to it
   auipc(scratch, 0);  // Load the current PC into scratch
   slli(scratch2, index,
-       kPointerSizeLog2);  // scratch2 = offset of indexth entry
+       kSystemPointerSizeLog2);  // scratch2 = offset of indexth entry
   add(scratch2, scratch2,
       scratch);  // scratch2 = (saved PC) + (offset of indexth entry)
   ld(scratch2, scratch2,
