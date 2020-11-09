@@ -7,6 +7,7 @@ import("//build/config/arm.gni")
 import("//build/config/dcheck_always_on.gni")
 import("//build/config/host_byteorder.gni")
 import("//build/config/mips.gni")
+import("//build/config/riscv.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build_overrides/build.gni")
 
@@ -831,7 +832,6 @@ config("toolchain") {
     defines += [ "V8_TARGET_ARCH_RISCV" ]
     defines += [ "__riscv_xlen=32" ]
   }
-
   if (v8_current_cpu == "riscv64") {
     defines += [ "V8_TARGET_ARCH_RISCV64" ]
     defines += [ "__riscv_xlen=64" ]
@@ -839,6 +839,11 @@ config("toolchain") {
     defines += [
         "CAN_USE_FPU_INSTRUCTIONS",
       ]
+  }
+  if (v8_current_cpu == "riscv" || v8_current_cpu == "riscv64") {
+    if (riscv_c_ext) {
+      defines += [ "__riscv_compressed" ]
+    }
   }
 
   if (v8_current_cpu == "x86") {

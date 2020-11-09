@@ -1,0 +1,32 @@
+
+# Copyright 2020 the V8 project authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/v8_target_cpu.gni")
+
+# These are primarily relevant in current_cpu == "riscv" contexts, where
+# RISC-V code is being compiled.  But they can also be relevant in the
+# other contexts when the code will change its behavior based on the
+# cpu it wants to generate code for.
+if (current_cpu == "riscv" || v8_current_cpu == "riscv" ||
+    current_cpu == "riscv64" || v8_current_cpu == "riscv64") {
+  declare_args() {
+    # Defined when targeting the 'C' ISA extension.
+    riscv_c_ext = false
+  }
+}
+
+if (current_cpu == "riscv" || current_cpu == "riscv64") {
+  declare_args() {
+    # The RISCV-V architecture which specifies the target ISA. 
+    # This will be a string, e.g. "rv32imafd".
+    # An empty string means to use the default for the riscv architecture.
+    riscv_arch = ""
+
+    # The RISC-V ABIs. 
+    # This will be a string, e.g. "lp64d".
+    # An empty string means to use the default for the riscv architecture.
+    riscv_abi = ""
+  }
+}
