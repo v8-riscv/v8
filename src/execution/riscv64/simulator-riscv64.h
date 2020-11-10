@@ -83,7 +83,6 @@ namespace internal {
 
 // -----------------------------------------------------------------------------
 // Utility types and functions for RISCV
-// TODO: Add Spike License here
 #ifdef V8_TARGET_ARCH_32_BIT
 using sreg_t = int32_t;
 using reg_t = uint32_t;
