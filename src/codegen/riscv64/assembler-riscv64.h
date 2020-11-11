@@ -32,8 +32,8 @@
 // modified significantly by Google Inc.
 // Copyright 2012 the V8 project authors. All rights reserved.
 
-#ifndef V8_CODEGEN_RISCV_ASSEMBLER_RISCV_H_
-#define V8_CODEGEN_RISCV_ASSEMBLER_RISCV_H_
+#ifndef V8_CODEGEN_RISCV64_ASSEMBLER_RISCV64_H_
+#define V8_CODEGEN_RISCV64_ASSEMBLER_RISCV64_H_
 
 #include <stdio.h>
 
@@ -1226,4 +1226,4 @@ class V8_EXPORT_PRIVATE UseScratchRegisterScope {
 }  // namespace internal
 }  // namespace v8
 
-#endif  // V8_CODEGEN_RISCV_ASSEMBLER_RISCV_H_
+#endif  // V8_CODEGEN_RISCV64_ASSEMBLER_RISCV64_H_
