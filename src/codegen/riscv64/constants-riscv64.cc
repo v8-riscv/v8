@@ -195,7 +195,6 @@ InstructionBase::Type InstructionBase::InstructionType() const {
   return kUnsupported;
 }
 
-
 }  // namespace internal
 }  // namespace v8
 
