@@ -9,7 +9,7 @@ import re
 import time
 from collections import Counter
 import argparse
-from prettytable import PrettyTable 
+from prettytable import PrettyTable
 
 def isIntN(x, n):
     limit = (1 << (n-1))
@@ -19,7 +19,7 @@ def isUIntN(x, n):
     return (x >> n) == 0
 
 class Instruction:
-    
+
     def __init__(self, line, pc, insnHex, insn, operands, offset):
         self.line = line
         self.pc = pc
@@ -41,12 +41,12 @@ class Instruction:
         if self.insn in ['nop', 'ebreak', 'mv']:
             return True
         if self.insn in ['lw', 'flw', 'sw', 'fsw']:
-            return self.__checkConstraint(lambda rd, offset, rs: 
+            return self.__checkConstraint(lambda rd, offset, rs:
                                             rs == 'sp'
                                             and isUIntN(int(offset), 8)
                                             and (int(offset) & 0x3) == 0)
         if self.insn in ['ld', 'fld', 'sd', 'fsd']:
-            return self.__checkConstraint(lambda rd, offset, rs: 
+            return self.__checkConstraint(lambda rd, offset, rs:
                                             rs == 'sp'
                                             and isUIntN(int(offset), 9)
                                             and (int(offset) & 0x7) == 0)
@@ -54,17 +54,17 @@ class Instruction:
             return len(self.operands) == 1
         if self.insn in ['jal', 'j']:
             return len(self.operands) == 1 \
-                and self.__checkConstraint(lambda offset: 
+                and self.__checkConstraint(lambda offset:
                                             isUIntN(int(offset), 12)
                                             and (int(offset) & 0x1) == 0)
         if self.insn in ['beq', 'bne']:
-            return self.__checkConstraint(lambda rs1, rs2, offset: 
+            return self.__checkConstraint(lambda rs1, rs2, offset:
                                             rs2 == 'zero_reg'
                                             and self.__is3BitReg(rs1) \
                                             and isIntN(int(offset), 9)
                                             and (int(offset) & 0x1) == 0)
         if self.insn in ['and', 'or', 'xor', 'sub', 'andw', 'subw']:
-            return self.__checkConstraint(lambda rd, rs1, rs2: 
+            return self.__checkConstraint(lambda rd, rs1, rs2:
                                             rd == rs1 \
                                             and self.__is3BitReg(rd) \
                                             and self.__is3BitReg(rs2))
@@ -75,27 +75,27 @@ class Instruction:
         if self.insn in ['li']:
             return self.__checkConstraint(lambda rd, imm: isIntN(int(imm), 6))
         if self.insn in ['lui']:
-            return self.__checkConstraint(lambda rd, imm: 
+            return self.__checkConstraint(lambda rd, imm:
                                             (rd != 'zero_reg' or rd != 'sp')
                                             and isUIntN(int(imm, 16), 6))
         if self.insn in ['slli']:
-            return self.__checkConstraint(lambda rd, rs, shamt: 
+            return self.__checkConstraint(lambda rd, rs, shamt:
                                             rd == rs
                                             and isUIntN(int(shamt), 6))
         if self.insn in ['srli', 'srai']:
-            return self.__checkConstraint(lambda rd, rs, shamt: 
+            return self.__checkConstraint(lambda rd, rs, shamt:
                                             rd == rs
                                             and self.__is3BitReg(rd)
                                             and isUIntN(int(shamt), 6))
         if self.insn in ['add']:
             return self.__checkConstraint(lambda rd, rs1, rs2: rd == rs1)
         if self.insn in ['addi']:
-            return self.__checkConstraint(lambda rd, rs, imm: 
+            return self.__checkConstraint(lambda rd, rs, imm:
                                             # C.ADDI
                                             (rd == rs and isIntN(int(imm), 6))
                                             # C.ADDI16SP
-                                            or (rd == rs and rd == 'sp' 
-                                                and isIntN(int(imm), 10) 
+                                            or (rd == rs and rd == 'sp'
+                                                and isIntN(int(imm), 10)
                                                 and (int(imm) & 0xF == 0))
                                             # C.ADDI4SPN
                                             or (self.__is3BitReg(rd)
@@ -103,11 +103,11 @@ class Instruction:
                                                 and isUIntN(int(imm), 10)
                                                 and (int(imm) & 0x3) == 0))
         if self.insn in ['addiw']:
-            return self.__checkConstraint(lambda rd, rs, imm: rd == rs 
+            return self.__checkConstraint(lambda rd, rs, imm: rd == rs
                                                         and isIntN(int(imm), 6))
         if self.insn in ['sext.w']:
             return self.__checkConstraint(lambda rd, rs: rd == rs)
-                                                       
+
         return False
 
     def insnSize(self):
@@ -189,11 +189,11 @@ if __name__ == "__main__":
         words = line.split()
         if len(words) == 0:
             continue
-        
+
         insn = Instruction.fromLine(line)
         if insn is not None and not insn.isShort():
             rawCounter[insn.insn] += 1
-            try: 
+            try:
                 if insn.isConvertible():
                     if args.verbose:
                         print(line, end = '')
