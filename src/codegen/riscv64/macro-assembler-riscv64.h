@@ -226,8 +226,9 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   // The return address on the stack is used by frame iteration.
   void StoreReturnAddressAndCall(Register target);
 
-  void CallForDeoptimization(Address target, int deopt_id, Label* exit,
-                             DeoptimizeKind kind);
+  void CallForDeoptimization(Builtins::Name target, int deopt_id, Label* exit,
+                             DeoptimizeKind kind,
+                             Label* jump_deoptimization_entry_label);
 
   void Ret(COND_ARGS);
 
@@ -1075,6 +1076,14 @@ class V8_EXPORT_PRIVATE MacroAssembler : public TurboAssembler {
                         Register scratch2);
   void DecrementCounter(StatsCounter* counter, int value, Register scratch1,
                         Register scratch2);
+
+// -------------------------------------------------------------------------
+  // Stack limit utilities
+
+  enum StackLimitKind { kInterruptStackLimit, kRealStackLimit };
+  void LoadStackLimit(Register destination, StackLimitKind kind);
+  void StackOverflowCheck(Register num_args, Register scratch1,
+                          Register scratch2, Label* stack_overflow);
 
   // -------------------------------------------------------------------------
   // Smi utilities.
