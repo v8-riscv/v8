@@ -111,7 +111,7 @@ int Assembler::deserialization_special_target_size(
 
 void Assembler::set_target_internal_reference_encoded_at(Address pc,
                                                          Address target) {
-    set_target_value_at(pc, static_cast<uint64_t>(target));
+  set_target_value_at(pc, static_cast<uint64_t>(target));
 }
 
 void Assembler::deserialization_set_target_internal_reference_at(
