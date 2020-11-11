@@ -4,11 +4,11 @@
 
 #if V8_TARGET_ARCH_RISCV64
 
+#include "src/execution/riscv64/frame-constants-riscv64.h"
+
 #include "src/codegen/riscv64/assembler-riscv64-inl.h"
 #include "src/execution/frame-constants.h"
 #include "src/execution/frames.h"
-
-#include "src/execution/riscv64/frame-constants-riscv64.h"
 
 namespace v8 {
 namespace internal {
