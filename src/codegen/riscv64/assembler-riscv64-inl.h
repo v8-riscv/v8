@@ -33,8 +33,8 @@
 // modified significantly by Google Inc.
 // Copyright 2012 the V8 project authors. All rights reserved.
 
-#ifndef V8_CODEGEN_RISCV_ASSEMBLER_RISCV_INL_H_
-#define V8_CODEGEN_RISCV_ASSEMBLER_RISCV_INL_H_
+#ifndef V8_CODEGEN_RISCV64_ASSEMBLER_RISCV64_INL_H_
+#define V8_CODEGEN_RISCV64_ASSEMBLER_RISCV64_INL_H_
 
 #include "src/codegen/assembler.h"
 #include "src/codegen/riscv64/assembler-riscv64.h"
@@ -259,4 +259,4 @@ EnsureSpace::EnsureSpace(Assembler* assembler) { assembler->CheckBuffer(); }
 }  // namespace internal
 }  // namespace v8
 
-#endif  // V8_CODEGEN_RISCV_ASSEMBLER_RISCV_INL_H_
+#endif  // V8_CODEGEN_RISCV64_ASSEMBLER_RISCV64_INL_H_
