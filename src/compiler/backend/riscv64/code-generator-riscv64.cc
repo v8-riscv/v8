@@ -607,7 +607,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       } else {
         Register reg = i.InputRegister(0);
         DCHECK_IMPLIES(
-            HasCallDescriptorFlag(instr, CallDescriptor::kFixedTargetRegister),
+            instr->HasCallDescriptorFlag(CallDescriptor::kFixedTargetRegister),
             reg == kJavaScriptCallCodeStartRegister);
         __ CallCodeObject(reg);
       }
@@ -654,7 +654,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       } else {
         Register reg = i.InputRegister(0);
         DCHECK_IMPLIES(
-            HasCallDescriptorFlag(instr, CallDescriptor::kFixedTargetRegister),
+            instr->HasCallDescriptorFlag(CallDescriptor::kFixedTargetRegister),
             reg == kJavaScriptCallCodeStartRegister);
         __ JumpCodeObject(reg);
       }
@@ -679,7 +679,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       CHECK(!instr->InputAt(0)->IsImmediate());
       Register reg = i.InputRegister(0);
       DCHECK_IMPLIES(
-          HasCallDescriptorFlag(instr, CallDescriptor::kFixedTargetRegister),
+          instr->HasCallDescriptorFlag(CallDescriptor::kFixedTargetRegister),
           reg == kJavaScriptCallCodeStartRegister);
       __ Jump(reg);
       frame_access_state()->ClearSPDelta();
@@ -812,8 +812,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kArchDeoptimize: {
       DeoptimizationExit* exit =
           BuildTranslation(instr, -1, 0, OutputFrameStateCombine::Ignore());
-      CodeGenResult result = AssembleDeoptimizerCall(exit);
-      if (result != kSuccess) return result;
+      __ Branch(exit->label());
       break;
     }
     case kArchRet:
@@ -2496,7 +2495,8 @@ void CodeGenerator::AssembleReturn(InstructionOperand* pop) {
 
 void CodeGenerator::FinishCode() {}
 
-void CodeGenerator::PrepareForDeoptimizationExits(int deopt_count) {}
+void CodeGenerator::PrepareForDeoptimizationExits(
+    ZoneDeque<DeoptimizationExit*>* exits) {}
 
 void CodeGenerator::AssembleMove(InstructionOperand* source,
                                  InstructionOperand* destination) {
