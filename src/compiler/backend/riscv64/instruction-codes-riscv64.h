@@ -250,6 +250,7 @@ namespace compiler {
   V(RiscvI32x4GeU)                          \
   V(RiscvI32x4Abs)                          \
   V(RiscvI32x4BitMask)                      \
+  V(RiscvI32x4DotI16x8S)                    \
   V(RiscvI16x8Splat)                        \
   V(RiscvI16x8ExtractLaneU)                 \
   V(RiscvI16x8ExtractLaneS)                 \
@@ -259,10 +260,10 @@ namespace compiler {
   V(RiscvI16x8ShrS)                         \
   V(RiscvI16x8ShrU)                         \
   V(RiscvI16x8Add)                          \
-  V(RiscvI16x8AddSaturateS)                 \
+  V(RiscvI16x8AddSatS)                      \
   V(RiscvI16x8AddHoriz)                     \
   V(RiscvI16x8Sub)                          \
-  V(RiscvI16x8SubSaturateS)                 \
+  V(RiscvI16x8SubSatS)                      \
   V(RiscvI16x8Mul)                          \
   V(RiscvI16x8MaxS)                         \
   V(RiscvI16x8MinS)                         \
@@ -270,8 +271,8 @@ namespace compiler {
   V(RiscvI16x8Ne)                           \
   V(RiscvI16x8GtS)                          \
   V(RiscvI16x8GeS)                          \
-  V(RiscvI16x8AddSaturateU)                 \
-  V(RiscvI16x8SubSaturateU)                 \
+  V(RiscvI16x8AddSatU)                      \
+  V(RiscvI16x8SubSatU)                      \
   V(RiscvI16x8MaxU)                         \
   V(RiscvI16x8MinU)                         \
   V(RiscvI16x8GtU)                          \
@@ -287,9 +288,9 @@ namespace compiler {
   V(RiscvI8x16Shl)                          \
   V(RiscvI8x16ShrS)                         \
   V(RiscvI8x16Add)                          \
-  V(RiscvI8x16AddSaturateS)                 \
+  V(RiscvI8x16AddSatS)                      \
   V(RiscvI8x16Sub)                          \
-  V(RiscvI8x16SubSaturateS)                 \
+  V(RiscvI8x16SubSatS)                      \
   V(RiscvI8x16Mul)                          \
   V(RiscvI8x16MaxS)                         \
   V(RiscvI8x16MinS)                         \
@@ -298,8 +299,8 @@ namespace compiler {
   V(RiscvI8x16GtS)                          \
   V(RiscvI8x16GeS)                          \
   V(RiscvI8x16ShrU)                         \
-  V(RiscvI8x16AddSaturateU)                 \
-  V(RiscvI8x16SubSaturateU)                 \
+  V(RiscvI8x16AddSatU)                      \
+  V(RiscvI8x16SubSatU)                      \
   V(RiscvI8x16MaxU)                         \
   V(RiscvI8x16MinU)                         \
   V(RiscvI8x16GtU)                          \

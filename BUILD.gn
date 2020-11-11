@@ -3845,6 +3845,7 @@ v8_source_set("v8_base_without_compiler") {
       "src/debug/riscv64/debug-riscv64.cc",
       "src/deoptimizer/riscv64/deoptimizer-riscv64.cc",
       "src/diagnostics/riscv64/disasm-riscv64.cc",
+      "src/diagnostics/riscv64/unwinder-riscv64.cc",
       "src/execution/riscv64/frame-constants-riscv64.cc",
       "src/execution/riscv64/frame-constants-riscv64.h",
       "src/execution/riscv64/simulator-riscv64.cc",
