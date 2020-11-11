@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef V8_CODEGEN_RISCV_REGISTER_RISCV_H_
-#define V8_CODEGEN_RISCV_REGISTER_RISCV_H_
+#ifndef V8_CODEGEN_RISCV64_REGISTER_RISCV64_H_
+#define V8_CODEGEN_RISCV64_REGISTER_RISCV64_H_
 
 #include "src/codegen/register.h"
 #include "src/codegen/reglist.h"
@@ -342,4 +342,4 @@ constexpr DoubleRegister kFPReturnRegister0 = fa0;
 }  // namespace internal
 }  // namespace v8
 
-#endif  // V8_CODEGEN_RISCV_REGISTER_RISCV_H_
+#endif  // V8_CODEGEN_RISCV64_REGISTER_RISCV64_H_
