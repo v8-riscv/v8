@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef V8_WASM_BASELINE_RISCV_LIFTOFF_ASSEMBLER_RISCV_H_
-#define V8_WASM_BASELINE_RISCV_LIFTOFF_ASSEMBLER_RISCV_H_
+#ifndef V8_WASM_BASELINE_RISCV64_LIFTOFF_ASSEMBLER_RISCV64_H_
+#define V8_WASM_BASELINE_RISCV64_LIFTOFF_ASSEMBLER_RISCV64_H_
 
 #include "src/wasm/baseline/liftoff-assembler.h"
 
@@ -2332,4 +2332,4 @@ void LiftoffStackSlots::Construct() {
 }  // namespace internal
 }  // namespace v8
 
-#endif  // V8_WASM_BASELINE_RISCV_LIFTOFF_ASSEMBLER_RISCV_H_
+#endif  // V8_WASM_BASELINE_RISCV64_LIFTOFF_ASSEMBLER_RISCV64_H_
