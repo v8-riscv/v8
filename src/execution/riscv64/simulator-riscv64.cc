@@ -50,8 +50,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#include <cfenv>
-
 #include "src/base/bits.h"
 #include "src/codegen/assembler-inl.h"
 #include "src/codegen/macro-assembler.h"
@@ -1841,10 +1839,20 @@ float Simulator::RoundF2FHelper(float input_val, int rmode) {
   float rounded = 0;
   switch (rmode) {
     case RNE: {  // Round to Nearest, tiest to Even
-      int curr_mode = fegetround();
-      fesetround(FE_TONEAREST);
-      rounded = std::nearbyintf(input_val);
-      fesetround(curr_mode);
+      rounded = std::floorf(input_val);
+      float error = input_val - rounded;
+
+      // Take care of correctly handling the range [-0.5, -0.0], which must
+      // yield -0.0.
+      if ((-0.5 <= input_val) && (input_val < 0.0)) {
+        rounded = -0.0;
+
+        // If the error is greater than 0.5, or is equal to 0.5 and the integer
+        // result is odd, round up.
+      } else if ((error > 0.5) ||
+                 ((error == 0.5) && (std::fmod(rounded, 2) != 0))) {
+        rounded++;
+      }
       break;
     }
     case RTZ:  // Round towards Zero
@@ -1872,10 +1880,20 @@ double Simulator::RoundF2FHelper(double input_val, int rmode) {
   double rounded = 0;
   switch (rmode) {
     case RNE: {  // Round to Nearest, tiest to Even
-      int curr_mode = fegetround();
-      fesetround(FE_TONEAREST);
-      rounded = std::nearbyint(input_val);
-      fesetround(curr_mode);
+      rounded = std::floor(input_val);
+      double error = input_val - rounded;
+
+      // Take care of correctly handling the range [-0.5, -0.0], which must
+      // yield -0.0.
+      if ((-0.5 <= input_val) && (input_val < 0.0)) {
+        rounded = -0.0;
+
+        // If the error is greater than 0.5, or is equal to 0.5 and the integer
+        // result is odd, round up.
+      } else if ((error > 0.5) ||
+                 ((error == 0.5) && (std::fmod(rounded, 2) != 0))) {
+        rounded++;
+      }
       break;
     }
     case RTZ:  // Round towards Zero
@@ -2221,7 +2239,7 @@ void Simulator::DecodeRVRAType() {
 }
 
 void Simulator::DecodeRVRFPType() {
-  // OP_FP instructions (F/D) uses func7 first. Some further uses fun3 and
+  // OP_FP instructions (F/D) uses func7 first. Some further uses func3 and
   // rs2()
 
   // kRATypeMask is only for func7
