@@ -726,7 +726,8 @@ config("toolchain") {
 
   # Mips64el/mipsel simulators.
   if (target_is_simulator &&
-      (v8_current_cpu == "mipsel" || v8_current_cpu == "mips64el" || v8_current_cpu == "riscv64")) {
+      (v8_current_cpu == "mipsel" || v8_current_cpu == "mips64el" ||
+       v8_current_cpu == "riscv64")) {
     defines += [ "_MIPS_TARGET_SIMULATOR" ]
   }
 
@@ -838,10 +839,9 @@ config("toolchain") {
   if (v8_current_cpu == "riscv64") {
     defines += [ "V8_TARGET_ARCH_RISCV64" ]
     defines += [ "__riscv_xlen=64" ]
+
     #FIXME: Temporarily use MIPS macro for the building.
-    defines += [
-        "CAN_USE_FPU_INSTRUCTIONS",
-      ]
+    defines += [ "CAN_USE_FPU_INSTRUCTIONS" ]
   }
 
   if (v8_current_cpu == "x86") {
@@ -1938,7 +1938,7 @@ v8_source_set("v8_initializers") {
       ### gcmole(arch:riscv64) ###
       "src/builtins/riscv64/builtins-riscv64.cc",
     ]
-  }  else if (v8_current_cpu == "riscv") {
+  } else if (v8_current_cpu == "riscv") {
     sources += [
       ### gcmole(arch:riscv) ###
       "src/builtins/riscv/builtins-riscv.cc",
@@ -4324,7 +4324,7 @@ v8_component("v8_libbase") {
     sources += [ "src/base/ubsan.cc" ]
   }
 
-  if(v8_current_cpu == "riscv" || v8_current_cpu == "riscv64"){
+  if (v8_current_cpu == "riscv" || v8_current_cpu == "riscv64") {
     libs += [ "atomic" ]
   }
 
