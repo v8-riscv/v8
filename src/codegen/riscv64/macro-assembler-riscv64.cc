@@ -3366,6 +3366,38 @@ void TurboAssembler::PrepareForTailCall(Register callee_args_count,
   mv(sp, dst_reg);
 }
 
+void MacroAssembler::LoadStackLimit(Register destination, StackLimitKind kind) {
+  DCHECK(root_array_available());
+  Isolate* isolate = this->isolate();
+  ExternalReference limit =
+      kind == StackLimitKind::kRealStackLimit
+          ? ExternalReference::address_of_real_jslimit(isolate)
+          : ExternalReference::address_of_jslimit(isolate);
+  DCHECK(TurboAssembler::IsAddressableThroughRootRegister(isolate, limit));
+
+  intptr_t offset =
+      TurboAssembler::RootRegisterOffsetForExternalReference(isolate, limit);
+  CHECK(is_int32(offset));
+  Ld(destination, MemOperand(kRootRegister, static_cast<int32_t>(offset)));
+}
+
+void MacroAssembler::StackOverflowCheck(Register num_args, Register scratch1,
+                                        Register scratch2,
+                                        Label* stack_overflow) {
+  // Check the stack for overflow. We are not trying to catch
+  // interruptions (e.g. debug break and preemption) here, so the "real stack
+  // limit" is checked.
+
+  LoadStackLimit(scratch1, StackLimitKind::kRealStackLimit);
+  // Make scratch1 the space we have left. The stack might already be overflowed
+  // here which will cause scratch1 to become negative.
+  Sub64(scratch1, sp, scratch1);
+  // Check if the arguments will overflow the stack.
+  Sll64(scratch2, num_args, kPointerSizeLog2);
+  // Signed comparison.
+  Branch(stack_overflow, le, scratch1, Operand(scratch2));
+}
+
 void MacroAssembler::InvokePrologue(Register expected_parameter_count,
                                     Register actual_parameter_count,
                                     Label* done, InvokeFlag flag) {
@@ -4405,16 +4437,20 @@ void TurboAssembler::ResetSpeculationPoisonRegister() {
   li(kSpeculationPoisonRegister, -1);
 }
 
-void TurboAssembler::CallForDeoptimization(Address target, int deopt_id,
-                                           Label* exit, DeoptimizeKind kind) {
+void TurboAssembler::CallForDeoptimization(Builtins::Name target, int,
+                                           Label* exit, DeoptimizeKind kind,
+                                           Label*) {
+  UseScratchRegisterScope temps(this);
+  BlockTrampolinePoolScope block_trampoline_pool(this);
+  Register scratch = temps.Acquire();
+  Ld(scratch,
+     MemOperand(kRootRegister, IsolateData::builtin_entry_slot_offset(target)));
+  Call(scratch);
+  DCHECK_EQ(SizeOfCodeGeneratedSince(exit),
+            (kind == DeoptimizeKind::kLazy)
+                ? Deoptimizer::kLazyDeoptExitSize
+                : Deoptimizer::kNonLazyDeoptExitSize);
   USE(exit, kind);
-  NoRootArrayScope no_root_array(this);
-
-  // Save the deopt id in kRootRegister (we don't need the roots array from
-  // now on).
-  DCHECK_LE(deopt_id, 0xFFFF);
-  li(kRootRegister, deopt_id);
-  Call(target, RelocInfo::RUNTIME_ENTRY);
 }
 
 void TurboAssembler::LoadCodeObjectEntry(Register destination,
