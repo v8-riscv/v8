@@ -378,8 +378,7 @@ void LiftoffAssembler::LoadTaggedPointer(Register dst, Register src_addr,
        LoadType::kI64Load, pinned);
 }
 
-void LiftoffAssembler::StoreTaggedPointer(Register dst_addr,
-                                          int32_t offset_imm,
+void LiftoffAssembler::StoreTaggedPointer(Register dst_addr, int32_t offset_imm,
                                           LiftoffRegister src,
                                           LiftoffRegList pinned) {
   bailout(kRefTypes, "StoreTaggedPointer");
