@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef V8_REGEXP_RISCV_REGEXP_MACRO_ASSEMBLER_RISCV_H_
-#define V8_REGEXP_RISCV_REGEXP_MACRO_ASSEMBLER_RISCV_H_
+#ifndef V8_REGEXP_RISCV64_REGEXP_MACRO_ASSEMBLER_RISCV64_H_
+#define V8_REGEXP_RISCV64_REGEXP_MACRO_ASSEMBLER_RISCV64_H_
 
 #include "src/codegen/macro-assembler.h"
 #include "src/codegen/riscv64/assembler-riscv64.h"
@@ -211,4 +211,4 @@ class V8_EXPORT_PRIVATE RegExpMacroAssemblerRISCV
 }  // namespace internal
 }  // namespace v8
 
-#endif  // V8_REGEXP_RISCV_REGEXP_MACRO_ASSEMBLER_RISCV_H_
+#endif  // V8_REGEXP_RISCV64_REGEXP_MACRO_ASSEMBLER_RISCV64_H_
