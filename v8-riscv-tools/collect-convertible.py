@@ -18,6 +18,90 @@ def isIntN(x, n):
 def isUIntN(x, n):
     return (x >> n) == 0
 
+def is3BitReg(reg):
+    return bool(re.match(r'^f?(s[01]|a[0-5])$', reg))
+
+instr2constraint = {}
+for instr in ['nop', 'ebreak', 'mv']:
+    instr2constraint[instr] = ((lambda *args: True, 'c.' + instr), )
+for instr in ['lw', 'flw', 'sw', 'fsw']:
+    instr2constraint[instr] = ( (lambda rd, offset, rs:
+                                    rs == 'sp'
+                                    and isUIntN(int(offset), 8)
+                                    and (int(offset) & 0x3) == 0, 'c.'+instr+'sp'),
+                                (lambda rd, offset, rs:
+                                    is3BitReg(rd)
+                                    and is3BitReg(rs)
+                                    and isUIntN(int(offset), 7)
+                                    and (int(offset) & 0x3) == 0, 'c.'+instr))
+for instr in ['ld', 'fld', 'sd', 'fsd']:
+    instr2constraint[instr] = ( (lambda rd, offset, rs:
+                                    rs == 'sp'
+                                    and isUIntN(int(offset), 9)
+                                    and (int(offset) & 0x7) == 0, 'c.'+instr+'sp'),
+                                (lambda rd, offset, rs:
+                                    is3BitReg(rd)
+                                    and is3BitReg(rs)
+                                    and isUIntN(int(offset), 8)
+                                    and (int(offset) & 0x7) == 0, 'c.'+instr))
+for instr in ['jalr', 'jr']:
+    instr2constraint[instr] = ((lambda *args: len(args) == 1, 'c.'+instr), )
+for instr in ['j']:
+    instr2constraint[instr] = ((lambda *args: len(args) == 1
+                                    and isUIntN(int(args[0]), 12)
+                                    and (int(args[0]) & 0x1) == 0, 'c.'+instr), )
+for instr in ['beq', 'bne']:
+    instr2constraint[instr] = ((lambda rs1, rs2, offset:
+                                    rs2 == 'zero_reg'
+                                    and is3BitReg(rs1) \
+                                    and isIntN(int(offset), 9)
+                                    and (int(offset) & 0x1) == 0, 'c.'+instr), )
+for instr in ['and', 'or', 'xor', 'sub', 'andw', 'subw']:
+    instr2constraint[instr] = ((lambda rd, rs1, rs2:
+                                    rd == rs1 \
+                                    and is3BitReg(rd) \
+                                    and is3BitReg(rs2), 'c.'+instr), )
+for instr in ['andi']:
+    instr2constraint[instr] = ((lambda rd, rs, imm: rd == rs \
+                                    and is3BitReg(rd) \
+                                    and isIntN(int(imm, 16), 6), 'c.'+instr), )
+for instr in ['li']:
+    instr2constraint[instr] = ((lambda rd, imm: isIntN(int(imm), 6), 'c.'+instr), )
+for instr in ['lui']:
+    instr2constraint[instr] = ((lambda rd, imm:
+                                    (rd != 'zero_reg' and rd != 'sp')
+                                    and isUIntN(int(imm, 16), 6), 'c.'+instr), )
+for instr in ['slli']:
+    instr2constraint[instr] = ((lambda rd, rs, shamt:
+                                    rd == rs
+                                    and isUIntN(int(shamt), 6), 'c.'+instr), )
+for instr in ['srli', 'srai']:
+    instr2constraint[instr] = ((lambda rd, rs, shamt:
+                                    rd == rs
+                                    and is3BitReg(rd)
+                                    and isUIntN(int(shamt), 6), 'c.'+instr), )
+for instr in ['add']:
+    instr2constraint[instr] = ((lambda rd, rs1, rs2: rd == rs1, 'c.'+instr), )
+for instr in ['addi']:
+    instr2constraint[instr] = ( (lambda rd, rs, imm:
+                                    # C.ADDI
+                                    rd == rs and isIntN(int(imm), 6), 'c.addi'),
+                                (lambda rd, rs, imm:
+                                    # C.ADDI16SP
+                                    rd == rs and rd == 'sp'
+                                    and isIntN(int(imm), 10)
+                                    and (int(imm) & 0xF == 0), 'c.addi16sp'),
+                                (lambda rd, rs, imm:
+                                    # C.ADDI4SPN
+                                    is3BitReg(rd) and rs == 'sp'
+                                    and isUIntN(int(imm), 10)
+                                    and (int(imm) & 0x3) == 0, 'c.addi4spn'))
+for instr in ['addiw']:
+    instr2constraint[instr] = ((lambda rd, rs, imm: rd == rs
+                                    and isIntN(int(imm), 6), 'c.'+instr), )
+for instr in ['sext.w']:
+    instr2constraint[instr] = ((lambda rd, rs: rd == rs, 'c.addiw'), )
+
 class Instruction:
 
     def __init__(self, line, pc, insnHex, insn, operands, offset):
@@ -31,84 +115,16 @@ class Instruction:
     def __repr__(self):
         return f"{self.pc:x} {self.insnHex:08x} {self.insn} {','.join(self.operands)}"
 
-    def __is3BitReg(self, reg):
-        return bool(re.match(r'^f?(s[01]|a[0-5])$', reg))
-
     def __checkConstraint(self, fn):
         return fn(*self.operands)
 
-    def isConvertible(self):
-        if self.insn in ['nop', 'ebreak', 'mv']:
-            return True
-        if self.insn in ['lw', 'flw', 'sw', 'fsw']:
-            return self.__checkConstraint(lambda rd, offset, rs:
-                                            rs == 'sp'
-                                            and isUIntN(int(offset), 8)
-                                            and (int(offset) & 0x3) == 0)
-        if self.insn in ['ld', 'fld', 'sd', 'fsd']:
-            return self.__checkConstraint(lambda rd, offset, rs:
-                                            rs == 'sp'
-                                            and isUIntN(int(offset), 9)
-                                            and (int(offset) & 0x7) == 0)
-        if self.insn in ['jalr', 'jr']:
-            return len(self.operands) == 1
-        if self.insn in ['jal', 'j']:
-            return len(self.operands) == 1 \
-                and self.__checkConstraint(lambda offset:
-                                            isUIntN(int(offset), 12)
-                                            and (int(offset) & 0x1) == 0)
-        if self.insn in ['beq', 'bne']:
-            return self.__checkConstraint(lambda rs1, rs2, offset:
-                                            rs2 == 'zero_reg'
-                                            and self.__is3BitReg(rs1) \
-                                            and isIntN(int(offset), 9)
-                                            and (int(offset) & 0x1) == 0)
-        if self.insn in ['and', 'or', 'xor', 'sub', 'andw', 'subw']:
-            return self.__checkConstraint(lambda rd, rs1, rs2:
-                                            rd == rs1 \
-                                            and self.__is3BitReg(rd) \
-                                            and self.__is3BitReg(rs2))
-        if self.insn in ['andi']:
-            return self.__checkConstraint(lambda rd, rs, imm: rd == rs \
-                                                        and self.__is3BitReg(rd) \
-                                                        and isIntN(int(imm, 16), 6))
-        if self.insn in ['li']:
-            return self.__checkConstraint(lambda rd, imm: isIntN(int(imm), 6))
-        if self.insn in ['lui']:
-            return self.__checkConstraint(lambda rd, imm:
-                                            (rd != 'zero_reg' or rd != 'sp')
-                                            and isUIntN(int(imm, 16), 6))
-        if self.insn in ['slli']:
-            return self.__checkConstraint(lambda rd, rs, shamt:
-                                            rd == rs
-                                            and isUIntN(int(shamt), 6))
-        if self.insn in ['srli', 'srai']:
-            return self.__checkConstraint(lambda rd, rs, shamt:
-                                            rd == rs
-                                            and self.__is3BitReg(rd)
-                                            and isUIntN(int(shamt), 6))
-        if self.insn in ['add']:
-            return self.__checkConstraint(lambda rd, rs1, rs2: rd == rs1)
-        if self.insn in ['addi']:
-            return self.__checkConstraint(lambda rd, rs, imm:
-                                            # C.ADDI
-                                            (rd == rs and isIntN(int(imm), 6))
-                                            # C.ADDI16SP
-                                            or (rd == rs and rd == 'sp'
-                                                and isIntN(int(imm), 10)
-                                                and (int(imm) & 0xF == 0))
-                                            # C.ADDI4SPN
-                                            or (self.__is3BitReg(rd)
-                                                and rs == 'sp'
-                                                and isUIntN(int(imm), 10)
-                                                and (int(imm) & 0x3) == 0))
-        if self.insn in ['addiw']:
-            return self.__checkConstraint(lambda rd, rs, imm: rd == rs
-                                                        and isIntN(int(imm), 6))
-        if self.insn in ['sext.w']:
-            return self.__checkConstraint(lambda rd, rs: rd == rs)
-
-        return False
+    def compressTo(self):
+        if self.insn in instr2constraint:
+            cons = instr2constraint[self.insn]
+            for fn, cInstr in cons:
+                if self.__checkConstraint(fn):
+                    return cInstr 
+        return ''
 
     def insnSize(self):
         return 32 if self.insnHex & 0x3 == 0x3 else 16
@@ -194,9 +210,11 @@ if __name__ == "__main__":
         if insn is not None and not insn.isShort():
             rawCounter[insn.insn] += 1
             try:
-                if insn.isConvertible():
+                cInstr = insn.compressTo()
+                if cInstr:
                     if args.verbose:
                         print(line, end = '')
+                        print('    ====> ', cInstr)
                     convertibleCounter[insn.insn] += 1
             except BaseException:
                 print("Error Line: ", line, end = '')
