@@ -1037,7 +1037,7 @@ class InstructionGetters : public T {
     uint32_t Bits = this->InstructionBits();
     int32_t uimm10 = ((Bits & 0x20) >> 2) | ((Bits & 0x40) >> 4) |
                      ((Bits & 0x780) >> 1) | ((Bits & 0x1800) >> 7);
-    DCHECK_NE(uimm10, 0);
+    //DCHECK_NE(uimm10, 0);
     return uimm10;
   }
 

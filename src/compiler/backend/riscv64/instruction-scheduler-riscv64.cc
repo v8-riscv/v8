@@ -360,7 +360,9 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvWord64AtomicLoadUint16:
     case kRiscvWord64AtomicLoadUint32:
     case kRiscvWord64AtomicLoadUint64:
-
+    case kRiscvLoadDecompressAnyTagged:
+    case kRiscvLoadDecompressTaggedSigned:
+    case kRiscvLoadDecompressTaggedPointer:
       return kIsLoadOperation;
 
     case kRiscvModD:
@@ -413,6 +415,7 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvWord64AtomicCompareExchangeUint16:
     case kRiscvWord64AtomicCompareExchangeUint32:
     case kRiscvWord64AtomicCompareExchangeUint64:
+    case kRiscvStoreCompressTagged:
       return kHasSideEffect;
 
 #define CASE(Name) case k##Name:

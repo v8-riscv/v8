@@ -169,6 +169,8 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void BranchFalseF(Register rs, Label* target);
 
   void Branch(Label* L, Condition cond, Register rs, RootIndex index);
+  void CompareTaggedAndBranch(const Register& lhs, const Operand& rhs,
+                              Condition cond, Label* label);
 
   static int InstrCountForLi64Bit(int64_t value);
   inline void LiLower32BitHelper(Register rd, Operand j);
@@ -179,7 +181,9 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
     li(rd, Operand(j), mode);
   }
 
-  void li(Register dst, Handle<HeapObject> value, LiFlags mode = OPTIMIZE_SIZE);
+  void li(Register dst, Handle<HeapObject> value,
+          RelocInfo::Mode rmode = RelocInfo::FULL_EMBEDDED_OBJECT);
+
   void li(Register dst, ExternalReference value, LiFlags mode = OPTIMIZE_SIZE);
   void li(Register dst, const StringConstantBase* string,
           LiFlags mode = OPTIMIZE_SIZE);
@@ -429,17 +433,7 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
 #undef DEFINE_INSTRUCTION2
 #undef DEFINE_INSTRUCTION3
 
-  void SmiUntag(Register dst, const MemOperand& src);
-  void SmiUntag(Register dst, Register src) {
-    if (SmiValuesAre32Bits()) {
-      srai(dst, src, kSmiShift);
-    } else {
-      DCHECK(SmiValuesAre31Bits());
-      sraiw(dst, src, kSmiShift);
-    }
-  }
 
-  void SmiUntag(Register reg) { SmiUntag(reg, reg); }
 
   // Removes current frame and its arguments from the stack preserving
   // the arguments and a return address pushed to the stack for the next call.
@@ -787,6 +781,36 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void Floor_s_s(FPURegister fd, FPURegister fs, FPURegister fpu_scratch);
   void Ceil_s_s(FPURegister fd, FPURegister fs, FPURegister fpu_scratch);
 
+  // -------------------------------------------------------------------------
+  // Smi utilities.
+
+  void SmiTag(Register dst, Register src);
+
+  void SmiTag(Register reg) { SmiTag(reg, reg); }
+
+  void SmiUntag(Register dst, const MemOperand& src);
+
+  void SmiUntag(Register dst, Register src);
+
+  void SmiUntag(Register reg) { SmiUntag(reg, reg); }
+
+  // Left-shifted from int32 equivalent of Smi.
+  void SmiScale(Register dst, Register src, int scale) {
+    if (SmiValuesAre32Bits()) {
+      // The int portion is upper 32-bits of 64-bit word.
+      srai(dst, src, (kSmiShift - scale) & 0x3F);
+    } else {
+      DCHECK(SmiValuesAre31Bits());
+      DCHECK_GE(scale, kSmiTagSize);
+      slliw(dst, src, scale - kSmiTagSize);
+    }
+  }
+
+  // Test if the register contains a smi.
+  inline void SmiTst(Register value, Register scratch) {
+    And(scratch, value, Operand(kSmiTagMask));
+  }
+
   // Jump the register contains a smi.
   void JumpIfSmi(Register value, Label* smi_label, Register scratch = t3);
 
@@ -797,6 +821,10 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void JumpIfLessThan(Register a, int32_t b, Label* dest) {
     Branch(dest, lt, a, Operand(b));
   }
+
+  // Jump if the register contains a non-smi.
+  void JumpIfNotSmi(Register value, Label* not_smi_label,
+                    Register scratch = t3);
 
   // Push a standard frame, consisting of ra, fp, context and JS function.
   void PushStandardFrame(Register function_reg);
@@ -818,11 +846,37 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
 
   // Define a function entrypoint. This doesn't emit any code for this
   // architecture, as control-flow integrity is not supported for it.
-  void CodeEntry() {}
+void CodeEntry() {}
   // Define an exception handler.
   void ExceptionHandler() {}
   // Define an exception handler and bind a label.
   void BindExceptionHandler(Label* label) { bind(label); }
+
+  // ---------------------------------------------------------------------------
+  // Pointer compression Support
+
+  // Loads a field containing a HeapObject and decompresses it if pointer
+  // compression is enabled.
+  void LoadTaggedPointerField(const Register destination,
+                              const MemOperand field_operand);
+
+  // Loads a field containing any tagged value and decompresses it if necessary.
+  void LoadAnyTaggedField(const Register destination,
+                          const MemOperand field_operand);
+
+  // Loads a field containing smi value and untags it.
+  void SmiUntagField(Register dst, const MemOperand src);
+
+  // Compresses and stores tagged value to given on-heap location.
+  void StoreTaggedField(const Register value,
+                        const MemOperand dst_field_operand);
+
+  void DecompressTaggedSigned(Register destination, MemOperand field_operand);
+  void DecompressTaggedSigned(Register destination, Register src);
+  void DecompressTaggedPointer(Register destination, MemOperand field_operand);
+  void DecompressTaggedPointer(Register destination, Register source);
+  void DecompressAnyTagged(Register destination, MemOperand field_operand);
+  void DecompressAnyTagged(Register destination, Register source);
 
  protected:
   inline Register GetRtAsRegisterHelper(const Operand& rt, Register scratch);
@@ -1075,44 +1129,7 @@ class V8_EXPORT_PRIVATE MacroAssembler : public TurboAssembler {
                         Register scratch2);
   void DecrementCounter(StatsCounter* counter, int value, Register scratch1,
                         Register scratch2);
-
-  // -------------------------------------------------------------------------
-  // Smi utilities.
-
-  void SmiTag(Register dst, Register src) {
-    STATIC_ASSERT(kSmiTag == 0);
-    if (SmiValuesAre32Bits()) {
-      // FIXME(RISCV): do not understand the logic here
-      slli(dst, src, 32);
-    } else {
-      DCHECK(SmiValuesAre31Bits());
-      Add32(dst, src, src);
-    }
-  }
-
-  void SmiTag(Register reg) { SmiTag(reg, reg); }
-
-  // Left-shifted from int32 equivalent of Smi.
-  void SmiScale(Register dst, Register src, int scale) {
-    if (SmiValuesAre32Bits()) {
-      // The int portion is upper 32-bits of 64-bit word.
-      srai(dst, src, (kSmiShift - scale) & 0x3F);
-    } else {
-      DCHECK(SmiValuesAre31Bits());
-      DCHECK_GE(scale, kSmiTagSize);
-      slliw(dst, src, scale - kSmiTagSize);
-    }
-  }
-
-  // Test if the register contains a smi.
-  inline void SmiTst(Register value, Register scratch) {
-    And(scratch, value, Operand(kSmiTagMask));
-  }
-
-  // Jump if the register contains a non-smi.
-  void JumpIfNotSmi(Register value, Label* not_smi_label,
-                    Register scratch = t3);
-
+                      
   // Abort execution if argument is a smi, enabled via --debug-code.
   void AssertNotSmi(Register object);
   void AssertSmi(Register object);

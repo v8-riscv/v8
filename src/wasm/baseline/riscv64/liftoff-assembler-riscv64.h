@@ -348,9 +348,8 @@ void LiftoffAssembler::LoadTaggedPointer(Register dst, Register src_addr,
                                          Register offset_reg,
                                          int32_t offset_imm,
                                          LiftoffRegList pinned) {
-  STATIC_ASSERT(kTaggedSize == kInt64Size);
-  Load(LiftoffRegister(dst), src_addr, offset_reg, offset_imm,
-       LoadType::kI64Load, pinned);
+  MemOperand src_op = MemOperand(src_addr, offset_imm);
+  LoadTaggedPointerField(dst, src_op);
 }
 
 void LiftoffAssembler::StoreTaggedPointer(Register dst_addr,

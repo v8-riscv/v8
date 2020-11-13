@@ -74,6 +74,7 @@ class Decoder {
   void PrintFRs3(Instruction* instr);
   void PrintFRd(Instruction* instr);
   void PrintImm12(Instruction* instr);
+  void PrintImm12J(Instruction* instr);
   void PrintImm12X(Instruction* instr);
   void PrintImm20U(Instruction* instr);
   void PrintImm20J(Instruction* instr);
@@ -206,6 +207,16 @@ void Decoder::PrintFRd(Instruction* instr) {
 void Decoder::PrintImm12X(Instruction* instr) {
   int32_t imm = instr->Imm12Value();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "0x%x", imm);
+}
+
+void Decoder::PrintImm12J(Instruction* instr) {
+  int32_t imm = instr->Imm12Value();
+  int32_t offset = imm + ((instr - 4)->Imm20UValue() << 12);
+  const char* target =
+      converter_.NameOfAddress(reinterpret_cast<byte*>(instr - 4) + offset);
+  int reg = instr->Rs1Value();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d(%s) -> %s",
+                              imm, converter_.NameOfCPURegister(reg), target);
 }
 
 void Decoder::PrintImm12(Instruction* instr) {
@@ -630,6 +641,10 @@ int Decoder::FormatOption(Instruction* instr, const char* format) {
           DCHECK(STRING_STARTS_WITH(format, "imm12"));
           if (format[5] == 'x') {
             PrintImm12X(instr);
+            return 6;
+          }
+          if (format[5] == 'J'){
+            PrintImm12J(instr);
             return 6;
           }
           PrintImm12(instr);
@@ -1279,7 +1294,9 @@ void Decoder::DecodeIType(Instruction* instr) {
         Format(instr, "jr        'rs1");
       else if (instr->RdValue() == ra.code() && instr->Imm12Value() == 0)
         Format(instr, "jalr      'rs1");
-      else
+      else if ((instr - 4) ->InstructionOpcodeType() == AUIPC)
+        Format(instr, "jalr      'rd, 'imm12J");
+      else 
         Format(instr, "jalr      'rd, 'imm12('rs1)");
       break;
     case RO_LB:

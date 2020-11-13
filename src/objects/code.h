@@ -462,7 +462,7 @@ class Code : public HeapObject {
 #elif V8_TARGET_ARCH_S390X
   static constexpr int kHeaderPaddingSize = COMPRESS_POINTERS_BOOL ? 16 : 28;
 #elif V8_TARGET_ARCH_RISCV64
-  static constexpr int kHeaderPaddingSize = 28;
+  static constexpr int kHeaderPaddingSize = COMPRESS_POINTERS_BOOL ? 16 : 28;
 #elif V8_TARGET_ARCH_RISCV
 #error riscv32 unsupported yet
 #else
