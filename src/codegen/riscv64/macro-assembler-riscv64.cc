@@ -325,7 +325,7 @@ void MacroAssembler::RecordWrite(Register object, Register address,
   if (emit_debug_code()) {
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    Ld(scratch, MemOperand(address));
+    LoadTaggedPointerField(scratch, MemOperand(address));
     Assert(eq, AbortReason::kWrongAddressOrValuePassedToRecordWrite, scratch,
            Operand(value));
   }
@@ -1379,15 +1379,22 @@ void TurboAssembler::Scd(Register rd, const MemOperand& rs) {
   }
 }
 
-void TurboAssembler::li(Register dst, Handle<HeapObject> value, LiFlags mode) {
+void TurboAssembler::li(Register dst, Handle<HeapObject> value,
+                        RelocInfo::Mode rmode) {
   // TODO(jgruber,v8:8887): Also consider a root-relative load when generating
   // non-isolate-independent code. In many cases it might be cheaper than
   // embedding the relocatable value.
   if (root_array_available_ && options().isolate_independent_code) {
     IndirectLoadConstant(dst, value);
     return;
+  } else if (RelocInfo::IsCompressedEmbeddedObject(rmode)) {
+    EmbeddedObjectIndex index = AddEmbeddedObject(value);
+    DCHECK(is_uint32(index));
+    li(dst, Operand(static_cast<int>(index), rmode));
+  } else {
+    DCHECK(RelocInfo::IsFullEmbeddedObject(rmode));
+    li(dst, Operand(value.address(), rmode));
   }
-  li(dst, Operand(value), mode);
 }
 
 void TurboAssembler::li(Register dst, ExternalReference value, LiFlags mode) {
@@ -2855,7 +2862,7 @@ void TurboAssembler::LoadFromConstantsTable(Register destination,
                                             int constant_index) {
   DCHECK(RootsTable::IsImmortalImmovable(RootIndex::kBuiltinsConstantsTable));
   LoadRoot(destination, RootIndex::kBuiltinsConstantsTable);
-  Ld(destination,
+  LoadTaggedPointerField(destination,
      FieldMemOperand(destination,
                      FixedArray::kHeaderSize + constant_index * kSystemPointerSize));
 }
@@ -3395,6 +3402,66 @@ void MacroAssembler::StackOverflowCheck(Register num_args, Register scratch1,
   // Signed comparison.
   Branch(stack_overflow, le, scratch1, Operand(scratch2));
 }
+void TurboAssembler::LoadTaggedPointerField(const Register destination,
+                                            const MemOperand field_operand) {
+  if (COMPRESS_POINTERS_BOOL) {
+    DecompressTaggedPointer(destination, field_operand);
+  } else {
+    Ld(destination, field_operand);
+  }
+}
+
+void TurboAssembler::LoadAnyTaggedField(const Register destination,
+                                        const MemOperand field_operand) {
+  if (COMPRESS_POINTERS_BOOL) {
+    DecompressAnyTagged(destination, field_operand);
+  } else {
+    Ld(destination, field_operand);
+  }
+}
+
+void TurboAssembler::SmiUntagField(Register dst, const MemOperand src) {
+  SmiUntag(dst, src);
+}
+
+void TurboAssembler::StoreTaggedField(const Register value,
+                                      const MemOperand dst_field_operand) {
+  if (COMPRESS_POINTERS_BOOL) {
+    Sw(value, dst_field_operand);
+  } else {
+    Sd(value, dst_field_operand);
+  }
+}
+
+void TurboAssembler::DecompressTaggedSigned(const Register destination,
+                                            const MemOperand field_operand) {
+  RecordComment("[ DecompressTaggedSigned");
+  Lw(destination, field_operand);
+  RecordComment("]");
+}
+
+void TurboAssembler::DecompressTaggedPointer(const Register destination,
+                                             const MemOperand field_operand) {
+  RecordComment("[ DecompressTaggedPointer");
+  Lw(destination, field_operand);
+  Add64(destination, kRootRegister, destination);
+  RecordComment("]");
+}
+
+void TurboAssembler::DecompressTaggedPointer(const Register destination,
+                                             const Register source) {
+  RecordComment("[ DecompressTaggedPointer");
+  Add64(destination, kRootRegister, source);
+  RecordComment("]");
+}
+
+void TurboAssembler::DecompressAnyTagged(const Register destination,
+                                         const MemOperand field_operand) {
+  RecordComment("[ DecompressAnyTagged");
+  Lw(destination, field_operand);
+  Add64(destination, kRootRegister, destination);
+  RecordComment("]");
+}
 
 void MacroAssembler::InvokePrologue(Register expected_parameter_count,
                                     Register actual_parameter_count,
@@ -3546,7 +3613,7 @@ void MacroAssembler::InvokeFunctionCode(Register function, Register new_target,
   // allow recompilation to take effect without changing any of the
   // call sites.
   Register code = kJavaScriptCallCodeStartRegister;
-  Ld(code, FieldMemOperand(function, JSFunction::kCodeOffset));
+  LoadTaggedPointerField(code, FieldMemOperand(function, JSFunction::kCodeOffset));
   if (flag == CALL_FUNCTION) {
     CallCodeObject(code);
   } else {
@@ -3569,8 +3636,8 @@ void MacroAssembler::InvokeFunctionWithNewTarget(
   DCHECK_EQ(function, a1);
   Register expected_parameter_count = a2;
   Register temp_reg = t0;
-  Ld(temp_reg, FieldMemOperand(a1, JSFunction::kSharedFunctionInfoOffset));
-  Ld(cp, FieldMemOperand(a1, JSFunction::kContextOffset));
+  LoadTaggedPointerField(temp_reg, FieldMemOperand(a1, JSFunction::kSharedFunctionInfoOffset));
+  LoadTaggedPointerField(cp, FieldMemOperand(a1, JSFunction::kContextOffset));
   // The argument count is stored as uint16_t
   Lhu(expected_parameter_count,
       FieldMemOperand(temp_reg,
@@ -3591,7 +3658,7 @@ void MacroAssembler::InvokeFunction(Register function,
   DCHECK_EQ(function, a1);
 
   // Get the function and setup the context.
-  Ld(cp, FieldMemOperand(a1, JSFunction::kContextOffset));
+  LoadTaggedPointerField(cp, FieldMemOperand(a1, JSFunction::kContextOffset));
 
   InvokeFunctionCode(a1, no_reg, expected_parameter_count,
                      actual_parameter_count, flag);
@@ -3853,14 +3920,14 @@ void TurboAssembler::Abort(AbortReason reason) {
 }
 
 void MacroAssembler::LoadMap(Register destination, Register object) {
-  Ld(destination, FieldMemOperand(object, HeapObject::kMapOffset));
+  LoadTaggedPointerField(destination, FieldMemOperand(object, HeapObject::kMapOffset));
 }
 
 void MacroAssembler::LoadNativeContextSlot(int index, Register dst) {
   LoadMap(dst, cp);
-  Ld(dst,
+  LoadTaggedPointerField(dst,
      FieldMemOperand(dst, Map::kConstructorOrBackPointerOrNativeContextOffset));
-  Ld(dst, MemOperand(dst, Context::SlotOffset(index)));
+  LoadTaggedPointerField(dst, MemOperand(dst, Context::SlotOffset(index)));
 }
 
 void TurboAssembler::StubPrologue(StackFrame::Type type) {
@@ -3870,7 +3937,7 @@ void TurboAssembler::StubPrologue(StackFrame::Type type) {
   PushCommonFrame(scratch);
 }
 
-void TurboAssembler::Prologue() { PushStandardFrame(a1); }
+void TurboAssembler::Prologue() { PushStandardFrame(kJSFunctionRegister); }
 
 void TurboAssembler::EnterFrame(StackFrame::Type type) {
   UseScratchRegisterScope temps(this);
@@ -4078,6 +4145,21 @@ void TurboAssembler::SmiUntag(Register dst, const MemOperand& src) {
   }
 }
 
+void TurboAssembler::SmiUntag(Register dst, Register src) {
+  if (SmiValuesAre32Bits()) {
+    srai(dst, src, kSmiShift);
+  } else {
+    DCHECK(SmiValuesAre31Bits());
+    sraiw(dst, src, kSmiShift);
+  }
+}
+
+void TurboAssembler::SmiTag(Register dst, Register src) {
+  STATIC_ASSERT(kSmiTag == 0);
+  DCHECK(SmiValuesAre31Bits() || SmiValuesAre32Bits());
+  slli(dst, src, kSmiShift);
+}
+
 void TurboAssembler::JumpIfSmi(Register value, Label* smi_label,
                                Register scratch) {
   DCHECK_EQ(0, kSmiTag);
@@ -4085,11 +4167,24 @@ void TurboAssembler::JumpIfSmi(Register value, Label* smi_label,
   Branch(smi_label, eq, scratch, Operand(zero_reg));
 }
 
-void MacroAssembler::JumpIfNotSmi(Register value, Label* not_smi_label,
+void TurboAssembler::JumpIfNotSmi(Register value, Label* not_smi_label,
                                   Register scratch) {
   DCHECK_EQ(0, kSmiTag);
   andi(scratch, value, kSmiTagMask);
   Branch(not_smi_label, ne, scratch, Operand(zero_reg));
+}
+
+void TurboAssembler::CompareTaggedAndBranch(const Register& lhs,
+                                            const Operand& rhs, Condition cond,
+                                            Label* label) {
+  if (COMPRESS_POINTERS_BOOL) {
+    UseScratchRegisterScope temps(this);
+    Register scratch = temps.Acquire();
+    Sub32(scratch, lhs, rhs);
+    Branch(label, cond, scratch, Operand(zero_reg));
+  } else {
+    Branch(label, cond, lhs, rhs);
+  }
 }
 
 void MacroAssembler::AssertNotSmi(Register object) {
@@ -4111,6 +4206,7 @@ void MacroAssembler::AssertSmi(Register object) {
     Check(eq, AbortReason::kOperandIsASmi, scratch, Operand(zero_reg));
   }
 }
+
 
 void MacroAssembler::AssertConstructor(Register object) {
   if (emit_debug_code()) {

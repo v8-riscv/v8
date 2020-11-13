@@ -279,6 +279,7 @@ void Assembler::CodeTargetAlign() {
   Align(4);
 }
 
+void Assembler::AbortedCodeGeneration() { constpool_.Clear(); }
 // Labels refer to positions in the (to be) generated code.
 // There are bound, linked, and unused labels.
 //
@@ -2723,6 +2724,7 @@ void Assembler::CheckTrampolinePool() {
       BlockTrampolinePoolScope block_trampoline_pool(this);
       Register scratch = temps.Acquire();
       Label after_pool;
+      RecordComment("[ TrampolinePool");
       j(&after_pool);
 
       int pool_start = pc_offset();
@@ -2741,6 +2743,7 @@ void Assembler::CheckTrampolinePool() {
       // information.
       trampoline_ = Trampoline(pool_start, unbound_labels_count_);
       bind(&after_pool);
+      RecordComment("]");
 
       trampoline_emitted_ = true;
       // As we are only going to emit trampoline once, we need to prevent any

@@ -318,7 +318,7 @@ void LiftoffAssembler::PatchPrepareStackFrame(int offset) {
 
 void LiftoffAssembler::FinishCode() {}
 
-void LiftoffAssembler::AbortCompilation() {}
+void LiftoffAssembler::AbortCompilation() { AbortedCodeGeneration(); }
 
 // static
 constexpr int LiftoffAssembler::StaticStackFrameSize() {
@@ -380,7 +380,8 @@ void LiftoffAssembler::LoadFromInstance(Register dst, int32_t offset,
 
 void LiftoffAssembler::LoadTaggedPointerFromInstance(Register dst,
                                                      int32_t offset) {
-  LoadFromInstance(dst, offset, kTaggedSize);
+  Ld(dst, liftoff::GetInstanceOperand());
+  LoadTaggedPointerField(dst, MemOperand(dst, offset));
 }
 
 void LiftoffAssembler::SpillInstance(Register instance) {
@@ -395,9 +396,8 @@ void LiftoffAssembler::LoadTaggedPointer(Register dst, Register src_addr,
                                          Register offset_reg,
                                          int32_t offset_imm,
                                          LiftoffRegList pinned) {
-  STATIC_ASSERT(kTaggedSize == kInt64Size);
-  MemOperand src_op = liftoff::GetMemOp(this, src_addr, offset_reg, offset_imm);
-  Ld(dst, src_op);
+  MemOperand src_op = MemOperand(src_addr, offset_imm);
+  LoadTaggedPointerField(dst, src_op);
 }
 
 void LiftoffAssembler::StoreTaggedPointer(Register dst_addr, int32_t offset_imm,

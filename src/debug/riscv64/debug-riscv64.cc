@@ -32,12 +32,12 @@ void DebugCodegen::GenerateFrameDropperTrampoline(MacroAssembler* masm) {
   // - Leave the frame.
   // - Restart the frame by calling the function.
   __ mv(fp, a1);
-  __ Ld(a1, MemOperand(fp, StandardFrameConstants::kFunctionOffset));
+  __ LoadTaggedPointerField(a1, MemOperand(fp, StandardFrameConstants::kFunctionOffset));
 
   // Pop return address and frame.
   __ LeaveFrame(StackFrame::INTERNAL);
 
-  __ Ld(a0, FieldMemOperand(a1, JSFunction::kSharedFunctionInfoOffset));
+  __ LoadTaggedPointerField(a0, FieldMemOperand(a1, JSFunction::kSharedFunctionInfoOffset));
   __ Lhu(a0,
          FieldMemOperand(a0, SharedFunctionInfo::kFormalParameterCountOffset));
   __ mv(a2, a0);
