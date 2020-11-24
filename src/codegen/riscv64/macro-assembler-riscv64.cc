@@ -4137,20 +4137,26 @@ void MacroAssembler::AssertStackIsAligned() {
 
 void TurboAssembler::SmiUntag(Register dst, const MemOperand& src) {
   if (SmiValuesAre32Bits()) {
-    Lw(dst, MemOperand(src.rm(), SmiWordOffset(src.offset())));
+    Ld(dst, src);
+    SmiUntag(dst);
   } else {
     DCHECK(SmiValuesAre31Bits());
+    if (COMPRESS_POINTERS_BOOL) {
     Lw(dst, src);
+    } else {
+      Ld(dst, src);
+    }
     SmiUntag(dst);
   }
 }
 
 void TurboAssembler::SmiUntag(Register dst, Register src) {
-  if (SmiValuesAre32Bits()) {
+  DCHECK(SmiValuesAre32Bits() || SmiValuesAre31Bits());
+  if (COMPRESS_POINTERS_BOOL) {
     srai(dst, src, kSmiShift);
+    sext_w(dst, dst);
   } else {
-    DCHECK(SmiValuesAre31Bits());
-    sraiw(dst, src, kSmiShift);
+    srai(dst, src, kSmiShift);
   }
 }
 

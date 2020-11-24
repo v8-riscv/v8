@@ -160,9 +160,12 @@ class OutOfLineRecordWrite final : public OutOfLineCode {
     if (mode_ > RecordWriteMode::kValueIsPointer) {
       __ JumpIfSmi(value_, exit());
     }
-    // if (COMPRESS_POINTERS_BOOL) {
-    //   __ DecompressTaggedPointer(value_, value_);
-    // }
+    if (COMPRESS_POINTERS_BOOL) {
+      //fixme:value_ should be 32-bit.
+      __ slli(value_,value_,32);
+      __ srli(value_,value_,32);
+      __ DecompressTaggedPointer(value_, value_);
+    }
     __ CheckPageFlag(value_, scratch0_,
                      MemoryChunk::kPointersToHereAreInterestingMask, eq,
                      exit());
