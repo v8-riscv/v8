@@ -264,6 +264,7 @@ void Builtins::Generate_JSConstructStubGeneric(MacroAssembler* masm) {
   // Restore smi-tagged arguments count from the frame.
   __ Ld(a1, MemOperand(fp, ConstructFrameConstants::kLengthOffset));
   // Leave construct frame.
+  __ LeaveFrame(StackFrame::CONSTRUCT);
 
   // Remove caller arguments from the stack and return.
   __ SmiScale(a4, a1, kPointerSizeLog2);
