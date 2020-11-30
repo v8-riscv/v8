@@ -94,10 +94,6 @@ constexpr RegList kLiftoffAssemblerFpCacheRegs =
 
 #error RISCV(32) architecture not supported yet
 
-#elif V8_TARGET_ARCH_RISCV
-
-#error RISCV(32) architecture not supported yet
-
 #else
 
 constexpr RegList kLiftoffAssemblerGpCacheRegs = 0xff;

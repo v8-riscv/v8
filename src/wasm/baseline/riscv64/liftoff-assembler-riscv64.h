@@ -14,6 +14,7 @@ namespace wasm {
 
 namespace liftoff {
 
+
 inline constexpr Condition ToCondition(LiftoffCondition liftoff_cond) {
   switch (liftoff_cond) {
     case kEqual:
@@ -262,6 +263,9 @@ inline void ChangeEndiannessStore(LiftoffAssembler* assm, LiftoffRegister src,
   }
 }
 #endif  // V8_TARGET_BIG_ENDIAN
+
+
+
 }  // namespace liftoff
 
 int LiftoffAssembler::PrepareStackFrame() {
@@ -922,7 +926,6 @@ void LiftoffAssembler::emit_i64_addi(LiftoffRegister dst, LiftoffRegister lhs,
                                      int64_t imm) {
   TurboAssembler::Add64(dst.gp(), lhs.gp(), Operand(imm));
 }
-
 void LiftoffAssembler::emit_u32_to_intptr(Register dst, Register src) {
   addw(dst, src, zero_reg);
 }
