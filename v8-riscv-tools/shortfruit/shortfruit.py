@@ -7,6 +7,7 @@ import re
 import string
 import subprocess
 import sys
+from prettytable import PrettyTable
 
 PATH_TO_V8_RISCV = '../../out/mips64el_debug/d8'
 PATH_TO_V8_MIPS = '../../out/riscv64.sim/d8'
@@ -251,14 +252,14 @@ class Context:
     def gen_var(self, loop_counter = False):
         if not loop_counter:
             v = f'v{self.var_counter}'
+            self.vars.append(v)
         else:
             v = f'i{self.var_counter}'
         self.var_counter = self.var_counter + 1
-        self.vars.append(v)
         return v
 
     def gen_vars(self, num):
-        return [self.gen_var() for i in range(randint(1, num))]
+        return [self.gen_var() for _ in range(num)]
 
     def rand_var(self):
         return choice(self.vars)
@@ -384,25 +385,28 @@ def gen_stmt_loop(ctx):
     end = randrange(1, 127)
     return (
         f'for(var {i} = 0; {i} < {end}; ++{i}) {{\n'
-        f'{gen_block(loop_ctx)}'
+        f'{gen_block(loop_ctx, randint(1, 10) < 5)}'
         f'}}'
     )
 
-def gen_stmt(ctx):
-    stmt = choice([
+def gen_stmt(ctx, no_loop=False):
+    stmts = [
         gen_stmt_decl,
         gen_stmt_assign,
         gen_stmt_loop,
-    ])(ctx)
+    ]
+    if (no_loop):
+        stmts.pop()
+    stmt = choice(stmts)(ctx)
     return f'{stmt}\n'
 
-def gen_block(ctx):
+def gen_block(ctx, no_loop=False):
     block = ''
-    for i in range(georand(0.5)):
-        block = block + gen_stmt(ctx)
+    for i in range(min(5, georand(0.5))):
+        block = block + gen_stmt(ctx, no_loop)
     return block
 
-def gen_func_args(ctx, n = -1):
+def gen_func_args(ctx, n=-1):
     if (n == -1):
         n = georand(0.2) + 1
     args = [v for v in ctx.gen_vars(n)]
@@ -422,8 +426,7 @@ def gen_func(ctx, num_args):
 
 def gen_global(ctx):
     g = ctx.gen_var()
-    t = choice(['var', 'const'])
-    return f'{t} {g} = {gen_expr_literal()};'
+    return f'var {g} = {gen_expr_literal()};'
 
 def gen_globals(ctx):
     globals = ''
@@ -435,6 +438,7 @@ def gen_globals(ctx):
 def gen_unit(ctx):
     # for now, one function with some parameter and access to some globals
     n = georand(0.2) + 1
+    assert n != -1
     paras = gen_func_paras(n)
 
     unit = gen_globals(ctx)
@@ -453,9 +457,19 @@ def gen_test(filename):
 def compare_bb_cost(c1, c2):
     total_diff = 0
     for bb in c1:
-        print(bb, c1[bb] - c2[bb])
+        # print(bb, c1[bb] - c2[bb])
         total_diff += max(c1[bb] - c2[bb], 0)
     return total_diff
+
+def print_cost_table(cost_riscv, cost_mips, f=sys.stdout):
+    x = PrettyTable(["Basic Block","RISCV64 cost","MIPS64 cost", "Difference"])
+    x._max_width = {"Basic Block" : 30}
+    for bb in cost_riscv:
+        diff = cost_riscv[bb] - cost_mips[bb]
+        bb_prefix = bb[3:-3]
+        x.add_row([bb_prefix, cost_riscv[bb], cost_mips[bb], diff])
+    print(x, file=f)
+
 
 def test_file(filename, arch, abi):
     asm_gcc = compile('gcc', arch, abi, filename)
@@ -472,8 +486,12 @@ def write_config(filename, cost1, cost2):
     config = configparser.ConfigParser()
     config.add_section('scenario')
     config['scenario']['filename'] = filename
-    config['scenario']['cost1'] = str(cost1)
-    config['scenario']['cost2'] = str(cost2)
+    config['scenario']['run command'] = ' '.join([
+        PATH_TO_V8_RISCV,
+        '--allow-natives-syntax',
+        '--print-code',
+        '--code-comments',
+        filename])
     with open('scenario.ini', 'w') as f:
         config.write(f)
     return config
@@ -496,6 +514,7 @@ def reduce_case(filename):
     subprocess.check_output(['creduce', 'test.py', filename])
 
 def main():
+    cnt = 0
     while True:
         id = random_id()
         source_file = f'case-{id}.js'
@@ -503,20 +522,27 @@ def main():
         gen_test(source_file)
         passed = False
 
+        cnt += 1
+        print(f"test case {cnt} : {source_file}")
+
         cost_riscv, cost_mips, asm_riscv, asm_mips = run_test(source_file)
-        print(cost_riscv, cost_mips)
         if compare_bb_cost(cost_riscv, cost_mips) > 0:
+            print_cost_table(cost_riscv, cost_mips)
             passed = True
             config = write_config(source_file, cost_riscv, cost_mips)
+
             # print('reducing')
             # reduce_case(source_file)
             # c1, c2, asm1, asm2 = run_test(source_file, arch, abi)
+
             # write_result(sys.stdout, config, asm_riscv, asm_mips)
-            write_result(open(case_file, 'w'), config, asm_riscv, asm_mips)
+            print_cost_table(cost_riscv, cost_mips, open(case_file, 'w'))
+            write_result(open(case_file, 'a'), config, asm_riscv, asm_mips)
+            break
 
         if not passed:
             os.remove(source_file)
-        break
+        # break
 
 if __name__ == '__main__':
     main()
