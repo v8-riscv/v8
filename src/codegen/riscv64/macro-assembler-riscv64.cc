@@ -3403,18 +3403,69 @@ void MacroAssembler::InvokePrologue(Register expected_parameter_count,
                                     Label* done, InvokeFlag flag) {
   Label regular_invoke;
 
-  // Check whether the expected and actual arguments count match. The
-  // registers are set up according to contract with
-  // ArgumentsAdaptorTrampoline:
   //  a0: actual arguments count
   //  a1: function (passed through to callee)
   //  a2: expected arguments count
 
-  // The code below is made a lot easier because the calling code already sets
-  // up actual and expected registers according to the contract.
-
   DCHECK_EQ(actual_parameter_count, a0);
   DCHECK_EQ(expected_parameter_count, a2);
+
+#ifdef V8_NO_ARGUMENTS_ADAPTOR
+  // If the expected parameter count is equal to the adaptor sentinel, no need
+  // to push undefined value as arguments.
+  Branch(&regular_invoke, eq, expected_parameter_count,
+         Operand(kDontAdaptArgumentsSentinel));
+
+  // If overapplication or if the actual argument count is equal to the
+  // formal parameter count, no need to push extra undefined values.
+  Sub64(expected_parameter_count, expected_parameter_count,
+        actual_parameter_count);
+  Branch(&regular_invoke, le, expected_parameter_count, Operand(zero_reg));
+
+  Label stack_overflow;
+  StackOverflowCheck(expected_parameter_count, t0, t1, &stack_overflow);
+  // Underapplication. Move the arguments already in the stack, including the
+  // receiver and the return address.
+  {
+    Label copy;
+    Register src = a6, dest = a7;
+    Move(src, sp);
+    Sll64(t0, expected_parameter_count, kSystemPointerSizeLog2);
+    Sub64(sp, sp, Operand(t0));
+    // Update stack pointer.
+    Move(dest, sp);
+    Move(t0, actual_parameter_count);
+    bind(&copy);
+    Ld(t1, MemOperand(src, 0));
+    Sd(t1, MemOperand(dest, 0));
+    Sub64(t0, t0, Operand(1));
+    Sub64(src, src, Operand(kSystemPointerSize));
+    Sub64(dest, dest, Operand(kSystemPointerSize));
+    Branch(&copy, ge, t0, Operand(zero_reg));
+  }
+
+  // Fill remaining expected arguments with undefined values.
+  LoadRoot(t0, RootIndex::kUndefinedValue);
+  {
+    Label loop;
+    bind(&loop);
+    Sd(t0, MemOperand(a7, 0));
+    Sub64(expected_parameter_count, expected_parameter_count, Operand(1));
+    Add64(a7, a7, Operand(kSystemPointerSize));
+    Branch(&loop, gt, expected_parameter_count, Operand(zero_reg));
+  }
+  Branch(&regular_invoke);
+
+  bind(&stack_overflow);
+  {
+    FrameScope frame(this,
+                     has_frame() ? StackFrame::NONE : StackFrame::INTERNAL);
+    CallRuntime(Runtime::kThrowStackOverflow);
+    break_(0xCC);
+  }
+#else
+  // Check whether the expected and actual arguments count match. The registers
+  // are set up according to contract with ArgumentsAdaptorTrampoline:
 
   Branch(&regular_invoke, eq, expected_parameter_count,
          Operand(actual_parameter_count));
@@ -3426,6 +3477,7 @@ void MacroAssembler::InvokePrologue(Register expected_parameter_count,
   } else {
     Jump(adaptor, RelocInfo::CODE_TARGET);
   }
+#endif
 
   bind(&regular_invoke);
 }
