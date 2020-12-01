@@ -388,6 +388,16 @@
 }],
 
 ##############################################################################
+['arch == riscv and simulator_run or arch == riscv64 and simulator_run', {
+
+  # Pass but take too long with the simulator.
+  'test-api/Threading*': [PASS, SLOW],
+  'test-api/ExternalArrays': [PASS, SLOW],
+  'test-heap-profiler/ManyLocalsInSharedContext': [PASS, SLOW],
+
+}],  # 'arch == riscv and simulator_run or arch == riscv64 and simulator_run'
+
+##############################################################################
 ['system == android', {
   # Uses too much memory.
   'test-api/NewStringRangeError': [SKIP],
