@@ -2440,7 +2440,7 @@ void CodeGenerator::AssembleConstructFrame() {
   }
 }
 
-void CodeGenerator::AssembleReturn(InstructionOperand* pop) {
+void CodeGenerator::AssembleReturn(InstructionOperand* additional_pop_count) {
   auto call_descriptor = linkage()->GetIncomingDescriptor();
 
   const int returns = frame()->GetReturnSlotCount();
@@ -2461,36 +2461,78 @@ void CodeGenerator::AssembleReturn(InstructionOperand* pop) {
   }
 
   RiscvOperandConverter g(this, nullptr);
+
+  const int parameter_count =
+      static_cast<int>(call_descriptor->StackParameterCount());
+
+  // {aditional_pop_count} is only greater than zero if {parameter_count = 0}.
+  // Check RawMachineAssembler::PopAndReturn.
+  if (parameter_count != 0) {
+    if (additional_pop_count->IsImmediate()) {
+      DCHECK_EQ(g.ToConstant(additional_pop_count).ToInt32(), 0);
+    } else if (__ emit_debug_code()) {
+      __ Assert(eq, AbortReason::kUnexpectedAdditionalPopValue,
+                g.ToRegister(additional_pop_count),
+                Operand(static_cast<int64_t>(0)));
+    }
+  }
+#ifdef V8_NO_ARGUMENTS_ADAPTOR
+  // Functions with JS linkage have at least one parameter (the receiver).
+  // If {parameter_count} == 0, it means it is a builtin with
+  // kDontAdaptArgumentsSentinel, which takes care of JS arguments popping
+  // itself.
+  const bool drop_jsargs = frame_access_state()->has_frame() &&
+                           call_descriptor->IsJSFunctionCall() &&
+                           parameter_count != 0;
+#else
+  const bool drop_jsargs = false;
+#endif
+
   if (call_descriptor->IsCFunctionCall()) {
     AssembleDeconstructFrame();
   } else if (frame_access_state()->has_frame()) {
     // Canonicalize JSFunction return sites for now unless they have an variable
     // number of stack slot pops.
-    if (pop->IsImmediate() && g.ToConstant(pop).ToInt32() == 0) {
+    if (additional_pop_count->IsImmediate() &&
+        g.ToConstant(additional_pop_count).ToInt32() == 0) {
       if (return_label_.is_bound()) {
         __ Branch(&return_label_);
         return;
       } else {
         __ bind(&return_label_);
-        AssembleDeconstructFrame();
       }
-    } else {
-      AssembleDeconstructFrame();
     }
+    if (drop_jsargs) {
+      // Get the actual argument count
+      __ Ld(t0, MemOperand(fp, StandardFrameConstants::kArgCOffset));
+    }
+    AssembleDeconstructFrame();
   }
-  int pop_count = static_cast<int>(call_descriptor->StackParameterCount());
-  if (pop->IsImmediate()) {
-    pop_count += g.ToConstant(pop).ToInt32();
+  if (drop_jsargs) {
+    // We must pop all arguments from the stack (including the receiver). This
+    // number of arguments is given by max(1 + argc_reg, parameter_count).
+    __ Add64(t0, t0, Operand(1));  // Also pop the receiver.
+    if (parameter_count > 1) {
+      Label done;
+      __ li(kScratchReg, parameter_count);
+      __ Branch(&done, ge, t0, Operand(kScratchReg));
+      __ Move(t0, kScratchReg);
+      __ bind(&done);
+    }
+    __ Sll64(t0, t0, kSystemPointerSizeLog2);
+    __ Add64(sp, sp, t0);
+  } else if (additional_pop_count->IsImmediate()) {
+    // it should be a kInt32 or a kInt64
+    DCHECK_LE(g.ToConstant(additional_pop_count).type(), Constant::kInt64);
+    int additional_count = g.ToConstant(additional_pop_count).ToInt32();
+    __ Drop(parameter_count + additional_count);
   } else {
-    Register pop_reg = g.ToRegister(pop);
+    Register pop_reg = g.ToRegister(additional_pop_count);
+    __ Drop(parameter_count);
     __ Sll64(pop_reg, pop_reg, kSystemPointerSizeLog2);
     __ Add64(sp, sp, pop_reg);
   }
-  if (pop_count != 0) {
-    __ DropAndRet(pop_count);
-  } else {
-    __ Ret();
-  }
+  __ Ret();
 }
 
 void CodeGenerator::FinishCode() {}
