@@ -1430,8 +1430,9 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kRiscvTruncWS: {
       Label done;
       Register result = instr->OutputCount() > 1 ? i.OutputRegister(1) : no_reg;
+      bool set_overflow_to_min_i32 = MiscField::decode(instr->opcode());
       __ Trunc_w_s(i.OutputRegister(), i.InputDoubleRegister(0), result);
-
+      
       // On RISCV, if the input value exceeds INT32_MAX, the result of fcvt
       // is INT32_MAX. Note that, since INT32_MAX means the lower 31-bits are
       // all 1s, INT32_MAX cannot be represented precisely as a float, so an
@@ -1447,10 +1448,12 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       // If the result of conversion overflow, the result will be set to
       // INT32_MIN. Here we detect overflow by testing whether output + 1 <
       // output (i.e., kScratchReg  < output)
-      __ Add32(kScratchReg, i.OutputRegister(), 1);
-      __ Branch(&done, lt, i.OutputRegister(), Operand(kScratchReg));
-      __ Move(i.OutputRegister(), kScratchReg);
-      __ bind(&done);
+      if (set_overflow_to_min_i32) {
+        __ Add32(kScratchReg, i.OutputRegister(), 1);
+        __ Branch(&done, lt, i.OutputRegister(), Operand(kScratchReg));
+        __ Move(i.OutputRegister(), kScratchReg);
+        __ bind(&done);
+      }
       break;
     }
     case kRiscvTruncLS: {
@@ -1459,8 +1462,16 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       break;
     }
     case kRiscvTruncLD: {
+      Label done;
       Register result = instr->OutputCount() > 1 ? i.OutputRegister(1) : no_reg;
+      bool set_overflow_to_min_i64 = MiscField::decode(instr->opcode());
       __ Trunc_l_d(i.OutputRegister(), i.InputDoubleRegister(0), result);
+      if (set_overflow_to_min_i64) {
+        __ Add64(kScratchReg, i.OutputRegister(), 1);
+        __ Branch(&done, lt, i.OutputRegister(), Operand(kScratchReg));
+        __ Move(i.OutputRegister(), kScratchReg);
+        __ bind(&done);
+      }
       break;
     }
     case kRiscvTruncUwD: {
@@ -1470,6 +1481,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     }
     case kRiscvTruncUwS: {
       Register result = instr->OutputCount() > 1 ? i.OutputRegister(1) : no_reg;
+      bool set_overflow_to_min_u32 = MiscField::decode(instr->opcode());
       __ Trunc_uw_s(i.OutputRegister(), i.InputDoubleRegister(0), result);
 
       // On RISCV, if the input value exceeds UINT32_MAX, the result of fcvt
@@ -1483,9 +1495,11 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       // So, UINT32_MAX is not a good value to indicate overflow. Instead, we
       // will use 0 as the converted result of an out-of-range FP value,
       // exploiting the fact that UINT32_MAX+1 is 0.
-      __ Add32(kScratchReg, i.OutputRegister(), 1);
-      // Set ouput to zero if result overflows (i.e., UINT32_MAX)
-      __ LoadZeroIfConditionZero(i.OutputRegister(), kScratchReg);
+      if (set_overflow_to_min_u32) {
+        __ Add32(kScratchReg, i.OutputRegister(), 1);
+        // Set ouput to zero if result overflows (i.e., UINT32_MAX)
+        __ LoadZeroIfConditionZero(i.OutputRegister(), kScratchReg);
+      }
       break;
     }
     case kRiscvTruncUlS: {
