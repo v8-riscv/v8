@@ -6,6 +6,7 @@
 #define V8_WASM_BASELINE_RISCV64_LIFTOFF_ASSEMBLER_RISCV64_H_
 
 #include "src/base/platform/wrappers.h"
+#include "src/heap/memory-chunk.h"
 #include "src/wasm/baseline/liftoff-assembler.h"
 
 namespace v8 {
@@ -395,15 +396,37 @@ void LiftoffAssembler::LoadTaggedPointer(Register dst, Register src_addr,
                                          Register offset_reg,
                                          int32_t offset_imm,
                                          LiftoffRegList pinned) {
+  DCHECK_GE(offset_imm, 0);
   STATIC_ASSERT(kTaggedSize == kInt64Size);
-  Load(LiftoffRegister(dst), src_addr, offset_reg, offset_imm,
-       LoadType::kI64Load, pinned);
+  Load(LiftoffRegister(dst), src_addr, offset_reg,
+       static_cast<uint32_t>(offset_imm), LoadType::kI64Load, pinned);
 }
 
-void LiftoffAssembler::StoreTaggedPointer(Register dst_addr, int32_t offset_imm,
+void LiftoffAssembler::StoreTaggedPointer(Register dst_addr,
+                                          int32_t offset_imm,
                                           LiftoffRegister src,
                                           LiftoffRegList pinned) {
-  bailout(kRefTypes, "StoreTaggedPointer");
+  DCHECK_GE(offset_imm, 0);
+  DCHECK_LE(offset_imm, std::numeric_limits<int32_t>::max());
+  STATIC_ASSERT(kTaggedSize == kInt64Size);
+  Register scratch = pinned.set(GetUnusedRegister(kGpReg, pinned)).gp();
+  Sd(src.gp(), MemOperand(dst_addr, offset_imm));
+
+  Label write_barrier;
+  Label exit;
+  CheckPageFlag(dst_addr, scratch,
+                MemoryChunk::kPointersFromHereAreInterestingMask, ne,
+                &write_barrier);
+  Branch(&exit);
+  bind(&write_barrier);
+  JumpIfSmi(src.gp(), &exit);
+  CheckPageFlag(src.gp(), scratch,
+                MemoryChunk::kPointersToHereAreInterestingMask, eq,
+                &exit);
+  Add64(scratch, dst_addr, offset_imm);
+  CallRecordWriteStub(dst_addr, scratch, EMIT_REMEMBERED_SET, kSaveFPRegs,
+                      wasm::WasmCode::kRecordWrite);
+  bind(&exit);
 }
 
 void LiftoffAssembler::Load(LiftoffRegister dst, Register src_addr,
@@ -808,7 +831,7 @@ bool LiftoffAssembler::emit_i32_popcnt(Register dst, Register src) {
 #define I32_SHIFTOP_I(name, instruction)                                \
   void LiftoffAssembler::emit_i32_##name##i(Register dst, Register src, \
                                             int amount) {               \
-    instruction(dst, src, amount);                                      \
+    instruction(dst, src, amount & 31);                                      \
   }
 
 I32_SHIFTOP(shl, sllw)
@@ -1519,14 +1542,14 @@ void LiftoffAssembler::emit_i8x16_add(LiftoffRegister dst, LiftoffRegister lhs,
 }
 
 void LiftoffAssembler::emit_i8x16_add_sat_s(LiftoffRegister dst,
-                                                 LiftoffRegister lhs,
-                                                 LiftoffRegister rhs) {
+                                            LiftoffRegister lhs,
+                                            LiftoffRegister rhs) {
   bailout(kSimd, "emit_i8x16_add_sat_s");
 }
 
 void LiftoffAssembler::emit_i8x16_add_sat_u(LiftoffRegister dst,
-                                                 LiftoffRegister lhs,
-                                                 LiftoffRegister rhs) {
+                                            LiftoffRegister lhs,
+                                            LiftoffRegister rhs) {
   bailout(kSimd, "emit_i8x16_add_sat_u");
 }
 
@@ -1536,14 +1559,14 @@ void LiftoffAssembler::emit_i8x16_sub(LiftoffRegister dst, LiftoffRegister lhs,
 }
 
 void LiftoffAssembler::emit_i8x16_sub_sat_s(LiftoffRegister dst,
-                                                 LiftoffRegister lhs,
-                                                 LiftoffRegister rhs) {
+                                            LiftoffRegister lhs,
+                                            LiftoffRegister rhs) {
   bailout(kSimd, "emit_i8x16_sub_sat_s");
 }
 
 void LiftoffAssembler::emit_i8x16_sub_sat_u(LiftoffRegister dst,
-                                                 LiftoffRegister lhs,
-                                                 LiftoffRegister rhs) {
+                                            LiftoffRegister lhs,
+                                            LiftoffRegister rhs) {
   bailout(kSimd, "emit_i8x16_sub_sat_u");
 }
 
@@ -1634,14 +1657,14 @@ void LiftoffAssembler::emit_i16x8_add(LiftoffRegister dst, LiftoffRegister lhs,
 }
 
 void LiftoffAssembler::emit_i16x8_add_sat_s(LiftoffRegister dst,
-                                                 LiftoffRegister lhs,
-                                                 LiftoffRegister rhs) {
+                                            LiftoffRegister lhs,
+                                            LiftoffRegister rhs) {
   bailout(kSimd, "emit_i16x8_add_sat_s");
 }
 
 void LiftoffAssembler::emit_i16x8_add_sat_u(LiftoffRegister dst,
-                                                 LiftoffRegister lhs,
-                                                 LiftoffRegister rhs) {
+                                            LiftoffRegister lhs,
+                                            LiftoffRegister rhs) {
   bailout(kSimd, "emit_i16x8_add_sat_u");
 }
 
@@ -1651,14 +1674,14 @@ void LiftoffAssembler::emit_i16x8_sub(LiftoffRegister dst, LiftoffRegister lhs,
 }
 
 void LiftoffAssembler::emit_i16x8_sub_sat_s(LiftoffRegister dst,
-                                                 LiftoffRegister lhs,
-                                                 LiftoffRegister rhs) {
+                                            LiftoffRegister lhs,
+                                            LiftoffRegister rhs) {
   bailout(kSimd, "emit_i16x8_sub_sat_s");
 }
 
 void LiftoffAssembler::emit_i16x8_sub_sat_u(LiftoffRegister dst,
-                                                 LiftoffRegister lhs,
-                                                 LiftoffRegister rhs) {
+                                            LiftoffRegister lhs,
+                                            LiftoffRegister rhs) {
   bailout(kSimd, "emit_i16x8_sub_sat_u");
 }
 
