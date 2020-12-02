@@ -1432,7 +1432,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       Register result = instr->OutputCount() > 1 ? i.OutputRegister(1) : no_reg;
       bool set_overflow_to_min_i32 = MiscField::decode(instr->opcode());
       __ Trunc_w_s(i.OutputRegister(), i.InputDoubleRegister(0), result);
-      
+
       // On RISCV, if the input value exceeds INT32_MAX, the result of fcvt
       // is INT32_MAX. Note that, since INT32_MAX means the lower 31-bits are
       // all 1s, INT32_MAX cannot be represented precisely as a float, so an
