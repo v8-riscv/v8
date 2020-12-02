@@ -4203,9 +4203,9 @@ void Genesis::InitializeCallSiteBuiltins() {
   FunctionInfo infos[] = {
       {"getColumnNumber", Builtins::kCallSitePrototypeGetColumnNumber},
       {"getEnclosingColumnNumber",
-        Builtins::kCallSitePrototypeGetEnclosingColumnNumber},
+       Builtins::kCallSitePrototypeGetEnclosingColumnNumber},
       {"getEnclosingLineNumber",
-        Builtins::kCallSitePrototypeGetEnclosingLineNumber},
+       Builtins::kCallSitePrototypeGetEnclosingLineNumber},
       {"getEvalOrigin", Builtins::kCallSitePrototypeGetEvalOrigin},
       {"getFileName", Builtins::kCallSitePrototypeGetFileName},
       {"getFunction", Builtins::kCallSitePrototypeGetFunction},

@@ -2681,8 +2681,7 @@ void Shell::SimulateErrors() {
   } else if (p < 0.5) {
     // Use-of-uninitialized-value caught by MSAN.
     int uninitialized[1];
-    if (uninitialized[0])
-      USE(uninitialized);
+    if (uninitialized[0]) USE(uninitialized);
   } else if (p < 0.6) {
     // Control flow violation caught by CFI.
     void (*func)() = (void (*)()) & Dummy;

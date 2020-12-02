@@ -1077,7 +1077,7 @@ class V8_EXPORT_PRIVATE MacroAssembler : public TurboAssembler {
   void DecrementCounter(StatsCounter* counter, int value, Register scratch1,
                         Register scratch2);
 
-// -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
   // Stack limit utilities
 
   enum StackLimitKind { kInterruptStackLimit, kRealStackLimit };
