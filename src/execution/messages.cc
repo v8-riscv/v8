@@ -518,7 +518,8 @@ int JSStackFrame::GetEnclosingLineNumber() {
   if (HasScript()) {
     Handle<SharedFunctionInfo> shared = handle(function_->shared(), isolate_);
     return Script::GetLineNumber(GetScript(),
-                                 shared->function_token_position()) + 1;
+                                 shared->function_token_position()) +
+           1;
   } else {
     return kNone;
   }
@@ -528,7 +529,8 @@ int JSStackFrame::GetEnclosingColumnNumber() {
   if (HasScript()) {
     Handle<SharedFunctionInfo> shared = handle(function_->shared(), isolate_);
     return Script::GetColumnNumber(GetScript(),
-                                   shared->function_token_position()) + 1;
+                                   shared->function_token_position()) +
+           1;
   } else {
     return kNone;
   }
@@ -702,9 +704,8 @@ int AsmJsWasmStackFrame::GetEnclosingLineNumber() {
   DCHECK_LE(0, GetPosition());
   Handle<Script> script(wasm_instance_->module_object().script(), isolate_);
   DCHECK(script->IsUserJavaScript());
-  int byte_offset = GetSourcePosition(wasm_instance_->module(),
-                                      wasm_func_index_, 0,
-                                      is_at_number_conversion_);
+  int byte_offset = GetSourcePosition(
+      wasm_instance_->module(), wasm_func_index_, 0, is_at_number_conversion_);
   return Script::GetLineNumber(script, byte_offset) + 1;
 }
 
@@ -712,9 +713,8 @@ int AsmJsWasmStackFrame::GetEnclosingColumnNumber() {
   DCHECK_LE(0, GetPosition());
   Handle<Script> script(wasm_instance_->module_object().script(), isolate_);
   DCHECK(script->IsUserJavaScript());
-  int byte_offset = GetSourcePosition(wasm_instance_->module(),
-                                      wasm_func_index_, 0,
-                                      is_at_number_conversion_);
+  int byte_offset = GetSourcePosition(
+      wasm_instance_->module(), wasm_func_index_, 0, is_at_number_conversion_);
   return Script::GetColumnNumber(script, byte_offset) + 1;
 }
 
