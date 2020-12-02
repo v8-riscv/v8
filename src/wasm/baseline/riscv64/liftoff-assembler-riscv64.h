@@ -15,7 +15,6 @@ namespace wasm {
 
 namespace liftoff {
 
-
 inline constexpr Condition ToCondition(LiftoffCondition liftoff_cond) {
   switch (liftoff_cond) {
     case kEqual:
@@ -265,8 +264,6 @@ inline void ChangeEndiannessStore(LiftoffAssembler* assm, LiftoffRegister src,
 }
 #endif  // V8_TARGET_BIG_ENDIAN
 
-
-
 }  // namespace liftoff
 
 int LiftoffAssembler::PrepareStackFrame() {
@@ -402,8 +399,7 @@ void LiftoffAssembler::LoadTaggedPointer(Register dst, Register src_addr,
        static_cast<uint32_t>(offset_imm), LoadType::kI64Load, pinned);
 }
 
-void LiftoffAssembler::StoreTaggedPointer(Register dst_addr,
-                                          int32_t offset_imm,
+void LiftoffAssembler::StoreTaggedPointer(Register dst_addr, int32_t offset_imm,
                                           LiftoffRegister src,
                                           LiftoffRegList pinned) {
   DCHECK_GE(offset_imm, 0);
@@ -421,8 +417,7 @@ void LiftoffAssembler::StoreTaggedPointer(Register dst_addr,
   bind(&write_barrier);
   JumpIfSmi(src.gp(), &exit);
   CheckPageFlag(src.gp(), scratch,
-                MemoryChunk::kPointersToHereAreInterestingMask, eq,
-                &exit);
+                MemoryChunk::kPointersToHereAreInterestingMask, eq, &exit);
   Add64(scratch, dst_addr, offset_imm);
   CallRecordWriteStub(dst_addr, scratch, EMIT_REMEMBERED_SET, kSaveFPRegs,
                       wasm::WasmCode::kRecordWrite);
@@ -485,7 +480,6 @@ void LiftoffAssembler::Store(Register dst_addr, Register offset_reg,
                              uintptr_t offset_imm, LiftoffRegister src,
                              StoreType type, LiftoffRegList pinned,
                              uint32_t* protected_store_pc, bool is_store_mem) {
-
   MemOperand dst_op = liftoff::GetMemOp(this, dst_addr, offset_reg, offset_imm);
 
 #if defined(V8_TARGET_BIG_ENDIAN)
@@ -831,7 +825,7 @@ bool LiftoffAssembler::emit_i32_popcnt(Register dst, Register src) {
 #define I32_SHIFTOP_I(name, instruction)                                \
   void LiftoffAssembler::emit_i32_##name##i(Register dst, Register src, \
                                             int amount) {               \
-    instruction(dst, src, amount & 31);                                      \
+    instruction(dst, src, amount & 31);                                 \
   }
 
 I32_SHIFTOP(shl, sllw)
