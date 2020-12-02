@@ -64,7 +64,6 @@ if (cppgc_is_standalone) {
       libs = [ "atomic" ]
     }
 
-
     configs = [
       "../..:external_config",
       "../..:internal_config_base",
