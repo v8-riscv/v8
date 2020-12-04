@@ -10,6 +10,7 @@ namespace internal {
 const bool Deoptimizer::kSupportsFixedDeoptExitSizes = true;
 const int Deoptimizer::kNonLazyDeoptExitSize = 5 * kInstrSize;
 const int Deoptimizer::kLazyDeoptExitSize = 5 * kInstrSize;
+const int Deoptimizer::kEagerWithResumeDeoptExitSize = 6 * kInstrSize;
 
 // Maximum size of a table entry generated below.
 // FIXME(RISCV): Is this value correct?
