@@ -630,6 +630,8 @@ void LiftoffAssembler::Spill(int offset, LiftoffRegister reg, ValueType type) {
       Sw(reg.gp(), dst);
       break;
     case ValueType::kI64:
+    case ValueType::kRef:
+    case ValueType::kOptRef:
       Sd(reg.gp(), dst);
       break;
     case ValueType::kF32:
