@@ -64,7 +64,7 @@ void EphemeronKeyBarrierDescriptor::InitializePlatformSpecific(
 
 void DynamicCheckMapsDescriptor::InitializePlatformSpecific(
     CallInterfaceDescriptorData* data) {
-  Register default_stub_registers[] = {kReturnRegister0, a0, a1, a2, cp};
+  Register default_stub_registers[] = {kReturnRegister0, a1, a2, a3, cp};
 
   data->RestrictAllocatableRegisters(default_stub_registers,
                                      arraysize(default_stub_registers));
