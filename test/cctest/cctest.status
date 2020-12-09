@@ -446,7 +446,6 @@
   'test-gc/RunWasmLiftoff*': [SKIP],
 
   # SIMD not fully implemented yet
-  'test-run-wasm-simd/*': [SKIP],
   'test-run-wasm-simd-liftoff/*': [SKIP],
 
 }],  # 'arch == ppc or arch == ppc64 or arch == s390 or arch == s390x'
@@ -568,6 +567,7 @@
   'test-run-jsexceptions/*': [SKIP],
   'test-run-jsobjects/*': [SKIP],
   'test-run-jsops/*': [SKIP],
+  'test-run-load-store/*': [SKIP],
   'test-run-machops/*': [SKIP],
   'test-run-native-calls/*': [SKIP],
   'test-run-retpoline/*': [SKIP],
