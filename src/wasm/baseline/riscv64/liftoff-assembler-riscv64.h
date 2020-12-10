@@ -97,6 +97,8 @@ inline void Load(LiftoffAssembler* assm, LiftoffRegister dst, MemOperand src,
       assm->Lw(dst.gp(), src);
       break;
     case ValueType::kI64:
+    case ValueType::kRef:
+    case ValueType::kOptRef:
       assm->Ld(dst.gp(), src);
       break;
     case ValueType::kF32:
@@ -654,7 +656,9 @@ void LiftoffAssembler::Spill(int offset, WasmValue value) {
       Sw(tmp.gp(), dst);
       break;
     }
-    case ValueType::kI64: {
+    case ValueType::kI64:
+    case ValueType::kRef:
+    case ValueType::kOptRef: {
       LiftoffRegister tmp = GetUnusedRegister(kGpReg, {});
       TurboAssembler::li(tmp.gp(), value.to_i64());
       Sd(tmp.gp(), dst);
@@ -674,6 +678,8 @@ void LiftoffAssembler::Fill(LiftoffRegister reg, int offset, ValueType type) {
       Lw(reg.gp(), src);
       break;
     case ValueType::kI64:
+    case ValueType::kRef:
+    case ValueType::kOptRef:
       Ld(reg.gp(), src);
       break;
     case ValueType::kF32:
