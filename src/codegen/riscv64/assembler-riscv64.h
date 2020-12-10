@@ -160,6 +160,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
   virtual ~Assembler() { CHECK(constpool_.IsEmpty()); }
 
+  void AbortedCodeGeneration() { constpool_.Clear(); }
   // GetCode emits any pending (non-emitted) code and fills the descriptor desc.
   static constexpr int kNoHandlerTable = 0;
   static constexpr SafepointTableBuilder* kNoSafepointTable = nullptr;
@@ -863,7 +864,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void CheckTrampolinePool();
 
   inline int UnboundLabelsCount() { return unbound_labels_count_; }
-  
+
   using BlockPoolsScope = BlockTrampolinePoolScope;
 
   void RecordConstPool(int size);
