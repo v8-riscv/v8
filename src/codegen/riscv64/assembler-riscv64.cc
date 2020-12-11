@@ -1132,6 +1132,7 @@ void Assembler::GenInstrALUFP_rr(uint8_t funct7, uint8_t funct3, Register rd,
 int32_t Assembler::get_trampoline_entry(int32_t pos) {
   int32_t trampoline_entry = kInvalidSlotPos;
   if (!internal_trampoline_exception_) {
+    DEBUG_PRINTF("\tstart: %d,pos: %d\n",trampoline_.start(),pos);
     if (trampoline_.start() > pos) {
       trampoline_entry = trampoline_.take_slot();
     }
@@ -2681,7 +2682,9 @@ void Assembler::RecordRelocInfo(RelocInfo::Mode rmode, intptr_t data) {
 }
 
 void Assembler::BlockTrampolinePoolFor(int instructions) {
+  DEBUG_PRINTF("\tBlockTrampolinePoolFor %d",instructions);
   CheckTrampolinePoolQuick(instructions);
+  DEBUG_PRINTF("\tpc_offset %d,BlockTrampolinePoolBefore %d\n",pc_offset(),pc_offset() + instructions * kInstrSize);
   BlockTrampolinePoolBefore(pc_offset() + instructions * kInstrSize);
 }
 
@@ -2691,6 +2694,8 @@ void Assembler::CheckTrampolinePool() {
   // either trampoline_pool_blocked_nesting_ or no_trampoline_pool_before_,
   // which are both checked here. Also, recursive calls to CheckTrampolinePool
   // are blocked by trampoline_pool_blocked_nesting_.
+  DEBUG_PRINTF("\tpc_offset %d no_trampoline_pool_before:%d\n",pc_offset(),no_trampoline_pool_before_);
+  DEBUG_PRINTF("\ttrampoline_pool_blocked_nesting:%d\n",trampoline_pool_blocked_nesting_);
   if ((trampoline_pool_blocked_nesting_ > 0) ||
       (pc_offset() < no_trampoline_pool_before_)) {
     // Emission is currently blocked; make sure we try again as soon as
