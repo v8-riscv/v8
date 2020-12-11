@@ -2983,7 +2983,6 @@ void TurboAssembler::Call(Address target, RelocInfo::Mode rmode, Condition cond,
                           Register rs, const Operand& rt) {
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
-  BlockTrampolinePoolScope block_trampoline_pool(this);
   li(scratch, Operand(static_cast<int64_t>(target), rmode), ADDRESS_LOAD);
   Call(scratch, cond, rs, rt);
 }
@@ -2992,7 +2991,6 @@ void TurboAssembler::Call(Handle<Code> code, RelocInfo::Mode rmode,
                           Condition cond, Register rs, const Operand& rt) {
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
-  BlockTrampolinePoolScope block_trampoline_pool(this);
 
   int builtin_index = Builtins::kNoBuiltinId;
   bool target_is_isolate_independent_builtin =
