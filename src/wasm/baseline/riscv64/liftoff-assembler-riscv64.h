@@ -363,6 +363,7 @@ void LiftoffAssembler::LoadConstant(LiftoffRegister reg, WasmValue value,
       break;
     default:
       UNREACHABLE();
+      // This is a test. DELETE ME!
   }
 }
 
