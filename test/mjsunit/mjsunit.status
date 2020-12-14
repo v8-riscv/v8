@@ -821,6 +821,9 @@
 
   'wasm/memory_2gb_oob': [SKIP], # OOM: sorry, best effort max memory size test
   'wasm/memory_4gb_oob': [SKIP], # OOM: sorry, best effort max memory size test
+
+  # This often fails in debug mode because it is too slow
+  'd8/d8-performance-now': [PASS, ['mode == debug', SKIP]],
 }],  # 'arch == riscv64 or arch == riscv'
 
 ##############################################################################
