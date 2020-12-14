@@ -362,7 +362,7 @@ void LiftoffAssembler::LoadConstant(LiftoffRegister reg, WasmValue value,
                                        value.to_f64_boxed().get_bits());
       break;
     default:
-      UNREACHABLE();
+      UNREACHABLE()
       // This is a test. DELETE ME!
       // This is another.
   }
