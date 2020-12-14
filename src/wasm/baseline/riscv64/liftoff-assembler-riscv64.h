@@ -2239,9 +2239,9 @@ void LiftoffAssembler::AssertUnreachable(AbortReason reason) {
 
 void LiftoffAssembler::PushRegisters(LiftoffRegList regs) {
   LiftoffRegList gp_regs = regs & kGpCacheRegList;
-  unsigned num_gp_regs = gp_regs.GetNumRegsSet();
+  int32_t num_gp_regs = gp_regs.GetNumRegsSet();
   if (num_gp_regs) {
-    unsigned offset = num_gp_regs * kSystemPointerSize;
+    int32_t offset = num_gp_regs * kSystemPointerSize;
     Add64(sp, sp, Operand(-offset));
     while (!gp_regs.is_empty()) {
       LiftoffRegister reg = gp_regs.GetFirstRegSet();
@@ -2252,10 +2252,10 @@ void LiftoffAssembler::PushRegisters(LiftoffRegList regs) {
     DCHECK_EQ(offset, 0);
   }
   LiftoffRegList fp_regs = regs & kFpCacheRegList;
-  unsigned num_fp_regs = fp_regs.GetNumRegsSet();
+  int32_t num_fp_regs = fp_regs.GetNumRegsSet();
   if (num_fp_regs) {
     Add64(sp, sp, Operand(-(num_fp_regs * kStackSlotSize)));
-    unsigned offset = 0;
+    int32_t offset = 0;
     while (!fp_regs.is_empty()) {
       LiftoffRegister reg = fp_regs.GetFirstRegSet();
       TurboAssembler::StoreDouble(reg.fp(), MemOperand(sp, offset));
@@ -2268,7 +2268,7 @@ void LiftoffAssembler::PushRegisters(LiftoffRegList regs) {
 
 void LiftoffAssembler::PopRegisters(LiftoffRegList regs) {
   LiftoffRegList fp_regs = regs & kFpCacheRegList;
-  unsigned fp_offset = 0;
+  int32_t fp_offset = 0;
   while (!fp_regs.is_empty()) {
     LiftoffRegister reg = fp_regs.GetFirstRegSet();
     TurboAssembler::LoadDouble(reg.fp(), MemOperand(sp, fp_offset));
@@ -2277,7 +2277,7 @@ void LiftoffAssembler::PopRegisters(LiftoffRegList regs) {
   }
   if (fp_offset) Add64(sp, sp, Operand(fp_offset));
   LiftoffRegList gp_regs = regs & kGpCacheRegList;
-  unsigned gp_offset = 0;
+  int32_t gp_offset = 0;
   while (!gp_regs.is_empty()) {
     LiftoffRegister reg = gp_regs.GetLastRegSet();
     Ld(reg.gp(), MemOperand(sp, gp_offset));

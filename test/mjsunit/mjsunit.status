@@ -821,10 +821,6 @@
 
   'wasm/memory_2gb_oob': [SKIP], # OOM: sorry, best effort max memory size test
   'wasm/memory_4gb_oob': [SKIP], # OOM: sorry, best effort max memory size test
-
-  # Issue 348 - seg fault
-  'wasm/compilation-hints-decoder': [SKIP],
-  'wasm/externref-liftoff': [SKIP],
 }],  # 'arch == riscv64 or arch == riscv'
 
 ##############################################################################
