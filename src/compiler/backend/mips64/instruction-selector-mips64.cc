@@ -2139,7 +2139,7 @@ void VisitWord32Compare(InstructionSelector* selector, Node* node,
 #else
   if (IsNodeUnsigned(node->InputAt(0)) != IsNodeUnsigned(node->InputAt(1)) ||
       node->InputAt(0)->opcode() == IrOpcode::kCall ||
-      node->InputAt(1)->opcode() == IrOpcode::kCall) {
+      node->InputAt(1)->opcode() == IrOpcode::kCall ) {
 #endif
     VisitFullWord32Compare(selector, node, kMips64Cmp, cont);
   } else {
