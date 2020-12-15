@@ -469,7 +469,7 @@ class Code : public HeapObject {
 #elif V8_TARGET_ARCH_RISCV64
   static constexpr int kHeaderPaddingSize = 24;
 #elif V8_TARGET_ARCH_RISCV
-#error riscv32 unsupported yet
+#error RISCV(32) architecture not supported
 #else
 #error Unknown architecture.
 #endif
