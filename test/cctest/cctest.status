@@ -366,7 +366,7 @@
 }],  # 'mips_arch_variant == r6'
 
 ##############################################################################
-['arch == riscv  or arch == riscv64', {
+['arch == riscv or arch == riscv64', {
   # this test is unstable, sometimes fail when running w/ other tests
   'test-cpu-profiler/CrossScriptInliningCallerLineNumbers2': [SKIP],
 
