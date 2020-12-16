@@ -1216,7 +1216,8 @@ DEFINE_STRING(sim_arm64_optional_features, "none",
               "all")
 DEFINE_BOOL(debug_riscv, false, "enable debug prints")
 // FIXME(Riscv): (https://github.com/v8-riscv/v8/issues/330)
-DEFINE_BOOL(disable_riscv_constant_pool, true, "disable constant pool (RISCV only)")
+DEFINE_BOOL(disable_riscv_constant_pool, true,
+            "disable constant pool (RISCV only)")
 
 // Controlling source positions for Torque/CSA code.
 DEFINE_BOOL(enable_source_at_csa_bind, false,
