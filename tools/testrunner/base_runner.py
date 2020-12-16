@@ -629,11 +629,6 @@ class BaseTestRunner(object):
       self.build_config.mips_arch_variant == "r6" and
       self.build_config.mips_use_msa)
 
-    # FIXME (RISCV): add sim_riscv flags in base_runner.py
-    simd_riscv = False
-      # (self.build_config.arch in ['riscv', 'riscv64'] and
-      # self.build_config.riscv_use_simd)
-
     mips_arch_variant = (
       self.build_config.arch in ['mipsel', 'mips', 'mips64', 'mips64el'] and
       self.build_config.mips_arch_variant)
@@ -662,7 +657,6 @@ class BaseTestRunner(object):
       "optimize_for_size": "--optimize-for-size" in options.extra_flags,
       "predictable": self.build_config.predictable,
       "simd_mips": simd_mips,
-      "simd_riscv": simd_riscv,
       "simulator_run": self.build_config.simulator_run and
                        not options.dont_skip_simulator_slow_tests,
       "system": self.target_os,
