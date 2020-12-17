@@ -191,13 +191,13 @@ inline void ChangeEndiannessLoad(LiftoffAssembler* assm, LiftoffRegister dst,
       assm->emit_type_conversion(kExprI32ReinterpretF32, tmp, dst);
       V8_FALLTHROUGH;
     case LoadType::kI32Load:
-      assm->TurboAssembler::ByteSwap(tmp.gp(), tmp.gp(), 4);
+      assm->TurboAssembler::ByteSwapSigned(tmp.gp(), tmp.gp(), 4);
       break;
     case LoadType::kI32Load16S:
-      assm->TurboAssembler::ByteSwap(tmp.gp(), tmp.gp(), 2);
+      assm->TurboAssembler::ByteSwapSigned(tmp.gp(), tmp.gp(), 2);
       break;
     case LoadType::kI32Load16U:
-      assm->TurboAssembler::ByteSwap(tmp.gp(), tmp.gp(), 2);
+      assm->TurboAssembler::ByteSwapUnsigned(tmp.gp(), tmp.gp(), 2);
       break;
     case LoadType::kF64Load:
       is_float = true;
@@ -206,23 +206,23 @@ inline void ChangeEndiannessLoad(LiftoffAssembler* assm, LiftoffRegister dst,
       V8_FALLTHROUGH;
     case LoadType::kI64Load:
       assm->TurboAssembler::Move(kScratchReg, tmp.low_gp());
-      assm->TurboAssembler::ByteSwap(tmp.low_gp(), tmp.high_gp(), 4);
-      assm->TurboAssembler::ByteSwap(tmp.high_gp(), kScratchReg, 4);
+      assm->TurboAssembler::ByteSwapSigned(tmp.low_gp(), tmp.high_gp(), 4);
+      assm->TurboAssembler::ByteSwapSigned(tmp.high_gp(), kScratchReg, 4);
       break;
     case LoadType::kI64Load16U:
-      assm->TurboAssembler::ByteSwap(tmp.low_gp(), tmp.low_gp(), 2);
+      assm->TurboAssembler::ByteSwapUnsigned(tmp.low_gp(), tmp.low_gp(), 2);
       assm->TurboAssembler::Move(tmp.high_gp(), zero_reg);
       break;
     case LoadType::kI64Load16S:
-      assm->TurboAssembler::ByteSwap(tmp.low_gp(), tmp.low_gp(), 2);
+      assm->TurboAssembler::ByteSwapSigned(tmp.low_gp(), tmp.low_gp(), 2);
       assm->sra(tmp.high_gp(), tmp.low_gp(), 31);
       break;
     case LoadType::kI64Load32U:
-      assm->TurboAssembler::ByteSwap(tmp.low_gp(), tmp.low_gp(), 4);
+      assm->TurboAssembler::ByteSwapSigned(tmp.low_gp(), tmp.low_gp(), 4);
       assm->TurboAssembler::Move(tmp.high_gp(), zero_reg);
       break;
     case LoadType::kI64Load32S:
-      assm->TurboAssembler::ByteSwap(tmp.low_gp(), tmp.low_gp(), 4);
+      assm->TurboAssembler::ByteSwapSigned(tmp.low_gp(), tmp.low_gp(), 4);
       assm->sra(tmp.high_gp(), tmp.low_gp(), 31);
       break;
     default:
@@ -258,10 +258,10 @@ inline void ChangeEndiannessStore(LiftoffAssembler* assm, LiftoffRegister src,
       assm->emit_type_conversion(kExprI32ReinterpretF32, tmp, src);
       V8_FALLTHROUGH;
     case StoreType::kI32Store:
-      assm->TurboAssembler::ByteSwap(tmp.gp(), tmp.gp(), 4);
+      assm->TurboAssembler::ByteSwapSigned(tmp.gp(), tmp.gp(), 4);
       break;
     case StoreType::kI32Store16:
-      assm->TurboAssembler::ByteSwap(tmp.gp(), tmp.gp(), 2);
+      assm->TurboAssembler::ByteSwapSigned(tmp.gp(), tmp.gp(), 2);
       break;
     case StoreType::kF64Store:
       is_float = true;
@@ -270,14 +270,14 @@ inline void ChangeEndiannessStore(LiftoffAssembler* assm, LiftoffRegister src,
       V8_FALLTHROUGH;
     case StoreType::kI64Store:
       assm->TurboAssembler::Move(kScratchReg, tmp.low_gp());
-      assm->TurboAssembler::ByteSwap(tmp.low_gp(), tmp.high_gp(), 4);
-      assm->TurboAssembler::ByteSwap(tmp.high_gp(), kScratchReg, 4);
+      assm->TurboAssembler::ByteSwapSigned(tmp.low_gp(), tmp.high_gp(), 4);
+      assm->TurboAssembler::ByteSwapSigned(tmp.high_gp(), kScratchReg, 4);
       break;
     case StoreType::kI64Store32:
-      assm->TurboAssembler::ByteSwap(tmp.low_gp(), tmp.low_gp(), 4);
+      assm->TurboAssembler::ByteSwapSigned(tmp.low_gp(), tmp.low_gp(), 4);
       break;
     case StoreType::kI64Store16:
-      assm->TurboAssembler::ByteSwap(tmp.low_gp(), tmp.low_gp(), 2);
+      assm->TurboAssembler::ByteSwapSigned(tmp.low_gp(), tmp.low_gp(), 2);
       break;
     default:
       UNREACHABLE();
@@ -930,7 +930,7 @@ I32_SHIFTOP_I(shr, srl)
 void LiftoffAssembler::emit_i64_addi(LiftoffRegister dst, LiftoffRegister lhs,
                                      int64_t imm) {
   LiftoffRegister imm_reg =
-      GetUnusedRegister(kFpReg, LiftoffRegList::ForRegs(dst, lhs));
+    GetUnusedRegister(kFpReg, LiftoffRegList::ForRegs(dst, lhs));
   int32_t imm_low_word = static_cast<int32_t>(imm);
   int32_t imm_high_word = static_cast<int32_t>(imm >> 32);
   TurboAssembler::li(imm_reg.low_gp(), imm_low_word);
