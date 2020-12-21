@@ -364,6 +364,7 @@ void LiftoffAssembler::LoadConstant(LiftoffRegister reg, WasmValue value,
     default:
       UNREACHABLE();
   }
+  
 }
 
 void LiftoffAssembler::LoadFromInstance(Register dst, int32_t offset,
