@@ -3398,7 +3398,7 @@ void MacroAssembler::StackOverflowCheck(Register num_args, Register scratch1,
   // here which will cause scratch1 to become negative.
   Sub64(scratch1, sp, scratch1);
   // Check if the arguments will overflow the stack.
-  Sll64(scratch2, num_args, kPointerSizeLog2);
+  Sll64(scratch2, num_args, kSystemPointerSizeLog2);
   // Signed comparison.
   Branch(stack_overflow, le, scratch1, Operand(scratch2));
 }
