@@ -1036,6 +1036,76 @@ void Assembler::GenInstrCS(uint8_t funct3, Opcode opcode, FPURegister rs2,
   emit(instr);
 }
 
+// vsetvl
+void Assembler::GenInstrV(Register rd, Register rs1, Register rs2) {
+    Instr instr = OP_V | ((rd.code() & 0xF) << kRvvRdShift) |
+                  (0x7 << 12) | ((rs1.code() & 0xF) << kRvvRs1Shift) |
+                  ((rs2.code() & 0xF) << kRvvRs2Shift) | 0x1 << 31;
+    emit(instr);
+}
+
+// vsetvli
+void Assembler::GenInstrV(Register rd, Register rs1, uint32_t zimm) {
+    Instr instr = OP_V | ((rd.code() & 0xF) << kRvvRdShift) |
+                  (0x7 << 12) | ((rs1.code() & 0xF) << kRvvRs1Shift) |
+                  ((zimm & 0xFFF) << kRvvZimmShift) | 0x0 << 31;
+    emit(instr);
+}
+
+void Assembler::GenInstrV(uint8_t funct6, VRegister vd, VRegister vs1,
+                          VRegister vs2, bool IsMask) {
+  UNIMPLEMENTED();
+}
+
+// OPMVV OPFVV OPIVV
+void Assembler::GenInstrV(uint8_t funct6, VRegister vd, Register rs1,
+                          VRegister vs2, bool IsMask) {
+  UNIMPLEMENTED();
+}
+
+// OPMVV OPFVV
+void Assembler::GenInstrV(uint8_t funct6, Register rd, VRegister vs1,
+                          VRegister vs2, bool IsMask) {
+  UNIMPLEMENTED();
+}
+// OPFVF
+void Assembler::GenInstrV(uint8_t funct6, Register rd, Register rs1,
+                          VRegister vs2, bool IsMask) {
+  UNIMPLEMENTED();
+}
+// OPIVI
+void Assembler::GenInstrV(uint8_t funct6, VRegister vd, uint8_t simm5,
+                          VRegister vs2, bool IsMask) {
+  UNIMPLEMENTED();
+}
+
+// VL VS
+void Assembler::GenInstrV(Opcode opcode, uint8_t width, VRegister vd,
+                          Register rs1, uint8_t umop, bool IsMask,
+                          uint8_t IsMop, bool IsMew, uint8_t Nf) {
+  DCHECK(opcode == LOAD_FP || pcode == STORE_FP);
+  UNIMPLEMENTED();
+}
+void Assembler::GenInstrV(Opcode opcode, uint8_t width, VRegister vd,
+                          Register rs1, Register rs2, bool IsMask, uint8_t Mop,
+                          bool IsMew, uint8_t Nf) {
+  DCHECK(opcode == LOAD_FP || pcode == STORE_FP);
+  UNIMPLEMENTED();
+}
+void Assembler::GenInstrV(Opcode opcode, uint8_t width, VRegister vd,
+                          Register rs1, VRegister vs2, bool IsMask, uint8_t Mop,
+                          bool IsMew, uint8_t Nf) {
+  DCHECK(opcode == LOAD_FP || pcode == STORE_FP);
+  UNIMPLEMENTED();
+}
+
+void Assembler::GenInstrV(Opcode opcode, uint8_t width, VRegister vd,
+                          Register rs1, VRegister vs2, bool IsMask, uint8_t Mop,
+                          bool IsMew, uint8_t Nf) {
+  DCHECK(opcode == AMO);
+  UNIMPLEMENTED();
+}
+
 // ----- Instruction class templates match those in the compiler
 
 void Assembler::GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,
@@ -2167,9 +2237,19 @@ void Assembler::c_j(int16_t imm12) {
   GenInstrCJ(0b101, C1, uimm11);
   BlockTrampolinePoolFor(1);
 }
+// RVV
+
+void Assembler::vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
+               TailAndInactiveType type) {
+   
+   GenInstrV()
+}
+
+void Assembler::vsetvl(Register rd, Register rs1, Register rs2) {
+   GenInstrV(rd,rs1,rs2);
+}
 
 // Privileged
-
 void Assembler::uret() {
   GenInstrPriv(0b0000000, ToRegister(0), ToRegister(0b00010));
 }

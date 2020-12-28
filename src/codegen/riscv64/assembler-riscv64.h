@@ -623,7 +623,11 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_sw(Register rs2, Register rs1, uint16_t uimm7);
   void c_sd(Register rs2, Register rs1, uint16_t uimm8);
   void c_fsd(FPURegister rs2, Register rs1, uint16_t uimm8);
-
+  
+  // RVV
+  void vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
+               TailAndInactiveType type);
+  void vsetvl(Register rd, Register rs1, Register rs2);
   // Privileged
   void uret();
   void sret();
@@ -1093,6 +1097,38 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void GenInstrCS(uint8_t funct3, Opcode opcode, FPURegister rs2, Register rs1,
                   uint8_t uimm5);
   void GenInstrCJ(uint8_t funct3, Opcode opcode, uint16_t uint11);
+
+  // ----------------------------RVV------------------------------------------
+  // vsetvl
+  void GenInstrV(Register rd, Register rs1, Register rs2);
+  // vsetvli
+  void GenInstrV(Register rd, Register rs1, uint32_t zimm);
+  // OPIVV OPFVV OPMVV
+  void GenInstrV(uint8_t funct6, VRegister vd, VRegister vs1, VRegister vs2,
+                 bool IsMask);
+  // OPMVV OPFVV OPIVV
+  void GenInstrV(uint8_t funct6, VRegister vd, Register rs1, VRegister vs2,
+                 bool IsMask);
+  // OPMVV OPFVV
+  void GenInstrV(uint8_t funct6, Register rd, VRegister vs1, VRegister vs2,
+                 bool IsMask);
+  // OPFVF
+  void GenInstrV(uint8_t funct6, Register rd, Register rs1, VRegister vs2,
+                 bool IsMask);
+  // OPIVI
+  void GenInstrV(uint8_t funct6, VRegister vd, uint8_t simm5, VRegister vs2,
+                 bool IsMask);
+
+  // VL VS
+  void GenInstrV(Opcode opcode, uint8_t width, VRegister vd, Register rs1,
+                 uint8_t umop, bool IsMask, uint8_t IsMop, bool IsMew,
+                 bool IsNf);
+  void GenInstrV(Opcode opcode, uint8_t width, VRegister vd, Register rs1,
+                 Register rs2, bool IsMask, uint8_t Mop, bool IsMew,
+                 uint8_t Nf);
+  void GenInstrV(Opcode opcode, uint8_t width, VRegister vd, Register rs1,
+                 VRegister vs2, bool IsMask, uint8_t Mop, bool IsMew,
+                 uint8_t Nf);
 
   // ----- Instruction class templates match those in LLVM's RISCVInstrInfo.td
   void GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,

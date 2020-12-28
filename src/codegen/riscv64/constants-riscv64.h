@@ -214,6 +214,46 @@ const int kRvcFunct2Bits = 2;
 const int kRvcFunct6Shift = 10;
 const int kRvcFunct6Bits = 6;
 
+// for RVV extension
+const int kRvvFunct6Shift = 26;
+const int kRvvFunct6Bits = 6;
+const int kRvvFunct6Mask = (((1 << kFunct6Bits) - 1) << kFunct6Shift);
+
+const int kRvvVmBits = 1;
+const int kRvvVmShift = 25;
+const int kRvvVmMask = (((1 << kRvvVmBits) - 1) << kRvvVmShift);
+
+const int kRvvVs2Bits = 5;
+const int kRvvVs2Shift = 20;
+const int kRvvVs2Mask = (((1 << kRvvVs2Bits) - 1) << kRvvVs2Shift);
+
+const int kRvvVs1Bits = 5;
+const int kRvvVs1Shift = 15;
+const int kRvvVs1Mask = (((1 << kRvvVs1Bits) - 1) << kRvvVs1Shift);
+
+const int kRvvRs1Bits = kRvvVs1Bits;
+const int kRvvRs1Shift =kRvvVs1Shift;
+const int kRvvVs1Mask = (((1 << kRvvRs1Bits) - 1) << kRvvRs1Shift);
+
+const int kRvvRs2Bits = 5;
+const int kRvvRs2Shift = 20;
+const int kRvvRs2Mask = (((1 << kRvvRs2Bits) - 1) << kRvvRs2Shift);
+
+const int kRvvSimm5Bits = kRvvVs1Bits;
+const int kRvvSimm5Shift = kRvvVs1Shift;
+const int kRvvSimm5Mask = (((1 << kRvvSimm5Bits) - 1) << kRvvSimm5Shift);
+
+const int kRvvVdBits = 5;
+const int kRvvVdShift = 7;
+const int kRvvVdMask = (((1 << kRvvVdBits) - 1) << kRvvVdShift);
+
+const int kRvvRdBits = kRvvVdBits;
+const int kRvvRdShift = kRvvVdShift;
+const int kRvvRdMask = (((1 << kRvvRdBits) - 1) << kRvvRdShift);
+
+const int kRvvZimmBits = 11;
+const int kRvvZimmShift = 20;
+const int kRvvZimmMask = (((1 << kRvvVs1Bits) - 1) << kRvvVs1Shift);
 // RISCV Instruction bit masks
 const int kBaseOpcodeMask = ((1 << kBaseOpcodeBits) - 1) << kBaseOpcodeShift;
 const int kFunct3Mask = ((1 << kFunct3Bits) - 1) << kFunct3Shift;
@@ -525,6 +565,20 @@ enum Opcode : uint32_t {
   RO_C_FSDSP = C2 | (0b101 << kRvcFunct3Shift),
   RO_C_SWSP = C2 | (0b110 << kRvcFunct3Shift),
   RO_C_SDSP = C2 | (0b111 << kRvcFunct3Shift),
+
+  // RVV Extension
+  OP_V  = 0b1010111,
+  OP_IVV = OP_V | (0b000 << kFunct3Shift),
+  OP_FVV = OP_V | (0b001 << kFunct3Shift),
+  OP_MVV = OP_V | (0b010 << kFunct3Shift),
+  OP_IVI = OP_V | (0b011 << kFunct3Shift),
+  OP_IVX = OP_V | (0b100 << kFunct3Shift),
+  OP_FVF = OP_V | (0b101 << kFunct3Shift),
+  OP_MVX = OP_V | (0b110 << kFunct3Shift),
+
+  RO_V_VSETVLI = OP_V | (0b111 << kFunct3Shift) | 0b0 << 31,
+  RO_V_VSETVL = OP_V | (0b111 << kFunct3Shift) | 0b1 << 31,
+
 };
 
 // ----- Emulated conditions.
@@ -671,17 +725,35 @@ enum FClassFlag {
   kQuietNaN = 1 << 9
 };
 
+enum VSew { E8 = 0x0, E16, E32, E64, E128, E256, E512, E1024 };
+
+enum Vlmul {
+  m1 = 0b000,
+  m2 = 0b001,
+  m4 = 0b010,
+  m8 = 0b011,
+  mf8 = 0b100,
+  mf4 = 0b101,
+  mf2 = 0b110,
+  mf1 = 0b111,
+};
+
+enum TailAndInactiveType {
+  ta,  // Tail agnostic
+  tu,  // Tail undisturbed
+  ma,  // Mask agnostic
+  mu,  // Mask undisturbed
+}
+
 // -----------------------------------------------------------------------------
 // Hints.
 
 // Branch hints are not used on RISC-V.  They are defined so that they can
 // appear in shared function signatures, but will be ignored in RISC-V
 // implementations.
-enum Hint { no_hint = 0 };
-
-inline Hint NegateHint(Hint hint) { return no_hint; }
-
-// -----------------------------------------------------------------------------
+enum Hint {
+  no_hint = 0
+};
 // Specific instructions, constants, and masks.
 // These constants are declared in assembler-riscv64.cc, as they use named
 // registers and other constants.
@@ -724,6 +796,18 @@ class InstructionBase {
     kCAType,
     kCBType,
     kCJType,
+    // V extension
+    kVLType,
+    kVSType,
+    kVAMOType,
+    kVIVVType,
+    kVFVVType,
+    kVMVVType,
+    kVIVIType,
+    kVIVXType,
+    kVFVFType,
+    kVMVXType,
+    kVSETType,
     kUnsupported = -1
   };
 
