@@ -1083,29 +1083,22 @@ void Assembler::GenInstrV(uint8_t funct6, VRegister vd, uint8_t simm5,
 void Assembler::GenInstrV(Opcode opcode, uint8_t width, VRegister vd,
                           Register rs1, uint8_t umop, bool IsMask,
                           uint8_t IsMop, bool IsMew, uint8_t Nf) {
-  DCHECK(opcode == LOAD_FP || pcode == STORE_FP);
+  DCHECK(opcode == LOAD_FP || opcode == STORE_FP);
   UNIMPLEMENTED();
 }
 void Assembler::GenInstrV(Opcode opcode, uint8_t width, VRegister vd,
                           Register rs1, Register rs2, bool IsMask, uint8_t Mop,
                           bool IsMew, uint8_t Nf) {
-  DCHECK(opcode == LOAD_FP || pcode == STORE_FP);
+  DCHECK(opcode == LOAD_FP || opcode == STORE_FP);
   UNIMPLEMENTED();
 }
+// VL VS AMO
 void Assembler::GenInstrV(Opcode opcode, uint8_t width, VRegister vd,
                           Register rs1, VRegister vs2, bool IsMask, uint8_t Mop,
                           bool IsMew, uint8_t Nf) {
-  DCHECK(opcode == LOAD_FP || pcode == STORE_FP);
+  DCHECK(opcode == LOAD_FP || opcode == STORE_FP || opcode == AMO);
   UNIMPLEMENTED();
 }
-
-void Assembler::GenInstrV(Opcode opcode, uint8_t width, VRegister vd,
-                          Register rs1, VRegister vs2, bool IsMask, uint8_t Mop,
-                          bool IsMew, uint8_t Nf) {
-  DCHECK(opcode == AMO);
-  UNIMPLEMENTED();
-}
-
 // ----- Instruction class templates match those in the compiler
 
 void Assembler::GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,
@@ -2240,13 +2233,14 @@ void Assembler::c_j(int16_t imm12) {
 // RVV
 
 void Assembler::vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
-               TailAndInactiveType type) {
-   
-   GenInstrV()
+                        TailAndInactiveType tail, TailAndInactiveType mask) {
+  int32_t zimm = (mask << 7) | (tail << 6) | ((vlmul & 0b100) << 5) |
+                 ((vsew & 0x7) << 2) | (vlmul & 0b11);
+  GenInstrV(rd, rs1, zimm);
 }
 
 void Assembler::vsetvl(Register rd, Register rs1, Register rs2) {
-   GenInstrV(rd,rs1,rs2);
+  GenInstrV(rd, rs1, rs2);
 }
 
 // Privileged

@@ -190,6 +190,8 @@ InstructionBase::Type InstructionBase::InstructionType() const {
         return kJType;
       case SYSTEM:
         return kIType;
+      case OP_V:
+        return kVType;
     }
   }
   return kUnsupported;

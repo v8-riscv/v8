@@ -217,7 +217,7 @@ const int kRvcFunct6Bits = 6;
 // for RVV extension
 const int kRvvFunct6Shift = 26;
 const int kRvvFunct6Bits = 6;
-const int kRvvFunct6Mask = (((1 << kFunct6Bits) - 1) << kFunct6Shift);
+const int kRvvFunct6Mask = (((1 << kRvvFunct6Bits) - 1) << kRvvFunct6Shift);
 
 const int kRvvVmBits = 1;
 const int kRvvVmShift = 25;
@@ -233,7 +233,7 @@ const int kRvvVs1Mask = (((1 << kRvvVs1Bits) - 1) << kRvvVs1Shift);
 
 const int kRvvRs1Bits = kRvvVs1Bits;
 const int kRvvRs1Shift =kRvvVs1Shift;
-const int kRvvVs1Mask = (((1 << kRvvRs1Bits) - 1) << kRvvRs1Shift);
+const int kRvvRs1Mask = (((1 << kRvvRs1Bits) - 1) << kRvvRs1Shift);
 
 const int kRvvRs2Bits = 5;
 const int kRvvRs2Shift = 20;
@@ -254,6 +254,8 @@ const int kRvvRdMask = (((1 << kRvvRdBits) - 1) << kRvvRdShift);
 const int kRvvZimmBits = 11;
 const int kRvvZimmShift = 20;
 const int kRvvZimmMask = (((1 << kRvvVs1Bits) - 1) << kRvvVs1Shift);
+
+
 // RISCV Instruction bit masks
 const int kBaseOpcodeMask = ((1 << kBaseOpcodeBits) - 1) << kBaseOpcodeShift;
 const int kFunct3Mask = ((1 << kFunct3Bits) - 1) << kFunct3Shift;
@@ -269,6 +271,7 @@ const int kSTypeMask = kBaseOpcodeMask | kFunct3Mask;
 const int kBTypeMask = kBaseOpcodeMask | kFunct3Mask;
 const int kUTypeMask = kBaseOpcodeMask;
 const int kJTypeMask = kBaseOpcodeMask;
+const int kVTypeMask = kRvvFunct6Mask | kBaseOpcodeMask;
 const int kRs1FieldMask = ((1 << kRs1Bits) - 1) << kRs1Shift;
 const int kRs2FieldMask = ((1 << kRs2Bits) - 1) << kRs2Shift;
 const int kRs3FieldMask = ((1 << kRs3Bits) - 1) << kRs3Shift;
@@ -739,11 +742,11 @@ enum Vlmul {
 };
 
 enum TailAndInactiveType {
-  ta,  // Tail agnostic
-  tu,  // Tail undisturbed
-  ma,  // Mask agnostic
-  mu,  // Mask undisturbed
-}
+  ta = 0x1,  // Tail agnostic
+  tu = 0x0,  // Tail undisturbed
+  ma = 0x1,  // Mask agnostic
+  mu = 0x0,  // Mask undisturbed
+};
 
 // -----------------------------------------------------------------------------
 // Hints.
@@ -797,6 +800,7 @@ class InstructionBase {
     kCBType,
     kCJType,
     // V extension
+    kVType,
     kVLType,
     kVSType,
     kVAMOType,
@@ -907,7 +911,8 @@ class InstructionGetters : public T {
            this->InstructionType() == InstructionBase::kR4Type ||
            this->InstructionType() == InstructionBase::kIType ||
            this->InstructionType() == InstructionBase::kSType ||
-           this->InstructionType() == InstructionBase::kBType);
+           this->InstructionType() == InstructionBase::kBType ||
+           this->InstructionType() == InstructionBase::kVType);
     return this->Bits(kRs1Shift + kRs1Bits - 1, kRs1Shift);
   }
 
@@ -915,7 +920,8 @@ class InstructionGetters : public T {
     DCHECK(this->InstructionType() == InstructionBase::kRType ||
            this->InstructionType() == InstructionBase::kR4Type ||
            this->InstructionType() == InstructionBase::kSType ||
-           this->InstructionType() == InstructionBase::kBType);
+           this->InstructionType() == InstructionBase::kBType ||
+           this->InstructionType() == InstructionBase::kVType);
     return this->Bits(kRs2Shift + kRs2Bits - 1, kRs2Shift);
   }
 
@@ -929,7 +935,8 @@ class InstructionGetters : public T {
            this->InstructionType() == InstructionBase::kR4Type ||
            this->InstructionType() == InstructionBase::kIType ||
            this->InstructionType() == InstructionBase::kUType ||
-           this->InstructionType() == InstructionBase::kJType);
+           this->InstructionType() == InstructionBase::kJType ||
+           this->InstructionType() == InstructionBase::kVType);
     return this->Bits(kRdShift + kRdBits - 1, kRdShift);
   }
 

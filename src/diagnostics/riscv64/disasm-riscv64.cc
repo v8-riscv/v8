@@ -118,7 +118,7 @@ class Decoder {
   void DecodeCLType(Instruction* instr);
   void DecodeCSType(Instruction* instr);
   void DecodeCJType(Instruction* instr);
-
+  void DecodeVType(Instruction* instr);
   // Printing of instruction name.
   void PrintInstructionName(Instruction* instr);
 
@@ -1721,6 +1721,43 @@ void Decoder::DecodeCSType(Instruction* instr) {
   }
 }
 
+void Decoder::DecodeVType(Instruction* instr) {
+  switch (instr->InstructionBits() & kVTypeMask) {
+    case OP_IVV:
+      UNSUPPORTED_RISCV();
+      break;
+    case OP_FVV:
+      UNSUPPORTED_RISCV();
+      break;
+    case OP_MVV:
+      UNSUPPORTED_RISCV();
+      break;
+    case OP_IVI:
+      UNSUPPORTED_RISCV();
+      break;
+    case OP_IVX:
+      UNSUPPORTED_RISCV();
+      break;
+    case OP_FVF:
+      UNSUPPORTED_RISCV();
+      break;
+    case OP_MVX:
+      UNSUPPORTED_RISCV();
+      break;
+  }
+  switch (instr->InstructionBits() & (kBaseOpcodeMask |kFunct3Mask| 0x80000000)) {
+    case RO_V_VSETVLI:
+      Format(instr, "vsetvli       'rd, 'rs1");
+      break;
+    case RO_V_VSETVL:
+      Format(instr, "vsetvl       'rd, 'rs1,  'rs2");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+      break;
+  }
+}
+
 void Decoder::DecodeCJType(Instruction* instr) {
   switch (instr->RvcOpcode()) {
     case RO_C_J:
@@ -1785,6 +1822,9 @@ int Decoder::InstructionDecode(byte* instr_ptr) {
       break;
     case Instruction::kCSType:
       DecodeCSType(instr);
+      break;
+    case Instruction::kVType:
+      DecodeVType(instr);
       break;
     default:
       Format(instr, "UNSUPPORTED");
