@@ -507,6 +507,12 @@ TEST(RV64C) {
   VERIFY_RUN();
 }
 
+TEST(RV64V) {
+  SET_UP();
+  COMPARE(vsetvl(a1, a2, a3), "80d675d7       vsetvl       a1, a2,  a3");
+  VERIFY_RUN();
+}
+
 /*
 TEST(Previleged) {
   SET_UP();
