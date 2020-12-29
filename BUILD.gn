@@ -857,6 +857,7 @@ config("toolchain") {
   if (v8_current_cpu == "riscv64") {
     defines += [ "V8_TARGET_ARCH_RISCV64" ]
     defines += [ "__riscv_xlen=64" ]
+    defines += [ "__riscv_compressed" ]
 
     #FIXME: Temporarily use MIPS macro for the building.
     defines += [ "CAN_USE_FPU_INSTRUCTIONS" ]
