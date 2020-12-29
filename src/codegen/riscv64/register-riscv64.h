@@ -278,6 +278,8 @@ using FloatRegister = FPURegister;
 
 using DoubleRegister = FPURegister;
 
+using Simd128Register = VRegister;
+
 #define DECLARE_DOUBLE_REGISTER(R) \
   constexpr DoubleRegister R = DoubleRegister::from_code(kDoubleCode_##R);
 DOUBLE_REGISTERS(DECLARE_DOUBLE_REGISTER)
@@ -306,7 +308,7 @@ constexpr DoubleRegister kDoubleRegZero = fs9;
 // Define {RegisterName} methods for the register types.
 DEFINE_REGISTER_NAMES(Register, GENERAL_REGISTERS)
 DEFINE_REGISTER_NAMES(FPURegister, DOUBLE_REGISTERS)
-DEFINE_REGISTER_NAMES(MSARegister, SIMD128_REGISTERS)
+DEFINE_REGISTER_NAMES(VRegister, VECTOR_REGISTERS)
 
 // Give alias names to registers for calling conventions.
 constexpr Register kReturnRegister0 = a0;

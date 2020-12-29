@@ -626,7 +626,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   
   // RVV
   void vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
-               TailAndInactiveType type);
+               TailAndInactiveType tail, TailAndInactiveType mask);
   void vsetvl(Register rd, Register rs1, Register rs2);
   // Privileged
   void uret();
@@ -1120,10 +1120,12 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   // VL VS
   void GenInstrV(Opcode opcode, uint8_t width, VRegister vd, Register rs1,
                  uint8_t umop, bool IsMask, uint8_t IsMop, bool IsMew,
-                 bool IsNf);
+                 uint8_t Nf);
+
   void GenInstrV(Opcode opcode, uint8_t width, VRegister vd, Register rs1,
                  Register rs2, bool IsMask, uint8_t Mop, bool IsMew,
                  uint8_t Nf);
+  // VL VS AMO
   void GenInstrV(Opcode opcode, uint8_t width, VRegister vd, Register rs1,
                  VRegister vs2, bool IsMask, uint8_t Mop, bool IsMew,
                  uint8_t Nf);
