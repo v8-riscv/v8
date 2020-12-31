@@ -1094,10 +1094,11 @@ class V8_EXPORT_PRIVATE MacroAssembler : public TurboAssembler {
   void SmiTag(Register dst, Register src) {
     STATIC_ASSERT(kSmiTag == 0);
     if (SmiValuesAre32Bits()) {
-      // FIXME(RISCV): do not understand the logic here
+      // Smi goes to upper 32
       slli(dst, src, 32);
     } else {
       DCHECK(SmiValuesAre31Bits());
+      // Smi is shifted left by 1
       Add32(dst, src, src);
     }
   }
