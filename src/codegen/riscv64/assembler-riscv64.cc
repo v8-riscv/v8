@@ -2573,7 +2573,6 @@ void Assembler::AdjustBaseAndOffset(MemOperand* src, Register scratch,
   src->rm_ = scratch;
 }
 
-// FIXME (RISCV): not yet ported (or not used?)
 int Assembler::RelocateInternalReference(RelocInfo::Mode rmode, Address pc,
                                          intptr_t pc_delta) {
   if (RelocInfo::IsInternalReference(rmode)) {
