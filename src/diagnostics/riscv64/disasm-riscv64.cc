@@ -1391,7 +1391,6 @@ void Decoder::DecodeIType(Instruction* instr) {
       Format(instr, "fence.i");
       break;
     // TODO(riscv): use Zicsr Standard Extension macro block
-    // FIXME(RISC-V): Add special formatting for CSR registers
     case RO_CSRRW:
       if (instr->CsrValue() == csr_fcsr) {
         if (instr->RdValue() == zero_reg.code())
