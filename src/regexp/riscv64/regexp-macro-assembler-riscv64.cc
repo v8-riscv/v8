@@ -39,7 +39,6 @@ namespace internal {
  * Each call to a public method should retain this convention.
  *
  * The stack will have the following structure:
- * FIXME(RISCV): Verify that this stack description is correct
  *
  *  - fp[80]  Isolate* isolate   (address of the current isolate)               kIsolate
  *                                                                              kStackFrameHeader
