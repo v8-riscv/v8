@@ -2830,17 +2830,10 @@ Address Assembler::target_address_at(Address pc) {
 //  slli(reg, reg, 6); // Space for next 6 bits
 //  ori(reg, reg, a6); // 6 bits are put in. all 48 bis in reg
 //
-// Patching the address must replace all instructions,
-// and flush the i-cache.
+// Patching the address must replace all instructions, and flush the i-cache.
+// Note that this assumes the use of SV48, the 48-bit virtual memory system.
 void Assembler::set_target_value_at(Address pc, uint64_t target,
                                     ICacheFlushMode icache_flush_mode) {
-  // FIXME(RISC-V): Does the below statement apply to RISC-V? If so, we do not
-  //   need all 8 instructions.
-  // There is an optimization where only 4 instructions are used to load address
-  // in code on MIP64 because only 48-bits of address is effectively used.
-  // It relies on fact the upper [63:48] bits are not used for virtual address
-  // translation and they have to be set according to value of bit 47 in order
-  // get canonical address.
   DEBUG_PRINTF("set_target_value_at: pc: %lx\ttarget: %lx\n", pc, target);
   uint32_t* p = reinterpret_cast<uint32_t*>(pc);
   DCHECK_EQ((target & 0xffff000000000000ll), 0);
