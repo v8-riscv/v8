@@ -22,6 +22,8 @@ constexpr RegList kLiftoffAssemblerGpCacheRegs =
 constexpr RegList kLiftoffAssemblerFpCacheRegs =
     DoubleRegister::ListOf(xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6);
 
+constexpr RegList kLiftoffAssemblerVpCacheRegs = 0x0;
+
 #elif V8_TARGET_ARCH_X64
 
 constexpr RegList kLiftoffAssemblerGpCacheRegs =
@@ -29,6 +31,8 @@ constexpr RegList kLiftoffAssemblerGpCacheRegs =
 
 constexpr RegList kLiftoffAssemblerFpCacheRegs =
     DoubleRegister::ListOf(xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7);
+
+constexpr RegList kLiftoffAssemblerVpCacheRegs = 0x0;
 
 #elif V8_TARGET_ARCH_MIPS
 
@@ -38,6 +42,8 @@ constexpr RegList kLiftoffAssemblerGpCacheRegs =
 constexpr RegList kLiftoffAssemblerFpCacheRegs = DoubleRegister::ListOf(
     f0, f2, f4, f6, f8, f10, f12, f14, f16, f18, f20, f22, f24);
 
+constexpr RegList kLiftoffAssemblerVpCacheRegs = 0x0;
+
 #elif V8_TARGET_ARCH_MIPS64
 
 constexpr RegList kLiftoffAssemblerGpCacheRegs =
@@ -45,6 +51,8 @@ constexpr RegList kLiftoffAssemblerGpCacheRegs =
 
 constexpr RegList kLiftoffAssemblerFpCacheRegs = DoubleRegister::ListOf(
     f0, f2, f4, f6, f8, f10, f12, f14, f16, f18, f20, f22, f24, f26);
+
+constexpr RegList kLiftoffAssemblerVpCacheRegs = 0x0;
 
 #elif V8_TARGET_ARCH_ARM
 
@@ -55,6 +63,8 @@ constexpr RegList kLiftoffAssemblerGpCacheRegs =
 // d13: zero, d14-d15: scratch
 constexpr RegList kLiftoffAssemblerFpCacheRegs = LowDwVfpRegister::ListOf(
     d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12);
+
+constexpr RegList kLiftoffAssemblerVpCacheRegs = 0x0;
 
 #elif V8_TARGET_ARCH_ARM64
 
@@ -69,6 +79,8 @@ constexpr RegList kLiftoffAssemblerFpCacheRegs = CPURegister::ListOf(
     d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d16, d17,
     d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29);
 
+constexpr RegList kLiftoffAssemblerVpCacheRegs = 0x0;
+
 #elif V8_TARGET_ARCH_S390X
 
 constexpr RegList kLiftoffAssemblerGpCacheRegs =
@@ -76,6 +88,8 @@ constexpr RegList kLiftoffAssemblerGpCacheRegs =
 
 constexpr RegList kLiftoffAssemblerFpCacheRegs = DoubleRegister::ListOf(
     d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12);
+
+constexpr RegList kLiftoffAssemblerVpCacheRegs = 0x0;
 
 #elif V8_TARGET_ARCH_RISCV64
 
@@ -90,6 +104,10 @@ constexpr RegList kLiftoffAssemblerFpCacheRegs =
     DoubleRegister::ListOf(ft0, ft1, ft2, ft3, ft4, ft5, ft6, ft7, fa0, fa1,
                            fa2, fa3, fa4, fa5, fa6, fa7, ft8, ft9, ft10, ft11);
 
+constexpr RegList kLiftoffAssemblerVpCacheRegs =
+    Simd128Register::ListOf(v1, v2, v3, v3, v4, v5, v6, v7, v0, v1, v2, v3, v4,
+                            v5, v6, v7, v8, v9, v10, v11);
+
 #elif V8_TARGET_ARCH_RISCV
 
 #error RISCV(32) architecture not supported
@@ -100,6 +118,7 @@ constexpr RegList kLiftoffAssemblerGpCacheRegs = 0xff;
 
 constexpr RegList kLiftoffAssemblerFpCacheRegs = 0xff;
 
+constexpr RegList kLiftoffAssemblerVpCacheRegs = 0xff;
 #endif
 }  // namespace wasm
 }  // namespace internal

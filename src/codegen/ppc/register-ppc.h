@@ -211,6 +211,7 @@ constexpr Register cp = r30;                     // JavaScript context pointer.
 
 constexpr bool kPadArguments = false;
 constexpr bool kSimpleFPAliasing = true;
+constexpr bool kHasVReg = false;
 constexpr bool kSimdMaskRegisters = false;
 
 enum DoubleRegisterCode {

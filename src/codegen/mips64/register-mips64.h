@@ -206,6 +206,7 @@ Register ToRegister(int num);
 constexpr bool kPadArguments = false;
 constexpr bool kSimpleFPAliasing = true;
 constexpr bool kSimdMaskRegisters = false;
+constexpr bool kHasVReg = false;
 
 enum MSARegisterCode {
 #define REGISTER_CODE(R) kMsaCode_##R,
