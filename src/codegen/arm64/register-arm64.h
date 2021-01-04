@@ -244,6 +244,7 @@ ASSERT_TRIVIALLY_COPYABLE(Register);
 constexpr bool kPadArguments = true;
 constexpr bool kSimpleFPAliasing = true;
 constexpr bool kSimdMaskRegisters = false;
+constexpr bool kHasVReg = false;
 
 enum DoubleRegisterCode {
 #define REGISTER_CODE(R) kDoubleCode_##R,

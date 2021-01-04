@@ -122,6 +122,7 @@ constexpr Register no_reg = Register::no_reg();
 constexpr bool kPadArguments = false;
 constexpr bool kSimpleFPAliasing = false;
 constexpr bool kSimdMaskRegisters = false;
+constexpr bool kHasVReg = false;
 
 enum SwVfpRegisterCode {
 #define REGISTER_CODE(R) kSwVfpCode_##R,

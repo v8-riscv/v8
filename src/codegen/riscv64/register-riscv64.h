@@ -222,6 +222,7 @@ Register ToRegister(int num);
 
 constexpr bool kPadArguments = false;
 constexpr bool kSimpleFPAliasing = true;
+constexpr bool kHasVReg = true;
 constexpr bool kSimdMaskRegisters = false;
 
 enum DoubleRegisterCode {
