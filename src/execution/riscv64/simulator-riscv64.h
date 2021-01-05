@@ -299,6 +299,42 @@ class Simulator : public SimulatorBase {
     kNumFPURegisters
   };
 
+  enum VRegister {
+    v0,
+    v1,
+    v2,
+    v3,
+    v4,
+    v5,
+    v6,
+    v7,
+    v8,
+    v9,
+    v10,
+    v11,
+    v12,
+    v13,
+    v14,
+    v15,
+    v16,
+    v17,
+    v18,
+    v19,
+    v20,
+    v21,
+    v22,
+    v23,
+    v24,
+    v25,
+    v26,
+    v27,
+    v28,
+    v29,
+    v30,
+    v31,
+    kNumVRegisters
+  };
+
   explicit Simulator(Isolate* isolate);
   ~Simulator();
 
@@ -545,6 +581,62 @@ class Simulator : public SimulatorBase {
     }
   }
 
+  // RVV
+
+  inline int32_t rvv_vs1_reg() { UNIMPLEMENTED(); }
+  inline __int128_t rvv_vs1() { UNIMPLEMENTED(); }
+  inline int32_t rvv_vs2_reg() { UNIMPLEMENTED(); }
+  inline __int128_t rvv_vs2() { UNIMPLEMENTED(); }
+  inline int32_t rvv_vd_reg() { UNIMPLEMENTED(); }
+  inline __int128_t rvv_vd() { UNIMPLEMENTED(); }
+  inline void set_vrd() { UNIMPLEMENTED(); }
+  
+  inline uint64_t rvv_vlen() const {return kRvvVLEN;}
+  inline uint64_t rvv_vtype() const { return vtype_; }
+  inline uint64_t rvv_vl() const { return vl_; }
+  inline uint64_t rvv_vstart() const { return vstart_; }
+  inline uint64_t rvv_vxsat() const { return vxsat_; }
+  inline uint64_t rvv_vxrm() const { return vxrm_; }
+  inline uint64_t rvv_vcsr() const { return vcsr_; }
+  inline uint64_t rvv_vlenb() const { return vlenb_; }
+  inline uint32_t rvv_zimm() const { return instr_.Rvvzimm(); }
+  inline uint32_t rvv_vlmul() const {
+    return (rvv_vtype() & 0x20) >> 3 || (rvv_vtype() & 0x3);
+  }
+  inline uint32_t rvv_vsew() const { return (rvv_vtype() & 0x1C) >> 2; }
+  inline uint32_t rvv_sew() const {
+    DCHECK_EQ(rvv_vsew() & (~0x7), 0x0);
+    return (0x1 << rvv_vsew()) * 8;
+  }
+  inline uint64_t rvv_vlmax() const {
+    if ((rvv_vlmul() & 0b100) != 0) {
+      return (rvv_vlen() / rvv_sew()) >> (rvv_vlmul() & 0b11);
+    } else {
+      return (rvv_vlen() / rvv_sew()) << rvv_vlmul();
+    }
+  }
+  inline void set_rvv_vtype(uint64_t value, bool trace = true) {   
+    vtype_ = value;                                                 
+  }
+  inline void set_rvv_vl(uint64_t value, bool trace = true) {   
+    vl_ = value;                                                 
+  }
+  inline void set_rvv_vstart(uint64_t value, bool trace = true) {   
+    vstart_ = value;                                                 
+  }
+  inline void set_rvv_vxsat(uint64_t value, bool trace = true) {   
+    vxsat_ = value;                                                 
+  }
+  inline void set_rvv_vxrm(uint64_t value, bool trace = true) {   
+    vxrm_ = value;                                                 
+  }
+  inline void set_rvv_vcsr(uint64_t value, bool trace = true) {   
+    vcsr_ = value;                                                 
+  }
+  inline void set_rvv_vlenb(uint64_t value, bool trace = true) {   
+    vlenb_ = value;                                                 
+  }
+
   template <typename T, typename Func>
   inline T CanonicalizeFPUOp3(Func fn) {
     DCHECK(std::is_floating_point<T>::value);
@@ -627,6 +719,7 @@ class Simulator : public SimulatorBase {
   void DecodeCLType();
   void DecodeCSType();
   void DecodeCJType();
+  void DecodeVType();
 
   // Used for breakpoints and traps.
   void SoftwareInterrupt();
@@ -692,6 +785,10 @@ class Simulator : public SimulatorBase {
   int64_t FPUregisters_[kNumFPURegisters];
   // Floating-point control and status register.
   uint32_t FCSR_;
+
+  //RVV registers
+  __int128_t Vregister_[kNumVRegisters];
+  uint64_t vstart_, vxsat_, vxrm_, vcsr_, vtype_, vl_, vlenb_;
 
   // Simulator support.
   // Allocate 1MB for stack.
