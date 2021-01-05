@@ -374,6 +374,32 @@ class Simulator : public SimulatorBase {
   void set_fflags(uint32_t flags) { set_csr_bits(csr_fflags, flags); }
   void clear_fflags(int32_t flags) { clear_csr_bits(csr_fflags, flags); }
 
+  // RVV CSR
+  inline uint64_t rvv_vlen() const { return kRvvVLEN; }
+  inline uint64_t rvv_vtype() const { return vtype_; }
+  inline uint64_t rvv_vl() const { return vl_; }
+  inline uint64_t rvv_vstart() const { return vstart_; }
+  inline uint64_t rvv_vxsat() const { return vxsat_; }
+  inline uint64_t rvv_vxrm() const { return vxrm_; }
+  inline uint64_t rvv_vcsr() const { return vcsr_; }
+  inline uint64_t rvv_vlenb() const { return vlenb_; }
+  inline uint32_t rvv_zimm() const { return instr_.Rvvzimm(); }
+  inline uint32_t rvv_vlmul() const {
+    return (rvv_vtype() & 0x20) >> 3 || (rvv_vtype() & 0x3);
+  }
+  inline uint32_t rvv_vsew() const { return (rvv_vtype() & 0x1C) >> 2; }
+  inline uint32_t rvv_sew() const {
+    DCHECK_EQ(rvv_vsew() & (~0x7), 0x0);
+    return (0x1 << rvv_vsew()) * 8;
+  }
+  inline uint64_t rvv_vlmax() const {
+    if ((rvv_vlmul() & 0b100) != 0) {
+      return (rvv_vlen() / rvv_sew()) >> (rvv_vlmul() & 0b11);
+    } else {
+      return (rvv_vlen() / rvv_sew()) << rvv_vlmul();
+    }
+  }
+
   inline uint32_t get_dynamic_rounding_mode();
   inline bool test_fflags_bits(uint32_t mask);
 
@@ -591,30 +617,6 @@ class Simulator : public SimulatorBase {
   inline __int128_t rvv_vd() { UNIMPLEMENTED(); }
   inline void set_vrd() { UNIMPLEMENTED(); }
   
-  inline uint64_t rvv_vlen() const {return kRvvVLEN;}
-  inline uint64_t rvv_vtype() const { return vtype_; }
-  inline uint64_t rvv_vl() const { return vl_; }
-  inline uint64_t rvv_vstart() const { return vstart_; }
-  inline uint64_t rvv_vxsat() const { return vxsat_; }
-  inline uint64_t rvv_vxrm() const { return vxrm_; }
-  inline uint64_t rvv_vcsr() const { return vcsr_; }
-  inline uint64_t rvv_vlenb() const { return vlenb_; }
-  inline uint32_t rvv_zimm() const { return instr_.Rvvzimm(); }
-  inline uint32_t rvv_vlmul() const {
-    return (rvv_vtype() & 0x20) >> 3 || (rvv_vtype() & 0x3);
-  }
-  inline uint32_t rvv_vsew() const { return (rvv_vtype() & 0x1C) >> 2; }
-  inline uint32_t rvv_sew() const {
-    DCHECK_EQ(rvv_vsew() & (~0x7), 0x0);
-    return (0x1 << rvv_vsew()) * 8;
-  }
-  inline uint64_t rvv_vlmax() const {
-    if ((rvv_vlmul() & 0b100) != 0) {
-      return (rvv_vlen() / rvv_sew()) >> (rvv_vlmul() & 0b11);
-    } else {
-      return (rvv_vlen() / rvv_sew()) << rvv_vlmul();
-    }
-  }
   inline void set_rvv_vtype(uint64_t value, bool trace = true) {   
     vtype_ = value;                                                 
   }
@@ -788,6 +790,7 @@ class Simulator : public SimulatorBase {
 
   //RVV registers
   __int128_t Vregister_[kNumVRegisters];
+  static_assert(sizeof(__int128_t) == kRvvVLEN/8 ,"unmatch vlen");
   uint64_t vstart_, vxsat_, vxrm_, vcsr_, vtype_, vl_, vlenb_;
 
   // Simulator support.
