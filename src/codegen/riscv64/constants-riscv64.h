@@ -215,6 +215,9 @@ const int kRvcFunct6Shift = 10;
 const int kRvcFunct6Bits = 6;
 
 // for RVV extension
+constexpr int kRvvELEN = 64;
+constexpr int kRvvVLEN = 128;
+constexpr int kRvvSLEN = kRvvVLEN;
 const int kRvvFunct6Shift = 26;
 const int kRvvFunct6Bits = 6;
 const int kRvvFunct6Mask = (((1 << kRvvFunct6Bits) - 1) << kRvvFunct6Shift);
@@ -1278,6 +1281,12 @@ class InstructionGetters : public T {
                     ((Bits & 0x100) << 2) | ((Bits & 0x600) >> 1) |
                     ((Bits & 0x800) >> 7) | ((Bits & 0x1000) >> 1);
     return imm12 << 20 >> 20;
+  }
+
+  inline uint32_t Rvvzimm() const {
+    uint32_t Bits = this->InstructionBits();
+    uint32_t zimm = Bits & kRvvZimmMask;
+    return zimm >> kRvvZimmShift;
   }
 
   inline bool AqValue() const { return this->Bits(kAqShift, kAqShift); }

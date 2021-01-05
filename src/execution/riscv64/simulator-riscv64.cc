@@ -3317,6 +3317,57 @@ void Simulator::DecodeCJType() {
   }
 }
 
+void Simulator::DecodeVType() {
+  switch (instr_.InstructionBits() & kVTypeMask) {
+    case OP_IVV:
+      UNSUPPORTED_RISCV();
+      break;
+    case OP_FVV:
+      UNSUPPORTED_RISCV();
+      break;
+    case OP_MVV:
+      UNSUPPORTED_RISCV();
+      break;
+    case OP_IVI:
+      UNSUPPORTED_RISCV();
+      break;
+    case OP_IVX:
+      UNSUPPORTED_RISCV();
+      break;
+    case OP_FVF:
+      UNSUPPORTED_RISCV();
+      break;
+    case OP_MVX:
+      UNSUPPORTED_RISCV();
+      break;
+  }
+  switch (instr_.InstructionBits() &
+          (kBaseOpcodeMask | kFunct3Mask | 0x80000000)) {
+    case RO_V_VSETVLI:
+      set_rvv_vtype(rvv_zimm());
+      uint64_t avl;
+      if (rs1_reg() != zero_reg) {
+        avl = rs1();
+      } else if (rd_reg() != zero_reg) {
+        avl = ~0;
+      } else {
+        avl = rvv_vl();
+      }
+      if (avl <= rvv_vlmax()) {
+        set_rvv_vl((uint32_t)avl);
+      } else {
+        set_rvv_vl(rvv_vlmax());
+      }
+      set_rd(rvv_vl());
+      break;
+    case RO_V_VSETVL:
+      UNSUPPORTED_RISCV();
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+      break;
+  }
+}
 // Executes the current instruction.
 void Simulator::InstructionDecode(Instruction* instr) {
   if (v8::internal::FLAG_check_icache) {
@@ -3384,6 +3435,9 @@ void Simulator::InstructionDecode(Instruction* instr) {
     case Instruction::kCSType:
       DecodeCSType();
       break;
+    case Instruction::kVType:
+       DecodeVType();
+       break;
     default:
       if (::v8::internal::FLAG_trace_sim) {
         std::cout << "Unrecognized instruction [@pc=0x" << std::hex
