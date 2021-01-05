@@ -625,8 +625,14 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_fsd(FPURegister rs2, Register rs1, uint16_t uimm8);
   
   // RVV
+  static int32_t GenZimm(VSew vsew, Vlmul vlmul, TailAgnosticType tail = tu,
+                         MaskAgnosticType mask = mu)  {
+    return (mask << 7) | (tail << 6) | ((vlmul & 0b100) << 5) |
+           ((vsew & 0x7) << 2) | (vlmul & 0b11);
+  }
+
   void vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
-               TailAndInactiveType tail, TailAndInactiveType mask);
+               TailAgnosticType tail = tu, MaskAgnosticType mask = mu);
   void vsetvl(Register rd, Register rs1, Register rs2);
   // Privileged
   void vl(VRegister vd, Register rs1, uint8_t lumop, VSew vsew, Vlmul vlmul,
