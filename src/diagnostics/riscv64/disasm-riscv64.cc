@@ -97,6 +97,8 @@ class Decoder {
   void PrintBranchOffset(Instruction* instr);
   void PrintStoreOffset(Instruction* instr);
   void PrintCSRReg(Instruction* instr);
+  void PrintRvvSEW(Instruction* instr);
+  void PrintRvvLMUL(Instruction* instr);
   void PrintRoundingMode(Instruction* instr);
   void PrintMemoryOrder(Instruction* instr, bool is_pred);
 
@@ -224,6 +226,16 @@ void Decoder::PrintBranchOffset(Instruction* instr) {
 void Decoder::PrintStoreOffset(Instruction* instr) {
   int32_t imm = instr->StoreOffset();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvvSEW(Instruction* instr) {
+  const char *sew = instr->RvvSEW();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%s", sew);
+}
+
+void Decoder::PrintRvvLMUL(Instruction* instr) {
+  const char *lmul = instr->RvvLMUL();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%s", lmul);
 }
 
 void Decoder::PrintImm20U(Instruction* instr) {
@@ -691,6 +703,10 @@ int Decoder::FormatOption(Instruction* instr, const char* format) {
         DCHECK(STRING_STARTS_WITH(format, "suc"));
         PrintMemoryOrder(instr, false);
         return 3;
+      } else if (format[1] == 'e') {
+        DCHECK(STRING_STARTS_WITH(format, "sew"));
+        PrintRvvSEW(instr);
+        return 3;
       }
       UNREACHABLE();
     }
@@ -698,6 +714,11 @@ int Decoder::FormatOption(Instruction* instr, const char* format) {
       DCHECK(STRING_STARTS_WITH(format, "vs1"));
       PrintVs1(instr);
       return 3;
+    }
+    case 'l': {  // 'vs1: Raw values from register fields
+      DCHECK(STRING_STARTS_WITH(format, "lmul"));
+      PrintRvvLMUL(instr);
+      return 4;
     }
   }
   UNREACHABLE();
@@ -1747,7 +1768,7 @@ void Decoder::DecodeVType(Instruction* instr) {
   }
   switch (instr->InstructionBits() & (kBaseOpcodeMask |kFunct3Mask| 0x80000000)) {
     case RO_V_VSETVLI:
-      Format(instr, "vsetvli       'rd, 'rs1");
+      Format(instr, "vsetvli       'rd, 'rs1, 'sew, 'lmul");
       break;
     case RO_V_VSETVL:
       Format(instr, "vsetvl       'rd, 'rs1,  'rs2");

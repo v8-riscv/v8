@@ -256,7 +256,7 @@ const int kRvvRdMask = (((1 << kRvvRdBits) - 1) << kRvvRdShift);
 
 const int kRvvZimmBits = 11;
 const int kRvvZimmShift = 20;
-const int kRvvZimmMask = (((1 << kRvvVs1Bits) - 1) << kRvvVs1Shift);
+const int kRvvZimmMask = (((1 << kRvvZimmBits) - 1) << kRvvZimmShift);
 
 const int kRvvWidthBits = 3;
 const int kRvvWidthShift = 12;
@@ -288,7 +288,7 @@ const int kSTypeMask = kBaseOpcodeMask | kFunct3Mask;
 const int kBTypeMask = kBaseOpcodeMask | kFunct3Mask;
 const int kUTypeMask = kBaseOpcodeMask;
 const int kJTypeMask = kBaseOpcodeMask;
-const int kVTypeMask = kRvvFunct6Mask | kBaseOpcodeMask;
+const int kVTypeMask = kRvvFunct6Mask | kFunct3Mask | kBaseOpcodeMask;
 const int kRs1FieldMask = ((1 << kRs1Bits) - 1) << kRs1Shift;
 const int kRs2FieldMask = ((1 << kRs2Bits) - 1) << kRs2Shift;
 const int kRs3FieldMask = ((1 << kRs3Bits) - 1) << kRs3Shift;
@@ -798,22 +798,44 @@ enum FClassFlag {
   kQuietNaN = 1 << 9
 };
 
-enum VSew { E8 = 0x0, E16, E32, E64, E128, E256, E512, E1024 };
+#define RVV_SEW(V) \
+  V(E8)            \
+  V(E16)           \
+  V(E32)           \
+  V(E64)           \
+  V(E128)          \
+  V(E256)          \
+  V(E512)          \
+  V(E1024)
 
-enum Vlmul {
-  m1 = 0b000,
-  m2 = 0b001,
-  m4 = 0b010,
-  m8 = 0b011,
-  mf8 = 0b100,
-  mf4 = 0b101,
-  mf2 = 0b110,
-  mf1 = 0b111,
+enum VSew {
+#define DEFINE_FLAG(name) name,
+RVV_SEW(DEFINE_FLAG)
+#undef DEFINE_FLAG
 };
 
-enum TailAndInactiveType {
+#define RVV_LMUL(V) \
+  V(m1)             \
+  V(m2)             \
+  V(m3)             \
+  V(m4)             \
+  V(RESERVERD)      \
+  V(mf8)            \
+  V(mf4)            \
+  V(mf2)
+
+enum Vlmul {
+#define DEFINE_FLAG(name) name,
+RVV_LMUL(DEFINE_FLAG)
+#undef DEFINE_FLAG
+};
+
+enum TailAgnosticType {
   ta = 0x1,  // Tail agnostic
   tu = 0x0,  // Tail undisturbed
+};
+
+enum MaskAgnosticType {
   ma = 0x1,  // Mask agnostic
   mu = 0x0,  // Mask undisturbed
 };
@@ -1287,6 +1309,44 @@ class InstructionGetters : public T {
     uint32_t Bits = this->InstructionBits();
     uint32_t zimm = Bits & kRvvZimmMask;
     return zimm >> kRvvZimmShift;
+  }
+
+  inline uint32_t RvvVsew() const {
+    uint32_t zimm = this->Rvvzimm();
+    uint32_t vsew = (zimm & 0x1c) >> 2;
+    return vsew;
+  }
+
+  inline uint32_t RvvVlmul() const {
+    uint32_t zimm = this->Rvvzimm();
+    uint32_t vlmul = ((zimm & 20) >> 3) | (zimm & 0x3);
+    return vlmul;
+  }
+
+  inline const char* RvvSEW() const {
+    uint32_t vsew = this->RvvVsew();
+    switch (vsew) {
+#define CAST_VSEW(name) \
+  case name:            \
+    return #name;
+      RVV_SEW(CAST_VSEW)
+      default:
+        return "unknown";
+#undef CAST_VSEW
+    }
+  }
+
+  inline const char* RvvLMUL() const {
+    uint32_t vlmul = this->RvvVlmul();
+    switch (vlmul) {
+#define CAST_VLMUL(name) \
+  case name:             \
+    return #name;
+      RVV_LMUL(CAST_VLMUL)
+      default:
+        return "unknown";
+#undef CAST_VSEW
+    }
   }
 
   inline bool AqValue() const { return this->Bits(kAqShift, kAqShift); }

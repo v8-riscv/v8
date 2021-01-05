@@ -2286,9 +2286,8 @@ void Assembler::c_j(int16_t imm12) {
 // RVV
 
 void Assembler::vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
-                        TailAndInactiveType tail, TailAndInactiveType mask) {
-  int32_t zimm = (mask << 7) | (tail << 6) | ((vlmul & 0b100) << 5) |
-                 ((vsew & 0x7) << 2) | (vlmul & 0b11);
+                        TailAgnosticType tail, MaskAgnosticType mask) {
+  int32_t zimm = GenZimm(vsew, vlmul, tail, mask);
   GenInstrV(rd, rs1, zimm);
 }
 void Assembler::vl(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
