@@ -1868,6 +1868,29 @@ TEST(li_estimate) {
   }
 }
 
+TEST(RVV_ZIMM) {
+  CHECK_EQ(Assembler::GenZimm(VSew::E8, m1), 0b00000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E16, m1),0b00100);
+  CHECK_EQ(Assembler::GenZimm(VSew::E32, m1), 0b01000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E64, m1), 0b01100);
+  CHECK_EQ(Assembler::GenZimm(VSew::E128, m1), 0b10000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E256, m1), 0b10100);
+  CHECK_EQ(Assembler::GenZimm(VSew::E512, m1), 0b11000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E1024, m1), 0b11100);
+}
+
+TEST(RVV_VSETVL) {
+  CcTest::InitializeVM();
+#define TEST_VSETVL(SEW, LMUL, tail, mask, expected_value)                    \
+  GenAndRunTest([](MacroAssembler& assm) { __ vsetvli(t0, t1, SEW, LMUL); }); \
+  CHECK_EQ(Simulator::current(CcTest::i_isolate())->rvv_vtype(),              \
+           expected_value);
+
+  TEST_VSETVL(E8, m1, tu, mu, Assembler::GenZimm(E8, m1));
+  TEST_VSETVL(E16, m1, tu, mu, 0x4);
+#undef TEST_VSETVL
+}
+                                                                            
 #undef __
 
 }  // namespace internal
