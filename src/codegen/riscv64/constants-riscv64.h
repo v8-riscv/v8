@@ -255,7 +255,21 @@ const int kRvvZimmBits = 11;
 const int kRvvZimmShift = 20;
 const int kRvvZimmMask = (((1 << kRvvVs1Bits) - 1) << kRvvVs1Shift);
 
+const int kRvvWidthBits = 3;
+const int kRvvWidthShift = 12;
+const int kRvvWidthMask = (((1 << kRvvWidthBits) - 1) << kRvvWidthShift);
 
+const int kRvvMopBits = 2;
+const int kRvvMopShift = 26;
+const int kRvvMopMask = (((1 << kRvvMopBits) - 1) << kRvvMopShift);
+
+const int kRvvMewBits = 1;
+const int kRvvMewShift = 28;
+const int kRvvMewMask = (((1 << kRvvMewBits) - 1) << kRvvMewShift);
+
+const int kRvvNfBits = 3;
+const int kRvvNfShift = 29;
+const int kRvvNfMask = (((1 << kRvvNfBits) - 1) << kRvvNfShift);
 // RISCV Instruction bit masks
 const int kBaseOpcodeMask = ((1 << kBaseOpcodeBits) - 1) << kBaseOpcodeShift;
 const int kFunct3Mask = ((1 << kFunct3Bits) - 1) << kFunct3Shift;
@@ -570,7 +584,7 @@ enum Opcode : uint32_t {
   RO_C_SDSP = C2 | (0b111 << kRvcFunct3Shift),
 
   // RVV Extension
-  OP_V  = 0b1010111,
+  OP_V = 0b1010111,
   OP_IVV = OP_V | (0b000 << kFunct3Shift),
   OP_FVV = OP_V | (0b001 << kFunct3Shift),
   OP_MVV = OP_V | (0b010 << kFunct3Shift),
@@ -581,6 +595,59 @@ enum Opcode : uint32_t {
 
   RO_V_VSETVLI = OP_V | (0b111 << kFunct3Shift) | 0b0 << 31,
   RO_V_VSETVL = OP_V | (0b111 << kFunct3Shift) | 0b1 << 31,
+
+  RO_V_VL = LOAD_FP | (0b00 << kRvvMopShift) | (0b000 << kRvvNfShift),
+  RO_V_VLS = LOAD_FP | (0b10 << kRvvMopShift) | (0b000 << kRvvNfShift),
+  RO_V_VLX = LOAD_FP | (0b11 << kRvvMopShift) | (0b000 << kRvvNfShift),
+
+  RO_V_VS = STORE_FP | (0b00 << kRvvMopShift) | (0b000 << kRvvNfShift),
+  RO_V_VSS = STORE_FP | (0b10 << kRvvMopShift) | (0b000 << kRvvNfShift),
+  RO_V_VSX = STORE_FP | (0b11 << kRvvMopShift) | (0b000 << kRvvNfShift),
+  // THE kFunct6Shift is mop
+  RO_V_VLSEG2 = LOAD_FP | (0b00 << kRvvMopShift) | (0b001 << kRvvNfShift),
+  RO_V_VLSEG3 = LOAD_FP | (0b00 << kRvvMopShift) | (0b010 << kRvvNfShift),
+  RO_V_VLSEG4 = LOAD_FP | (0b00 << kRvvMopShift) | (0b011 << kRvvNfShift),
+  RO_V_VLSEG5 = LOAD_FP | (0b00 << kRvvMopShift) | (0b100 << kRvvNfShift),
+  RO_V_VLSEG6 = LOAD_FP | (0b00 << kRvvMopShift) | (0b101 << kRvvNfShift),
+  RO_V_VLSEG7 = LOAD_FP | (0b00 << kRvvMopShift) | (0b110 << kRvvNfShift),
+  RO_V_VLSEG8 = LOAD_FP | (0b00 << kRvvMopShift) | (0b111 << kRvvNfShift),
+
+  RO_V_VSSEG2 = STORE_FP | (0b00 << kRvvMopShift) | (0b001 << kRvvNfShift),
+  RO_V_VSSEG3 = STORE_FP | (0b00 << kRvvMopShift) | (0b010 << kRvvNfShift),
+  RO_V_VSSEG4 = STORE_FP | (0b00 << kRvvMopShift) | (0b011 << kRvvNfShift),
+  RO_V_VSSEG5 = STORE_FP | (0b00 << kRvvMopShift) | (0b100 << kRvvNfShift),
+  RO_V_VSSEG6 = STORE_FP | (0b00 << kRvvMopShift) | (0b101 << kRvvNfShift),
+  RO_V_VSSEG7 = STORE_FP | (0b00 << kRvvMopShift) | (0b110 << kRvvNfShift),
+  RO_V_VSSEG8 = STORE_FP | (0b00 << kRvvMopShift) | (0b111 << kRvvNfShift),
+
+  RO_V_VLSSEG2 = LOAD_FP | (0b10 << kRvvMopShift) | (0b001 << kRvvNfShift),
+  RO_V_VLSSEG3 = LOAD_FP | (0b10 << kRvvMopShift) | (0b010 << kRvvNfShift),
+  RO_V_VLSSEG4 = LOAD_FP | (0b10 << kRvvMopShift) | (0b011 << kRvvNfShift),
+  RO_V_VLSSEG5 = LOAD_FP | (0b10 << kRvvMopShift) | (0b100 << kRvvNfShift),
+  RO_V_VLSSEG6 = LOAD_FP | (0b10 << kRvvMopShift) | (0b101 << kRvvNfShift),
+  RO_V_VLSSEG7 = LOAD_FP | (0b10 << kRvvMopShift) | (0b110 << kRvvNfShift),
+  RO_V_VLSSEG8 = LOAD_FP | (0b10 << kRvvMopShift) | (0b111 << kRvvNfShift),
+
+  RO_V_VSSSEG2 = STORE_FP | (0b10 << kRvvMopShift) | (0b001 << kRvvNfShift),
+  RO_V_VSSSEG3 = STORE_FP | (0b10 << kRvvMopShift) | (0b010 << kRvvNfShift),
+  RO_V_VSSSEG4 = STORE_FP | (0b10 << kRvvMopShift) | (0b011 << kRvvNfShift),
+  RO_V_VSSSEG5 = STORE_FP | (0b10 << kRvvMopShift) | (0b100 << kRvvNfShift),
+  RO_V_VSSSEG6 = STORE_FP | (0b10 << kRvvMopShift) | (0b101 << kRvvNfShift),
+  RO_V_VSSSEG7 = STORE_FP | (0b10 << kRvvMopShift) | (0b110 << kRvvNfShift),
+
+  RO_V_VLXSEG2 = LOAD_FP | (0b11 << kRvvMopShift) | (0b001 << kRvvNfShift),
+  RO_V_VLXSEG3 = LOAD_FP | (0b11 << kRvvMopShift) | (0b010 << kRvvNfShift),
+  RO_V_VLXSEG4 = LOAD_FP | (0b11 << kRvvMopShift) | (0b011 << kRvvNfShift),
+  RO_V_VLXSEG5 = LOAD_FP | (0b11 << kRvvMopShift) | (0b100 << kRvvNfShift),
+  RO_V_VLXSEG6 = LOAD_FP | (0b11 << kRvvMopShift) | (0b101 << kRvvNfShift),
+  RO_V_VLXSEG7 = LOAD_FP | (0b11 << kRvvMopShift) | (0b110 << kRvvNfShift),
+
+  RO_V_VSXSEG2 = STORE_FP | (0b11 << kRvvMopShift) | (0b001 << kRvvNfShift),
+  RO_V_VSXSEG3 = STORE_FP | (0b11 << kRvvMopShift) | (0b010 << kRvvNfShift),
+  RO_V_VSXSEG4 = STORE_FP | (0b11 << kRvvMopShift) | (0b011 << kRvvNfShift),
+  RO_V_VSXSEG5 = STORE_FP | (0b11 << kRvvMopShift) | (0b100 << kRvvNfShift),
+  RO_V_VSXSEG6 = STORE_FP | (0b11 << kRvvMopShift) | (0b101 << kRvvNfShift),
+  RO_V_VSXSEG7 = STORE_FP | (0b11 << kRvvMopShift) | (0b110 << kRvvNfShift),
 
 };
 
@@ -746,6 +813,10 @@ enum TailAndInactiveType {
   tu = 0x0,  // Tail undisturbed
   ma = 0x1,  // Mask agnostic
   mu = 0x0,  // Mask undisturbed
+};
+enum MaskType {
+  Mask = 0x1,  // use the mask
+  NoMask = 0x0,
 };
 
 // -----------------------------------------------------------------------------
