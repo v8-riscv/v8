@@ -1869,14 +1869,21 @@ TEST(li_estimate) {
 }
 
 TEST(RVV_ZIMM) {
-  CHECK_EQ(Assembler::GenZimm(VSew::E8, m1), 0b00000);
-  CHECK_EQ(Assembler::GenZimm(VSew::E16, m1),0b00100);
-  CHECK_EQ(Assembler::GenZimm(VSew::E32, m1), 0b01000);
-  CHECK_EQ(Assembler::GenZimm(VSew::E64, m1), 0b01100);
-  CHECK_EQ(Assembler::GenZimm(VSew::E128, m1), 0b10000);
-  CHECK_EQ(Assembler::GenZimm(VSew::E256, m1), 0b10100);
-  CHECK_EQ(Assembler::GenZimm(VSew::E512, m1), 0b11000);
-  CHECK_EQ(Assembler::GenZimm(VSew::E1024, m1), 0b11100);
+  CHECK_EQ(Assembler::GenZimm(VSew::E8, Vlmul::m1), 0b00000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E16, Vlmul::m1), 0b00100);
+  CHECK_EQ(Assembler::GenZimm(VSew::E32, Vlmul::m1), 0b01000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E64, Vlmul::m1), 0b01100);
+  CHECK_EQ(Assembler::GenZimm(VSew::E128, Vlmul::m1), 0b10000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E256, Vlmul::m1), 0b10100);
+  CHECK_EQ(Assembler::GenZimm(VSew::E512, Vlmul::m1), 0b11000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E1024, Vlmul::m1), 0b11100);
+  CHECK_EQ(Assembler::GenZimm(VSew::E8, Vlmul::m1), 0b000000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E16, Vlmul::m2), 0b000101);
+  CHECK_EQ(Assembler::GenZimm(VSew::E32, Vlmul::m4), 0b001010);
+  CHECK_EQ(Assembler::GenZimm(VSew::E64, Vlmul::m8), 0b001111);
+  CHECK_EQ(Assembler::GenZimm(VSew::E128, Vlmul::mf2), 0b110011);
+  CHECK_EQ(Assembler::GenZimm(VSew::E256, Vlmul::mf4), 0b110110);
+  CHECK_EQ(Assembler::GenZimm(VSew::E512, Vlmul::mf8), 0b111001);
 }
 
 TEST(RVV_VSETVL) {
