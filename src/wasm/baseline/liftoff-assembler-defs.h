@@ -89,11 +89,6 @@ constexpr RegList kLiftoffAssemblerGpCacheRegs =
 constexpr RegList kLiftoffAssemblerFpCacheRegs =
     DoubleRegister::ListOf(ft0, ft1, ft2, ft3, ft4, ft5, ft6, ft7, fa0, fa1,
                            fa2, fa3, fa4, fa5, fa6, fa7, ft8, ft9, ft10, ft11);
-
-#elif V8_TARGET_ARCH_RISCV
-
-#error RISCV(32) architecture not supported
-
 #else
 
 constexpr RegList kLiftoffAssemblerGpCacheRegs = 0xff;

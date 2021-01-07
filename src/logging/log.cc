@@ -599,10 +599,6 @@ void LowLevelLogger::LogCodeInfo() {
   // FIXME (RISCV) porting: need more specific arch strings based on cpu
   // features
   const char arch[] = "riscv64";
-#elif V8_TARGET_ARCH_RISCV
-  // FIXME (RISCV) porting: need more specific arch strings based on cpu
-  // features
-  const char arch[] = "riscv";
 #else
   const char arch[] = "unknown";
 #endif

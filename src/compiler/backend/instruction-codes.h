@@ -25,8 +25,6 @@
 #include "src/compiler/backend/s390/instruction-codes-s390.h"
 #elif V8_TARGET_ARCH_RISCV64
 #include "src/compiler/backend/riscv64/instruction-codes-riscv64.h"
-#elif V8_TARGET_ARCH_RISCV
-#include "src/compiler/backend/riscv/instruction-codes-riscv.h"
 #else
 #define TARGET_ARCH_OPCODE_LIST(V)
 #define TARGET_ADDRESSING_MODE_LIST(V)
