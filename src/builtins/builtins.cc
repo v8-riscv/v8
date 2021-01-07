@@ -493,8 +493,7 @@ bool Builtins::CodeObjectIsExecutable(int builtin_index) {
     case Builtins::kCEntry_Return1_DontSaveFPRegs_ArgvOnStack_NoBuiltinExit:
       return true;
     default:
-#if V8_TARGET_ARCH_MIPS || V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_RISCV64 || \
-    V8_TARGET_ARCH_RISCV
+#if V8_TARGET_ARCH_MIPS || V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_RISCV64
       // FIXME(RISCV): Is this correct for RISC-V?
       // TODO(Loongson): Move non-JS linkage builtins code objects into RO_SPACE
       // caused MIPS platform to crash, and we need some time to handle it. Now
@@ -503,7 +502,7 @@ bool Builtins::CodeObjectIsExecutable(int builtin_index) {
 #else
       return false;
 #endif  // V8_TARGET_ARCH_MIPS || V8_TARGET_ARCH_MIPS64 ||
-        // V8_TARGET_ARCH_RISCV64 || V8_TARGET_ARCH_RISCV
+        // V8_TARGET_ARCH_RISCV64
   }
 }
 
