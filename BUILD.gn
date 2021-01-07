@@ -749,8 +749,7 @@ config("toolchain") {
 
   # Mips64el/mipsel simulators.
   if (target_is_simulator &&
-      (v8_current_cpu == "mipsel" || v8_current_cpu == "mips64el" ||
-       v8_current_cpu == "riscv64")) {
+      (v8_current_cpu == "mipsel" || v8_current_cpu == "mips64el") {
     defines += [ "_MIPS_TARGET_SIMULATOR" ]
   }
 
