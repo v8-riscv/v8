@@ -627,7 +627,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   // RVV
   static int32_t GenZimm(VSew vsew, Vlmul vlmul, TailAgnosticType tail = tu,
                          MaskAgnosticType mask = mu)  {
-    return (mask << 7) | (tail << 6) | ((vlmul & 0b100) << 5) |
+    return (mask << 7) | (tail << 6) | ((vlmul & 0b100) << 3) |
            ((vsew & 0x7) << 2) | (vlmul & 0b11);
   }
 
