@@ -817,8 +817,8 @@ RVV_SEW(DEFINE_FLAG)
 #define RVV_LMUL(V) \
   V(m1)             \
   V(m2)             \
-  V(m3)             \
   V(m4)             \
+  V(m8)             \
   V(RESERVERD)      \
   V(mf8)            \
   V(mf4)            \
