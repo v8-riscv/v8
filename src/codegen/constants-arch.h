@@ -23,8 +23,6 @@
 #include "src/codegen/x64/constants-x64.h"  // NOLINT
 #elif V8_TARGET_ARCH_RISCV64
 #include "src/codegen/riscv64/constants-riscv64.h"  // NOLINT
-#elif V8_TARGET_ARCH_RISCV
-#include "src/codegen/riscv64/constants-riscv.h"  // NOLINT
 #else
 #error Unsupported target architecture.
 #endif
