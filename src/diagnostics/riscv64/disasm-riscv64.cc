@@ -229,12 +229,12 @@ void Decoder::PrintStoreOffset(Instruction* instr) {
 }
 
 void Decoder::PrintRvvSEW(Instruction* instr) {
-  const char *sew = instr->RvvSEW();
+  const char* sew = instr->RvvSEW();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%s", sew);
 }
 
 void Decoder::PrintRvvLMUL(Instruction* instr) {
-  const char *lmul = instr->RvvLMUL();
+  const char* lmul = instr->RvvLMUL();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%s", lmul);
 }
 
@@ -1766,7 +1766,8 @@ void Decoder::DecodeVType(Instruction* instr) {
       UNSUPPORTED_RISCV();
       break;
   }
-  switch (instr->InstructionBits() & (kBaseOpcodeMask |kFunct3Mask| 0x80000000)) {
+  switch (instr->InstructionBits() &
+          (kBaseOpcodeMask | kFunct3Mask | 0x80000000)) {
     case RO_V_VSETVLI:
       Format(instr, "vsetvli       'rd, 'rs1, 'sew, 'lmul");
       break;

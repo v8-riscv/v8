@@ -235,7 +235,7 @@ const int kRvvVs1Shift = 15;
 const int kRvvVs1Mask = (((1 << kRvvVs1Bits) - 1) << kRvvVs1Shift);
 
 const int kRvvRs1Bits = kRvvVs1Bits;
-const int kRvvRs1Shift =kRvvVs1Shift;
+const int kRvvRs1Shift = kRvvVs1Shift;
 const int kRvvRs1Mask = (((1 << kRvvRs1Bits) - 1) << kRvvRs1Shift);
 
 const int kRvvRs2Bits = 5;
@@ -813,7 +813,7 @@ enum FClassFlag {
 
 enum VSew {
 #define DEFINE_FLAG(name) name,
-RVV_SEW(DEFINE_FLAG)
+  RVV_SEW(DEFINE_FLAG)
 #undef DEFINE_FLAG
 };
 
@@ -829,7 +829,7 @@ RVV_SEW(DEFINE_FLAG)
 
 enum Vlmul {
 #define DEFINE_FLAG(name) name,
-RVV_LMUL(DEFINE_FLAG)
+  RVV_LMUL(DEFINE_FLAG)
 #undef DEFINE_FLAG
 };
 
@@ -853,9 +853,7 @@ enum MaskType {
 // Branch hints are not used on RISC-V.  They are defined so that they can
 // appear in shared function signatures, but will be ignored in RISC-V
 // implementations.
-enum Hint {
-  no_hint = 0
-};
+enum Hint { no_hint = 0 };
 // Specific instructions, constants, and masks.
 // These constants are declared in assembler-riscv64.cc, as they use named
 // registers and other constants.
