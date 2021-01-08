@@ -1212,21 +1212,23 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   // vsetvli
   void GenInstrV(Register rd, Register rs1, uint32_t zimm);
   // OPIVV OPFVV OPMVV
-  void GenInstrV(uint8_t funct6, VRegister vd, VRegister vs1, VRegister vs2,
-                 bool IsMask);
-  // OPMVV OPFVV OPIVV
-  void GenInstrV(uint8_t funct6, VRegister vd, Register rs1, VRegister vs2,
-                 bool IsMask);
+  void GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd, VRegister vs1,
+                 VRegister vs2, bool IsMask);
   // OPMVV OPFVV
-  void GenInstrV(uint8_t funct6, Register rd, VRegister vs1, VRegister vs2,
-                 bool IsMask);
-  // OPFVF
+  void GenInstrV(uint8_t funct6, Opcode opcode, Register rd, VRegister vs1,
+                 VRegister vs2, bool IsMask);
+
+  // OPIVX OPFVF OPMVX
+  void GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd, Register rs1,
+                 VRegister vs2, bool IsMask);
+
+  // OPMVX
   void GenInstrV(uint8_t funct6, Register rd, Register rs1, VRegister vs2,
                  bool IsMask);
   // OPIVI
   void GenInstrV(uint8_t funct6, VRegister vd, uint8_t simm5, VRegister vs2,
                  bool IsMask);
-
+                 
   // VL VS
   void GenInstrV(Opcode opcode, uint8_t width, VRegister vd, Register rs1,
                  uint8_t umop, MaskType IsMask, uint8_t IsMop, bool IsMew,

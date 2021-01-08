@@ -637,6 +637,7 @@ enum Opcode : uint32_t {
   RO_V_VSSSEG5 = STORE_FP | (0b10 << kRvvMopShift) | (0b100 << kRvvNfShift),
   RO_V_VSSSEG6 = STORE_FP | (0b10 << kRvvMopShift) | (0b101 << kRvvNfShift),
   RO_V_VSSSEG7 = STORE_FP | (0b10 << kRvvMopShift) | (0b110 << kRvvNfShift),
+  RO_V_VSSSEG8 = STORE_FP | (0b10 << kRvvMopShift) | (0b111 << kRvvNfShift),
 
   RO_V_VLXSEG2 = LOAD_FP | (0b11 << kRvvMopShift) | (0b001 << kRvvNfShift),
   RO_V_VLXSEG3 = LOAD_FP | (0b11 << kRvvMopShift) | (0b010 << kRvvNfShift),
@@ -644,6 +645,7 @@ enum Opcode : uint32_t {
   RO_V_VLXSEG5 = LOAD_FP | (0b11 << kRvvMopShift) | (0b100 << kRvvNfShift),
   RO_V_VLXSEG6 = LOAD_FP | (0b11 << kRvvMopShift) | (0b101 << kRvvNfShift),
   RO_V_VLXSEG7 = LOAD_FP | (0b11 << kRvvMopShift) | (0b110 << kRvvNfShift),
+  RO_V_VLXSEG8 = LOAD_FP | (0b11 << kRvvMopShift) | (0b111 << kRvvNfShift),
 
   RO_V_VSXSEG2 = STORE_FP | (0b11 << kRvvMopShift) | (0b001 << kRvvNfShift),
   RO_V_VSXSEG3 = STORE_FP | (0b11 << kRvvMopShift) | (0b010 << kRvvNfShift),
@@ -651,6 +653,7 @@ enum Opcode : uint32_t {
   RO_V_VSXSEG5 = STORE_FP | (0b11 << kRvvMopShift) | (0b100 << kRvvNfShift),
   RO_V_VSXSEG6 = STORE_FP | (0b11 << kRvvMopShift) | (0b101 << kRvvNfShift),
   RO_V_VSXSEG7 = STORE_FP | (0b11 << kRvvMopShift) | (0b110 << kRvvNfShift),
+  RO_V_VSXSEG8 = STORE_FP | (0b11 << kRvvMopShift) | (0b111 << kRvvNfShift),
 
 };
 

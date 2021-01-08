@@ -1081,23 +1081,24 @@ void Assembler::GenInstrV(Register rd, Register rs1, uint32_t zimm) {
   emit(instr);
 }
 
-void Assembler::GenInstrV(uint8_t funct6, VRegister vd, VRegister vs1,
-                          VRegister vs2, bool IsMask) {
+// OPIVV OPFVV OPMVV
+void Assembler::GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd,
+                          VRegister vs1, VRegister vs2, bool IsMask) {
   UNIMPLEMENTED();
 }
-
-// OPMVV OPFVV OPIVV
-void Assembler::GenInstrV(uint8_t funct6, VRegister vd, Register rs1,
-                          VRegister vs2, bool IsMask) {
-  UNIMPLEMENTED();
-}
-
 // OPMVV OPFVV
-void Assembler::GenInstrV(uint8_t funct6, Register rd, VRegister vs1,
-                          VRegister vs2, bool IsMask) {
+void Assembler::GenInstrV(uint8_t funct6, Opcode opcode, Register rd,
+                          VRegister vs1, VRegister vs2, bool IsMask) {
   UNIMPLEMENTED();
 }
-// OPFVF
+
+// OPIVX OPFVF OPMVX
+void Assembler::GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd,
+                          Register rs1, VRegister vs2, bool IsMask) {
+  UNIMPLEMENTED();
+}
+
+// OPMVX
 void Assembler::GenInstrV(uint8_t funct6, Register rd, Register rs1,
                           VRegister vs2, bool IsMask) {
   UNIMPLEMENTED();
