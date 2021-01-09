@@ -16,9 +16,13 @@ namespace internal {
 
 void CpuFeatures::FlushICache(void* start, size_t size) {
 #if !defined(USE_SIMULATOR)
-  // FIXME(RISCV): builtin_clear_cache doesn't work yet; use `fence.i` for now
-  // __builtin___clear_cache(start, (char *)start + size);
-  asm volatile("fence.i" ::: "memory");
+  char* end = reinterpret_cast<char*>(start) + size;
+  // The definition of this syscall is
+  // SYSCALL_DEFINE3(riscv_flush_icache, uintptr_t, start,
+  //                 uintptr_t, end, uintptr_t, flags)
+  // The flag here is set to be SYS_RISCV_FLUSH_ICACHE_LOCAL, which is
+  // defined as 1 in the Linux kernel.
+  syscall(SYS_riscv_flush_icache, start, end, 1);
 #endif  // !USE_SIMULATOR.
 }
 
