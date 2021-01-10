@@ -1897,7 +1897,6 @@ TEST(RVV_VSETVL) {
   TEST_VSETVL(E16, m1, tu, mu, 0x4);
 #undef TEST_VSETVL
 }
-                                                                            
 #undef __
 
 }  // namespace internal
