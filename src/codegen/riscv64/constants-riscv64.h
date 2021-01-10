@@ -235,7 +235,7 @@ const int kRvvVs1Shift = 15;
 const int kRvvVs1Mask = (((1 << kRvvVs1Bits) - 1) << kRvvVs1Shift);
 
 const int kRvvRs1Bits = kRvvVs1Bits;
-const int kRvvRs1Shift =kRvvVs1Shift;
+const int kRvvRs1Shift = kRvvVs1Shift;
 const int kRvvRs1Mask = (((1 << kRvvRs1Bits) - 1) << kRvvRs1Shift);
 
 const int kRvvRs2Bits = 5;
@@ -637,6 +637,7 @@ enum Opcode : uint32_t {
   RO_V_VSSSEG5 = STORE_FP | (0b10 << kRvvMopShift) | (0b100 << kRvvNfShift),
   RO_V_VSSSEG6 = STORE_FP | (0b10 << kRvvMopShift) | (0b101 << kRvvNfShift),
   RO_V_VSSSEG7 = STORE_FP | (0b10 << kRvvMopShift) | (0b110 << kRvvNfShift),
+  RO_V_VSSSEG8 = STORE_FP | (0b10 << kRvvMopShift) | (0b111 << kRvvNfShift),
 
   RO_V_VLXSEG2 = LOAD_FP | (0b11 << kRvvMopShift) | (0b001 << kRvvNfShift),
   RO_V_VLXSEG3 = LOAD_FP | (0b11 << kRvvMopShift) | (0b010 << kRvvNfShift),
@@ -644,6 +645,7 @@ enum Opcode : uint32_t {
   RO_V_VLXSEG5 = LOAD_FP | (0b11 << kRvvMopShift) | (0b100 << kRvvNfShift),
   RO_V_VLXSEG6 = LOAD_FP | (0b11 << kRvvMopShift) | (0b101 << kRvvNfShift),
   RO_V_VLXSEG7 = LOAD_FP | (0b11 << kRvvMopShift) | (0b110 << kRvvNfShift),
+  RO_V_VLXSEG8 = LOAD_FP | (0b11 << kRvvMopShift) | (0b111 << kRvvNfShift),
 
   RO_V_VSXSEG2 = STORE_FP | (0b11 << kRvvMopShift) | (0b001 << kRvvNfShift),
   RO_V_VSXSEG3 = STORE_FP | (0b11 << kRvvMopShift) | (0b010 << kRvvNfShift),
@@ -651,6 +653,7 @@ enum Opcode : uint32_t {
   RO_V_VSXSEG5 = STORE_FP | (0b11 << kRvvMopShift) | (0b100 << kRvvNfShift),
   RO_V_VSXSEG6 = STORE_FP | (0b11 << kRvvMopShift) | (0b101 << kRvvNfShift),
   RO_V_VSXSEG7 = STORE_FP | (0b11 << kRvvMopShift) | (0b110 << kRvvNfShift),
+  RO_V_VSXSEG8 = STORE_FP | (0b11 << kRvvMopShift) | (0b111 << kRvvNfShift),
 
 };
 
@@ -810,7 +813,7 @@ enum FClassFlag {
 
 enum VSew {
 #define DEFINE_FLAG(name) name,
-RVV_SEW(DEFINE_FLAG)
+  RVV_SEW(DEFINE_FLAG)
 #undef DEFINE_FLAG
 };
 
@@ -826,7 +829,7 @@ RVV_SEW(DEFINE_FLAG)
 
 enum Vlmul {
 #define DEFINE_FLAG(name) name,
-RVV_LMUL(DEFINE_FLAG)
+  RVV_LMUL(DEFINE_FLAG)
 #undef DEFINE_FLAG
 };
 
@@ -850,9 +853,7 @@ enum MaskType {
 // Branch hints are not used on RISC-V.  They are defined so that they can
 // appear in shared function signatures, but will be ignored in RISC-V
 // implementations.
-enum Hint {
-  no_hint = 0
-};
+enum Hint { no_hint = 0 };
 // Specific instructions, constants, and masks.
 // These constants are declared in assembler-riscv64.cc, as they use named
 // registers and other constants.
