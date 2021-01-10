@@ -2292,14 +2292,13 @@ void Assembler::vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
   GenInstrV(rd, rs1, zimm);
 }
 void Assembler::vl(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
-
                    MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, lumop, mask, 0b00, IsMew, 0b000);
 }
 void Assembler::vls(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                    Vlmul vluml, MaskType mask) {
+                    MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b000);

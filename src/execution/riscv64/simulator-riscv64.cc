@@ -3446,8 +3446,8 @@ void Simulator::InstructionDecode(Instruction* instr) {
       DecodeCSType();
       break;
     case Instruction::kVType:
-       DecodeVType();
-       break;
+      DecodeVType();
+      break;
     default:
       if (::v8::internal::FLAG_trace_sim) {
         std::cout << "Unrecognized instruction [@pc=0x" << std::hex
