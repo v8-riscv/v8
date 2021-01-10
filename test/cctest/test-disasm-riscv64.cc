@@ -510,8 +510,10 @@ TEST(RV64C) {
 TEST(RV64V) {
   SET_UP();
   COMPARE(vsetvl(a1, a2, a3), "80d675d7       vsetvl       a1, a2,  a3");
-  COMPARE(vsetvli(t0, t1, E8, m1);, "000372d7       vsetvli       t0, t1,  E8,m1");
-  COMPARE(vsetvli(t0, t1, E16, m1);, "004372d7       vsetvli       t0, t1,  E16,m1");
+  COMPARE(vsetvli(t0, t1, E8, m1);
+          , "000372d7       vsetvli       t0, t1,  E8,m1");
+  COMPARE(vsetvli(t0, t1, E16, m1);
+          , "004372d7       vsetvli       t0, t1,  E16,m1");
   VERIFY_RUN();
 }
 

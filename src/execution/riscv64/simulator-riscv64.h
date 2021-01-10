@@ -616,27 +616,21 @@ class Simulator : public SimulatorBase {
   inline int32_t rvv_vd_reg() { UNIMPLEMENTED(); }
   inline __int128_t rvv_vd() { UNIMPLEMENTED(); }
   inline void set_vrd() { UNIMPLEMENTED(); }
-  
-  inline void set_rvv_vtype(uint64_t value, bool trace = true) {   
-    vtype_ = value;                                                 
+
+  inline void set_rvv_vtype(uint64_t value, bool trace = true) {
+    vtype_ = value;
   }
-  inline void set_rvv_vl(uint64_t value, bool trace = true) {   
-    vl_ = value;                                                 
+  inline void set_rvv_vl(uint64_t value, bool trace = true) { vl_ = value; }
+  inline void set_rvv_vstart(uint64_t value, bool trace = true) {
+    vstart_ = value;
   }
-  inline void set_rvv_vstart(uint64_t value, bool trace = true) {   
-    vstart_ = value;                                                 
+  inline void set_rvv_vxsat(uint64_t value, bool trace = true) {
+    vxsat_ = value;
   }
-  inline void set_rvv_vxsat(uint64_t value, bool trace = true) {   
-    vxsat_ = value;                                                 
-  }
-  inline void set_rvv_vxrm(uint64_t value, bool trace = true) {   
-    vxrm_ = value;                                                 
-  }
-  inline void set_rvv_vcsr(uint64_t value, bool trace = true) {   
-    vcsr_ = value;                                                 
-  }
-  inline void set_rvv_vlenb(uint64_t value, bool trace = true) {   
-    vlenb_ = value;                                                 
+  inline void set_rvv_vxrm(uint64_t value, bool trace = true) { vxrm_ = value; }
+  inline void set_rvv_vcsr(uint64_t value, bool trace = true) { vcsr_ = value; }
+  inline void set_rvv_vlenb(uint64_t value, bool trace = true) {
+    vlenb_ = value;
   }
 
   template <typename T, typename Func>
@@ -788,9 +782,9 @@ class Simulator : public SimulatorBase {
   // Floating-point control and status register.
   uint32_t FCSR_;
 
-  //RVV registers
+  // RVV registers
   __int128_t Vregister_[kNumVRegisters];
-  static_assert(sizeof(__int128_t) == kRvvVLEN/8 ,"unmatch vlen");
+  static_assert(sizeof(__int128_t) == kRvvVLEN / 8, "unmatch vlen");
   uint64_t vstart_, vxsat_, vxrm_, vcsr_, vtype_, vl_, vlenb_;
 
   // Simulator support.

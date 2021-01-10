@@ -1081,23 +1081,24 @@ void Assembler::GenInstrV(Register rd, Register rs1, uint32_t zimm) {
   emit(instr);
 }
 
-void Assembler::GenInstrV(uint8_t funct6, VRegister vd, VRegister vs1,
-                          VRegister vs2, bool IsMask) {
+// OPIVV OPFVV OPMVV
+void Assembler::GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd,
+                          VRegister vs1, VRegister vs2, bool IsMask) {
   UNIMPLEMENTED();
 }
-
-// OPMVV OPFVV OPIVV
-void Assembler::GenInstrV(uint8_t funct6, VRegister vd, Register rs1,
-                          VRegister vs2, bool IsMask) {
-  UNIMPLEMENTED();
-}
-
 // OPMVV OPFVV
-void Assembler::GenInstrV(uint8_t funct6, Register rd, VRegister vs1,
-                          VRegister vs2, bool IsMask) {
+void Assembler::GenInstrV(uint8_t funct6, Opcode opcode, Register rd,
+                          VRegister vs1, VRegister vs2, bool IsMask) {
   UNIMPLEMENTED();
 }
-// OPFVF
+
+// OPIVX OPFVF OPMVX
+void Assembler::GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd,
+                          Register rs1, VRegister vs2, bool IsMask) {
+  UNIMPLEMENTED();
+}
+
+// OPMVX
 void Assembler::GenInstrV(uint8_t funct6, Register rd, Register rs1,
                           VRegister vs2, bool IsMask) {
   UNIMPLEMENTED();
@@ -2291,7 +2292,8 @@ void Assembler::vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
   GenInstrV(rd, rs1, zimm);
 }
 void Assembler::vl(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
-                   Vlmul vlmul, MaskType mask) {
+
+                   MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, lumop, mask, 0b00, IsMew, 0b000);
@@ -2303,288 +2305,288 @@ void Assembler::vls(VRegister vd, Register rs1, Register rs2, VSew vsew,
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b000);
 }
 void Assembler::vlx(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-                    Vlmul vlmul, MaskType mask) {
+                    MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, vs2, mask, 0b11, IsMew, 0);
 }
 
 void Assembler::vs(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
-                   Vlmul vlmul, MaskType mask) {
+                   MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, sumop, mask, 0b00, IsMew, 0b000);
 }
 void Assembler::vss(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                    Vlmul vlmul, MaskType mask) {
+                    MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b000);
 }
 
 void Assembler::vsx(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-                    Vlmul vlmul, MaskType mask) {
+                    MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, vs2, mask, 0b11, IsMew, 0b000);
 }
 
 void Assembler::vlseg2(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, lumop, mask, 0b00, IsMew, 0b001);
 }
 
 void Assembler::vlseg3(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, lumop, mask, 0b00, IsMew, 0b010);
 }
 
 void Assembler::vlseg4(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, lumop, mask, 0b00, IsMew, 0b011);
 }
 
 void Assembler::vlseg5(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, lumop, mask, 0b00, IsMew, 0b100);
 }
 
 void Assembler::vlseg6(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, lumop, mask, 0b00, IsMew, 0b101);
 }
 
 void Assembler::vlseg7(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, lumop, mask, 0b00, IsMew, 0b110);
 }
 
 void Assembler::vlseg8(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, lumop, mask, 0b00, IsMew, 0b111);
 }
 void Assembler::vsseg2(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, sumop, mask, 0b00, IsMew, 0b001);
 }
 void Assembler::vsseg3(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, sumop, mask, 0b00, IsMew, 0b010);
 }
 void Assembler::vsseg4(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, sumop, mask, 0b00, IsMew, 0b011);
 }
 void Assembler::vsseg5(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, sumop, mask, 0b00, IsMew, 0b100);
 }
 void Assembler::vsseg6(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, sumop, mask, 0b00, IsMew, 0b101);
 }
 void Assembler::vsseg7(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, sumop, mask, 0b00, IsMew, 0b110);
 }
 void Assembler::vsseg8(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
-                       Vlmul vlmul, MaskType mask) {
+                       MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, sumop, mask, 0b00, IsMew, 0b111);
 }
 
 void Assembler::vlsseg2(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b001);
 }
 void Assembler::vlsseg3(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b010);
 }
 void Assembler::vlsseg4(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b011);
 }
 void Assembler::vlsseg5(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b100);
 }
 void Assembler::vlsseg6(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b101);
 }
 void Assembler::vlsseg7(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b110);
 }
 void Assembler::vlsseg8(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b111);
 }
 void Assembler::vssseg2(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b001);
 }
 void Assembler::vssseg3(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b010);
 }
 void Assembler::vssseg4(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b011);
 }
 void Assembler::vssseg5(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b100);
 }
 void Assembler::vssseg6(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b101);
 }
 void Assembler::vssseg7(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b110);
 }
 void Assembler::vssseg8(VRegister vd, Register rs1, Register rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b111);
 }
 
 void Assembler::vlxseg2(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b001);
 }
 void Assembler::vlxseg3(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b010);
 }
 void Assembler::vlxseg4(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b011);
 }
 void Assembler::vlxseg5(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b100);
 }
 void Assembler::vlxseg6(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b101);
 }
 void Assembler::vlxseg7(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b110);
 }
 void Assembler::vlxseg8(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b111);
 }
 void Assembler::vsxseg2(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b001);
 }
 void Assembler::vsxseg3(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b010);
 }
 void Assembler::vsxseg4(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b011);
 }
 void Assembler::vsxseg5(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b100);
 }
 void Assembler::vsxseg6(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b101);
 }
 void Assembler::vsxseg7(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b110);
 }
 void Assembler::vsxseg8(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
-                        Vlmul vlmul, MaskType mask) {
+                        MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b111);

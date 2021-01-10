@@ -623,10 +623,10 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_sw(Register rs2, Register rs1, uint16_t uimm7);
   void c_sd(Register rs2, Register rs1, uint16_t uimm8);
   void c_fsd(FPURegister rs2, Register rs1, uint16_t uimm8);
-  
+
   // RVV
   static int32_t GenZimm(VSew vsew, Vlmul vlmul, TailAgnosticType tail = tu,
-                         MaskAgnosticType mask = mu)  {
+                         MaskAgnosticType mask = mu) {
     return (mask << 7) | (tail << 6) | ((vlmul & 0b100) << 3) |
            ((vsew & 0x7) << 2) | (vlmul & 0b11);
   }
@@ -635,109 +635,103 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
                TailAgnosticType tail = tu, MaskAgnosticType mask = mu);
   void vsetvl(Register rd, Register rs1, Register rs2);
   // Privileged
-  void vl(VRegister vd, Register rs1, uint8_t lumop, VSew vsew, Vlmul vlmul,
-          MaskType mask);
-  void vls(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
-           MaskType mask);
-  void vlx(VRegister vd, Register rs1, VRegister vs3, VSew vsew, Vlmul vlmul,
-           MaskType mask);
+  void vl(VRegister vd, Register rs1, uint8_t lumop, VSew vsew, MaskType mask);
+  void vls(VRegister vd, Register rs1, Register rs2, VSew vsew, MaskType mask);
+  void vlx(VRegister vd, Register rs1, VRegister vs3, VSew vsew, MaskType mask);
 
-  void vs(VRegister vd, Register rs1, uint8_t sumop, VSew vsew, Vlmul vlmul,
-          MaskType mask);
-  void vss(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
-           MaskType mask);
-  void vsx(VRegister vd, Register rs1, VRegister vs3, VSew vsew, Vlmul vlmul,
-           MaskType Type);
+  void vs(VRegister vd, Register rs1, uint8_t sumop, VSew vsew, MaskType mask);
+  void vss(VRegister vd, Register rs1, Register rs2, VSew vsew, MaskType mask);
+  void vsx(VRegister vd, Register rs1, VRegister vs3, VSew vsew, MaskType Type);
 
-  void vlseg2(VRegister vd, Register rs1, uint8_t lumop, VSew vsew, Vlmul vlmul,
+  void vlseg2(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
               MaskType mask);
-  void vlseg3(VRegister vd, Register rs1, uint8_t lumop, VSew vsew, Vlmul vlmul,
+  void vlseg3(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
               MaskType mask);
-  void vlseg4(VRegister vd, Register rs1, uint8_t lumop, VSew vsew, Vlmul vlmul,
+  void vlseg4(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
               MaskType mask);
-  void vlseg5(VRegister vd, Register rs1, uint8_t lumop, VSew vsew, Vlmul vlmul,
+  void vlseg5(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
               MaskType mask);
-  void vlseg6(VRegister vd, Register rs1, uint8_t lumop, VSew vsew, Vlmul vlmul,
+  void vlseg6(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
               MaskType mask);
-  void vlseg7(VRegister vd, Register rs1, uint8_t lumop, VSew vsew, Vlmul vlmul,
+  void vlseg7(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
               MaskType mask);
-  void vlseg8(VRegister vd, Register rs1, uint8_t lumop, VSew vsew, Vlmul vlmul,
+  void vlseg8(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
               MaskType mask);
 
-  void vsseg2(VRegister vd, Register rs1, uint8_t sumop, VSew vsew, Vlmul vlmul,
+  void vsseg2(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
               MaskType mask);
-  void vsseg3(VRegister vd, Register rs1, uint8_t sumop, VSew vsew, Vlmul vlmul,
+  void vsseg3(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
               MaskType mask);
-  void vsseg4(VRegister vd, Register rs1, uint8_t sumop, VSew vsew, Vlmul vlmul,
+  void vsseg4(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
               MaskType mask);
-  void vsseg5(VRegister vd, Register rs1, uint8_t sumop, VSew vsew, Vlmul vlmul,
+  void vsseg5(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
               MaskType mask);
-  void vsseg6(VRegister vd, Register rs1, uint8_t sumop, VSew vsew, Vlmul vlmul,
+  void vsseg6(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
               MaskType mask);
-  void vsseg7(VRegister vd, Register rs1, uint8_t sumop, VSew vsew, Vlmul vlmul,
+  void vsseg7(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
               MaskType mask);
-  void vsseg8(VRegister vd, Register rs1, uint8_t sumop, VSew vsew, Vlmul vlmul,
+  void vsseg8(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
               MaskType mask);
 
-  void vlsseg2(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vlsseg2(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
-  void vlsseg3(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vlsseg3(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
-  void vlsseg4(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vlsseg4(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
-  void vlsseg5(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vlsseg5(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
-  void vlsseg6(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vlsseg6(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
-  void vlsseg7(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vlsseg7(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
-  void vlsseg8(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vlsseg8(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
 
-  void vssseg2(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vssseg2(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
-  void vssseg3(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vssseg3(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
-  void vssseg4(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vssseg4(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
-  void vssseg5(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vssseg5(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
-  void vssseg6(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vssseg6(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
-  void vssseg7(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vssseg7(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
-  void vssseg8(VRegister vd, Register rs1, Register rs2, VSew vsew, Vlmul vlmul,
+  void vssseg8(VRegister vd, Register rs1, Register rs2, VSew vsew,
                MaskType mask);
 
   void vlxseg2(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
   void vlxseg3(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
   void vlxseg4(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
   void vlxseg5(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
   void vlxseg6(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
   void vlxseg7(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
   void vlxseg8(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
 
   void vsxseg2(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
   void vsxseg3(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
   void vsxseg4(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
   void vsxseg5(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
   void vsxseg6(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
   void vsxseg7(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
   void vsxseg8(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
-               Vlmul vlmul, MaskType mask);
+               MaskType mask);
 
   void uret();
   void sret();
@@ -1214,15 +1208,17 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   // vsetvli
   void GenInstrV(Register rd, Register rs1, uint32_t zimm);
   // OPIVV OPFVV OPMVV
-  void GenInstrV(uint8_t funct6, VRegister vd, VRegister vs1, VRegister vs2,
-                 bool IsMask);
-  // OPMVV OPFVV OPIVV
-  void GenInstrV(uint8_t funct6, VRegister vd, Register rs1, VRegister vs2,
-                 bool IsMask);
+  void GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd, VRegister vs1,
+                 VRegister vs2, bool IsMask);
   // OPMVV OPFVV
-  void GenInstrV(uint8_t funct6, Register rd, VRegister vs1, VRegister vs2,
-                 bool IsMask);
-  // OPFVF
+  void GenInstrV(uint8_t funct6, Opcode opcode, Register rd, VRegister vs1,
+                 VRegister vs2, bool IsMask);
+
+  // OPIVX OPFVF OPMVX
+  void GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd, Register rs1,
+                 VRegister vs2, bool IsMask);
+
+  // OPMVX
   void GenInstrV(uint8_t funct6, Register rd, Register rs1, VRegister vs2,
                  bool IsMask);
   // OPIVI
