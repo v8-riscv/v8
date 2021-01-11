@@ -507,13 +507,14 @@ TEST(RV64C) {
   VERIFY_RUN();
 }
 
-TEST(RV64V) {
+TEST(RVV) {
   SET_UP();
   COMPARE(vsetvl(a1, a2, a3), "80d675d7       vsetvl       a1, a2,  a3");
   COMPARE(vsetvli(t0, t1, E8, m1);
-          , "000372d7       vsetvli       t0, t1,  E8,m1");
+          , "000372d7       vsetvli       t0, t1, E8, m1");
   COMPARE(vsetvli(t0, t1, E16, m1);
-          , "004372d7       vsetvli       t0, t1,  E16,m1");
+          , "004372d7       vsetvli       t0, t1, E16, m1");
+  COMPARE(vadd_vv(v0, v1, v2), "00208057       vadd.vv       v0 v2, v1");
   VERIFY_RUN();
 }
 

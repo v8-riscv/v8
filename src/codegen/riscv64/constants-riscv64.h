@@ -75,6 +75,8 @@ const int kPCRegister = 34;
 const int kNumFPURegisters = 32;
 const int kInvalidFPURegister = -1;
 
+// Number vectotr registers
+const int kNumVRegisters = 32;
 // 'pref' instruction hints
 const int32_t kPrefHintLoad = 0;
 const int32_t kPrefHintStore = 1;
@@ -131,6 +133,24 @@ class FPURegisters {
   static const RegisterAlias aliases_[];
 };
 
+class VRegisters {
+ public:
+  // Return the name of the register.
+  static const char* Name(int reg);
+
+  // Lookup the register number for the name provided.
+  static int Number(const char* name);
+
+  struct RegisterAlias {
+    int creg;
+    const char* name;
+  };
+
+ private:
+  static const char* names_[kNumVRegisters];
+  static const RegisterAlias aliases_[];
+};
+
 // -----------------------------------------------------------------------------
 // Instructions encoding constants.
 
@@ -170,6 +190,12 @@ const int kFunct2Shift = 25;
 const int kFunct2Bits = 2;
 const int kRs1Shift = 15;
 const int kRs1Bits = 5;
+const int kVs1Shift = 15;
+const int kVs1Bits = 5;
+const int kVs2Shift = 20;
+const int kVs2Bits = 5;
+const int kVdShift = 7;
+const int kVdBits = 5;
 const int kRs2Shift = 20;
 const int kRs2Bits = 5;
 const int kRs3Shift = 27;
@@ -599,6 +625,7 @@ enum Opcode : uint32_t {
   RO_V_VSETVLI = OP_V | (0b111 << kFunct3Shift) | 0b0 << 31,
   RO_V_VSETVL = OP_V | (0b111 << kFunct3Shift) | 0b1 << 31,
 
+  // RVV LOAD/STORE
   RO_V_VL = LOAD_FP | (0b00 << kRvvMopShift) | (0b000 << kRvvNfShift),
   RO_V_VLS = LOAD_FP | (0b10 << kRvvMopShift) | (0b000 << kRvvNfShift),
   RO_V_VLX = LOAD_FP | (0b11 << kRvvMopShift) | (0b000 << kRvvNfShift),
@@ -654,6 +681,11 @@ enum Opcode : uint32_t {
   RO_V_VSXSEG6 = STORE_FP | (0b11 << kRvvMopShift) | (0b101 << kRvvNfShift),
   RO_V_VSXSEG7 = STORE_FP | (0b11 << kRvvMopShift) | (0b110 << kRvvNfShift),
   RO_V_VSXSEG8 = STORE_FP | (0b11 << kRvvMopShift) | (0b111 << kRvvNfShift),
+
+  // RVV Vector Arithmetic Instruction
+  RO_V_VADD_VI = OP_IVI | (0b000000 << kRvvFunct6Shift),
+  RO_V_VADD_VV = OP_IVV | (0b000000 << kRvvFunct6Shift),
+  RO_V_VADD_VX = OP_IVX | (0b000000 << kRvvFunct6Shift),
 
 };
 
@@ -1025,6 +1057,21 @@ class InstructionGetters : public T {
   inline int Rs3Value() const {
     DCHECK(this->InstructionType() == InstructionBase::kR4Type);
     return this->Bits(kRs3Shift + kRs3Bits - 1, kRs3Shift);
+  }
+
+  inline int Vs1Value() const {
+    DCHECK(this->InstructionType() == InstructionBase::kVType);
+    return this->Bits(kVs1Shift + kVs1Bits - 1, kVs1Shift);
+  }
+
+  inline int Vs2Value() const {
+    DCHECK(this->InstructionType() == InstructionBase::kVType);
+    return this->Bits(kVs2Shift + kVs2Bits - 1, kVs2Shift);
+  }
+
+  inline int VdValue() const {
+    DCHECK(this->InstructionType() == InstructionBase::kVType);
+    return this->Bits(kVdShift + kVdBits - 1, kVdShift);
   }
 
   inline int RdValue() const {

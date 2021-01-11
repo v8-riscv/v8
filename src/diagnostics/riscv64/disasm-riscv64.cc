@@ -66,11 +66,15 @@ class Decoder {
   // Printing of common values.
   void PrintRegister(int reg);
   void PrintFPURegister(int freg);
+  void PrintVRegister(int reg);
   void PrintFPUStatusRegister(int freg);
   void PrintRs1(Instruction* instr);
   void PrintRs2(Instruction* instr);
   void PrintRd(Instruction* instr);
+  void PrintUimm(Instruction* instr);
   void PrintVs1(Instruction* instr);
+  void PrintVs2(Instruction* instr);
+  void PrintVd(Instruction* instr);
   void PrintFRs1(Instruction* instr);
   void PrintFRs2(Instruction* instr);
   void PrintFRs3(Instruction* instr);
@@ -121,6 +125,7 @@ class Decoder {
   void DecodeCSType(Instruction* instr);
   void DecodeCJType(Instruction* instr);
   void DecodeVType(Instruction* instr);
+  void DecodeRvvIVV(Instruction* instr);
   // Printing of instruction name.
   void PrintInstructionName(Instruction* instr);
 
@@ -160,6 +165,10 @@ void Decoder::PrintRegister(int reg) {
   Print(converter_.NameOfCPURegister(reg));
 }
 
+void Decoder::PrintVRegister(int reg) {
+  Print(v8::internal::VRegisters::Name(reg));
+}
+
 void Decoder::PrintRs1(Instruction* instr) {
   int reg = instr->Rs1Value();
   PrintRegister(reg);
@@ -175,9 +184,24 @@ void Decoder::PrintRd(Instruction* instr) {
   PrintRegister(reg);
 }
 
-void Decoder::PrintVs1(Instruction* instr) {
+void Decoder::PrintUimm(Instruction* instr) {
   int val = instr->Rs1Value();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "0x%x", val);
+}
+
+void Decoder::PrintVs1(Instruction* instr) {
+  int reg = instr->Vs1Value();
+  PrintVRegister(reg);
+}
+
+void Decoder::PrintVs2(Instruction* instr) {
+  int reg = instr->Vs2Value();
+  PrintVRegister(reg);
+}
+
+void Decoder::PrintVd(Instruction* instr) {
+  int reg = instr->VdValue();
+  PrintVRegister(reg);
 }
 
 // Print the FPUregister name according to the active name converter.
@@ -711,13 +735,26 @@ int Decoder::FormatOption(Instruction* instr, const char* format) {
       UNREACHABLE();
     }
     case 'v': {  // 'vs1: Raw values from register fields
-      DCHECK(STRING_STARTS_WITH(format, "vs1"));
-      PrintVs1(instr);
+      if (format[1] == 'd') {
+        DCHECK(STRING_STARTS_WITH(format, "vd"));
+        PrintVd(instr);
+      } else if (format[2] == '1') {
+        DCHECK(STRING_STARTS_WITH(format, "vs1"));
+        PrintVs1(instr);
+      } else if (format[2] == '2') {
+        DCHECK(STRING_STARTS_WITH(format, "vs2"));
+        PrintVs2(instr);
+      }
       return 3;
     }
-    case 'l': {  // 'vs1: Raw values from register fields
+    case 'l': {
       DCHECK(STRING_STARTS_WITH(format, "lmul"));
       PrintRvvLMUL(instr);
+      return 4;
+    }
+    case 'u': {
+      DCHECK(STRING_STARTS_WITH(format, "uimm"));
+      PrintUimm(instr);
       return 4;
     }
   }
@@ -1484,21 +1521,21 @@ void Decoder::DecodeIType(Instruction* instr) {
       break;
     case RO_CSRRWI:
       if (instr->RdValue() == zero_reg.code())
-        Format(instr, "csrwi     'csr, 'vs1");
+        Format(instr, "csrwi     'csr, 'uimm");
       else
-        Format(instr, "csrrwi    'rd, 'csr, 'vs1");
+        Format(instr, "csrrwi    'rd, 'csr, 'uimm");
       break;
     case RO_CSRRSI:
       if (instr->RdValue() == zero_reg.code())
-        Format(instr, "csrsi     'csr, 'vs1");
+        Format(instr, "csrsi     'csr, 'uimm");
       else
-        Format(instr, "csrrsi    'rd, 'csr, 'vs1");
+        Format(instr, "csrrsi    'rd, 'csr, 'uimm");
       break;
     case RO_CSRRCI:
       if (instr->RdValue() == zero_reg.code())
-        Format(instr, "csrci     'csr, 'vs1");
+        Format(instr, "csrci     'csr, 'uimm");
       else
-        Format(instr, "csrrci    'rd, 'csr, 'vs1");
+        Format(instr, "csrrci    'rd, 'csr, 'uimm");
       break;
     // TODO(riscv): use F Extension macro block
     case RO_FLW:
@@ -1742,28 +1779,47 @@ void Decoder::DecodeCSType(Instruction* instr) {
   }
 }
 
-void Decoder::DecodeVType(Instruction* instr) {
+void Decoder::DecodeRvvIVV(Instruction* instr) {
+  DCHECK_EQ(instr->InstructionBits() & kVTypeMask, OP_IVV);
   switch (instr->InstructionBits() & kVTypeMask) {
-    case OP_IVV:
+    case RO_V_VADD_VV:
+      Format(instr, "vadd.vv       'vd, 'vs2, 'vs1");
+      break;
+    default:
       UNSUPPORTED_RISCV();
+      break;
+  }
+}
+
+void Decoder::DecodeVType(Instruction* instr) {
+  switch (instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask)) {
+    case OP_IVV:
+      DecodeRvvIVV(instr);
+      return;
       break;
     case OP_FVV:
       UNSUPPORTED_RISCV();
+      return;
       break;
     case OP_MVV:
       UNSUPPORTED_RISCV();
+      return;
       break;
     case OP_IVI:
       UNSUPPORTED_RISCV();
+      return;
       break;
     case OP_IVX:
       UNSUPPORTED_RISCV();
+      return;
       break;
     case OP_FVF:
       UNSUPPORTED_RISCV();
+      return;
       break;
     case OP_MVX:
       UNSUPPORTED_RISCV();
+      return;
       break;
   }
   switch (instr->InstructionBits() &
