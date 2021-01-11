@@ -733,6 +733,21 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void vsxseg8(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
                MaskType mask);
 
+  // RVV Vector Arithmetic Instruction
+  void vadd_vv(VRegister vd, VRegister vs1, VRegister vs2,
+               bool IsMask = false) {
+    GenInstrV(0b000000, OP_IVV, vd, vs1, vs2, IsMask);
+  }
+
+  void vadd_vx(VRegister vd, Register rs1, VRegister vs2, bool IsMask = false) {
+    GenInstrV(0b000000, OP_IVX, vd, rs1, vs2, IsMask);
+  }
+
+  void vadd_vi(VRegister vd, uint8_t simm5, VRegister vs2,
+               bool IsMask = false) {
+    GenInstrV(0b000000, vd, simm5, vs2, IsMask);
+  }
+
   void uret();
   void sret();
   void mret();
