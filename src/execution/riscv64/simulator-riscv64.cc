@@ -956,6 +956,11 @@ double Simulator::get_fpu_register_double(int fpureg) const {
   return *bit_cast<double*>(&FPUregisters_[fpureg]);
 }
 
+__int128_t Simulator::get_vregister(int vreg) const {
+  DCHECK((vreg >= 0) && (vreg < kNumVRegisters));
+  return Vregister_[vreg];
+}
+
 // Runtime FP routines take up to two double arguments and zero
 // or one integer arguments. All are constructed here,
 // from fa0, fa1, and a0.
@@ -3317,28 +3322,49 @@ void Simulator::DecodeCJType() {
   }
 }
 
-void Simulator::DecodeVType() {
+void Simulator::DecodeRvvIVV() {
+  DCHECK_EQ(instr_.InstructionBits() & kVTypeMask, OP_IVV);
   switch (instr_.InstructionBits() & kVTypeMask) {
+    case RO_V_VADD_VV: {
+      RVV_VI_VV_LOOP({ vd = vs1 + vs2; });
+      break;
+    }
+    default:
+      UNSUPPORTED_RISCV();
+      break;
+  }
+  set_rvv_vstart(0);
+}
+
+void Simulator::DecodeVType() {
+  switch (instr_.InstructionBits() & (kFunct3Mask | kBaseOpcodeMask)) {
     case OP_IVV:
-      UNIMPLEMENTED_RISCV();
+      DecodeRvvIVV();
+      return;
       break;
     case OP_FVV:
       UNIMPLEMENTED_RISCV();
+      return;
       break;
     case OP_MVV:
       UNIMPLEMENTED_RISCV();
+      return;
       break;
     case OP_IVI:
       UNIMPLEMENTED_RISCV();
+      return;
       break;
     case OP_IVX:
       UNIMPLEMENTED_RISCV();
+      return;
       break;
     case OP_FVF:
       UNIMPLEMENTED_RISCV();
+      return;
       break;
     case OP_MVX:
       UNIMPLEMENTED_RISCV();
+      return;
       break;
   }
   switch (instr_.InstructionBits() &
@@ -3399,6 +3425,11 @@ void Simulator::InstructionDecode(Instruction* instr) {
   }
 
   instr_ = instr;
+  if (::v8::internal::FLAG_trace_sim) {
+    PrintF("  0x%012" PRIxPTR "   %-44s   %s\n",
+           reinterpret_cast<intptr_t>(instr), buffer.begin(),
+           trace_buf_.begin());
+  }
   switch (instr_.InstructionType()) {
     case Instruction::kRType:
       DecodeRVRType();
@@ -3455,12 +3486,6 @@ void Simulator::InstructionDecode(Instruction* instr) {
                   << std::endl;
       }
       UNSUPPORTED();
-  }
-
-  if (::v8::internal::FLAG_trace_sim) {
-    PrintF("  0x%012" PRIxPTR "   %-44s   %s\n",
-           reinterpret_cast<intptr_t>(instr), buffer.begin(),
-           trace_buf_.begin());
   }
 
   if (!pc_modified_) {
