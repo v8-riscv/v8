@@ -1886,6 +1886,14 @@ TEST(RVV_ZIMM) {
   CHECK_EQ(Assembler::GenZimm(VSew::E512, Vlmul::mf8), 0b111001);
 }
 
+TEST(RVV_assembler) {
+  CcTest::InitializeVM();
+  GenAndRunTest([](MacroAssembler& assm) {
+    __ vsetvli(t0, zero_reg, E8, m1);
+    __ vadd_vv(v1, v2, v3);
+  });
+}
+
 TEST(RVV_VSETVL) {
   CcTest::InitializeVM();
 #define TEST_VSETVL(SEW, LMUL, tail, mask, expected_value)                    \
