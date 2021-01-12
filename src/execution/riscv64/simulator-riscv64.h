@@ -375,6 +375,7 @@ class Simulator : public SimulatorBase {
   void clear_fflags(int32_t flags) { clear_csr_bits(csr_fflags, flags); }
 
   // RVV CSR
+  __int128_t get_vregister(int vreg) const;
   inline uint64_t rvv_vlen() const { return kRvvVLEN; }
   inline uint64_t rvv_vtype() const { return vtype_; }
   inline uint64_t rvv_vl() const { return vl_; }
@@ -608,13 +609,139 @@ class Simulator : public SimulatorBase {
   }
 
   // RVV
+  // The following code about RVV was based from:
+  //   https://github.com/riscv/riscv-isa-sim
+  // Copyright (c) 2010-2017, The Regents of the University of California
+  // (Regents).  All Rights Reserved.
 
-  inline int32_t rvv_vs1_reg() { UNIMPLEMENTED(); }
-  inline __int128_t rvv_vs1() { UNIMPLEMENTED(); }
-  inline int32_t rvv_vs2_reg() { UNIMPLEMENTED(); }
-  inline __int128_t rvv_vs2() { UNIMPLEMENTED(); }
-  inline int32_t rvv_vd_reg() { UNIMPLEMENTED(); }
-  inline __int128_t rvv_vd() { UNIMPLEMENTED(); }
+  // Redistribution and use in source and binary forms, with or without
+  // modification, are permitted provided that the following conditions are met:
+  // 1. Redistributions of source code must retain the above copyright
+  //    notice, this list of conditions and the following disclaimer.
+  // 2. Redistributions in binary form must reproduce the above copyright
+  //    notice, this list of conditions and the following disclaimer in the
+  //    documentation and/or other materials provided with the distribution.
+  // 3. Neither the name of the Regents nor the
+  //    names of its contributors may be used to endorse or promote products
+  //    derived from this software without specific prior written permission.
+
+  // IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT,
+  // SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS,
+  // ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF
+  // REGENTS HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+  // REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED
+  // TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+  // PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED
+  // HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE
+  // MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+  template <uint64_t N>
+  struct type_usew_t;
+  template <>
+  struct type_usew_t<8> {
+    using type = uint8_t;
+  };
+
+  template <>
+  struct type_usew_t<16> {
+    using type = uint16_t;
+  };
+
+  template <>
+  struct type_usew_t<32> {
+    using type = uint32_t;
+  };
+
+  template <>
+  struct type_usew_t<64> {
+    using type = uint64_t;
+  };
+
+  template <uint64_t N>
+  struct type_sew_t;
+
+  template <>
+  struct type_sew_t<8> {
+    using type = int8_t;
+  };
+
+  template <>
+  struct type_sew_t<16> {
+    using type = int16_t;
+  };
+
+  template <>
+  struct type_sew_t<32> {
+    using type = int32_t;
+  };
+
+  template <>
+  struct type_sew_t<64> {
+    using type = int64_t;
+  };
+
+#define VV_PARAMS(x)                                                      \
+  type_sew_t<x>::type& vd = Rvvelt<type_sew_t<x>::type>(vd_num, i, true); \
+  type_sew_t<x>::type vs1 = Rvvelt<type_sew_t<x>::type>(vs1_num, i);      \
+  type_sew_t<x>::type vs2 = Rvvelt<type_sew_t<x>::type>(vs2_num, i);
+
+#define RVV_VI_VV_LOOP(BODY)                              \
+  uint32_t vsew = rvv_vsew();                             \
+  reg_t vs1_num = rvv_vs1_reg();                          \
+  reg_t vs2_num = rvv_vs2_reg();                          \
+  reg_t vd_num = rvv_vd_reg();                            \
+  for (uint64_t i = rvv_vstart(); i < rvv_vl(); i++) {    \
+    if (instr_.RvvVM() == 0) {                            \
+      UNIMPLEMENTED();                                    \
+    }                                                     \
+    if (vsew == E8) {                                     \
+      VV_PARAMS(8);                                       \
+      BODY                                                \
+    } else if (vsew == E16) {                             \
+      VV_PARAMS(16);                                      \
+      BODY                                                \
+    } else if (vsew == E16) {                             \
+      VV_PARAMS(32);                                      \
+      BODY                                                \
+    } else if (vsew == E16) {                             \
+      VV_PARAMS(64);                                      \
+      BODY                                                \
+    } else {                                              \
+      UNREACHABLE();                                      \
+    }                                                     \
+  }                                                       \
+  if (::v8::internal::FLAG_trace_sim) {                   \
+    PrintF("\t%s:0x%016" PRIx64 "%016" PRIx64 "\n",       \
+           v8::internal::VRegisters::Name((int)vd_num),   \
+           (uint64_t)(get_vregister((int)vd_num) >> 64),  \
+           (uint64_t)get_vregister((int)vd_num));         \
+    PrintF("\t%s:0x%016" PRIx64 "%016" PRIx64 "\n",       \
+           v8::internal::VRegisters::Name((int)vs1_num),  \
+           (uint64_t)(get_vregister((int)vs1_num) >> 64), \
+           (uint64_t)get_vregister((int)vs1_num));        \
+    PrintF("\t%s:0x%016" PRIx64 "%016" PRIx64 "\n",       \
+           v8::internal::VRegisters::Name((int)vs2_num),  \
+           (uint64_t)(get_vregister((int)vs2_num) >> 64), \
+           (uint64_t)get_vregister((int)vs2_num));        \
+  }
+
+  template <class T>
+  T& Rvvelt(reg_t vReg, uint64_t n, bool is_write = false) {
+    CHECK(rvv_sew() != 0);
+    CHECK((rvv_vlen() >> 3) / sizeof(T) > 0);
+    reg_t elts_per_reg = (rvv_vlen() >> 3) / (sizeof(T));
+    vReg += n / elts_per_reg;
+    n = n % elts_per_reg;
+    T* regStart = (T*)((char*)Vregister_ + vReg * (rvv_vlen() >> 3));
+    return regStart[n];
+  }
+
+  inline int32_t rvv_vs1_reg() { return instr_.Vs1Value(); }
+  inline reg_t rvv_vs1() { UNIMPLEMENTED(); }
+  inline int32_t rvv_vs2_reg() { return instr_.Vs2Value(); }
+  inline reg_t rvv_vs2() { UNIMPLEMENTED(); }
+  inline int32_t rvv_vd_reg() { return instr_.VdValue(); }
+  inline reg_t rvv_vd() { UNIMPLEMENTED(); }
   inline void set_vrd() { UNIMPLEMENTED(); }
 
   inline void set_rvv_vtype(uint64_t value, bool trace = true) {
@@ -716,6 +843,7 @@ class Simulator : public SimulatorBase {
   void DecodeCSType();
   void DecodeCJType();
   void DecodeVType();
+  void DecodeRvvIVV();
 
   // Used for breakpoints and traps.
   void SoftwareInterrupt();
