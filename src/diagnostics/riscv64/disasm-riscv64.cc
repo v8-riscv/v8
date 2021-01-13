@@ -97,6 +97,7 @@ class Decoder {
   void PrintRvcImm5D(Instruction* instr);
   void PrintRvcImm8Addi4spn(Instruction* instr);
   void PrintRvcImm11CJ(Instruction* instr);
+  void PrintRvvVm(Instruction* instr);
   void PrintAcquireRelease(Instruction* instr);
   void PrintBranchOffset(Instruction* instr);
   void PrintStoreOffset(Instruction* instr);
@@ -343,6 +344,13 @@ void Decoder::PrintRvcImm8Addi4spn(Instruction* instr) {
 void Decoder::PrintRvcImm11CJ(Instruction* instr) {
   int32_t imm = instr->RvcImm11CJValue();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", imm);
+}
+
+void Decoder::PrintRvvVm(Instruction* instr) {
+  uint8_t imm = instr->RvvVM();
+  if (imm == 0) {
+    out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "vm");
+  }
 }
 
 void Decoder::PrintAcquireRelease(Instruction* instr) {
@@ -738,14 +746,20 @@ int Decoder::FormatOption(Instruction* instr, const char* format) {
       if (format[1] == 'd') {
         DCHECK(STRING_STARTS_WITH(format, "vd"));
         PrintVd(instr);
+        return 2;
       } else if (format[2] == '1') {
         DCHECK(STRING_STARTS_WITH(format, "vs1"));
         PrintVs1(instr);
+        return 3;
       } else if (format[2] == '2') {
         DCHECK(STRING_STARTS_WITH(format, "vs2"));
         PrintVs2(instr);
+        return 3;
+      } else {
+        DCHECK(STRING_STARTS_WITH(format, "vm"));
+        PrintRvvVm(instr);
+        return 2;
       }
-      return 3;
     }
     case 'l': {
       DCHECK(STRING_STARTS_WITH(format, "lmul"));
@@ -1783,7 +1797,7 @@ void Decoder::DecodeRvvIVV(Instruction* instr) {
   DCHECK_EQ(instr->InstructionBits() & kVTypeMask, OP_IVV);
   switch (instr->InstructionBits() & kVTypeMask) {
     case RO_V_VADD_VV:
-      Format(instr, "vadd.vv       'vd, 'vs2, 'vs1");
+      Format(instr, "vadd.vv       'vd, 'vs2, 'vs1  'vm");
       break;
     default:
       UNSUPPORTED_RISCV();
