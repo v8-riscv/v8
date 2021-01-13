@@ -366,7 +366,7 @@
 }],  # 'mips_arch_variant == r6'
 
 ##############################################################################
-['arch == riscv or arch == riscv64', {
+['arch == riscv64', {
   # this test is unstable, sometimes fail when running w/ other tests
   'test-cpu-profiler/CrossScriptInliningCallerLineNumbers2': [SKIP],
 
@@ -383,14 +383,14 @@
 }],
 
 ##############################################################################
-['arch == riscv and simulator_run or arch == riscv64 and simulator_run', {
+['arch == riscv64 and simulator_run', {
 
   # Pass but take too long with the simulator.
   'test-api/Threading*': [PASS, SLOW],
   'test-api/ExternalArrays': [PASS, SLOW],
   'test-heap-profiler/ManyLocalsInSharedContext': [PASS, SLOW],
 
-}],  # 'arch == riscv and simulator_run or arch == riscv64 and simulator_run'
+}],  # 'arch == riscv64 and simulator_run'
 
 ##############################################################################
 ['system == android', {

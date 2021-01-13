@@ -60,7 +60,7 @@ v8_source_set("v8_cppgc_shared_unittests_sources") {
 if (cppgc_is_standalone) {
   v8_executable("cppgc_unittests") {
     testonly = true
-    if (v8_current_cpu == "riscv64" || v8_current_cpu == "riscv") {
+    if (v8_current_cpu == "riscv64") {
       libs = [ "atomic" ]
     }
 
@@ -438,11 +438,6 @@ v8_source_set("unittests_sources") {
     sources += [
       "assembler/turbo-assembler-riscv64-unittest.cc",
       "compiler/riscv64/instruction-selector-riscv64-unittest.cc",
-    ]
-  } else if (v8_current_cpu == "riscv") {
-    sources += [
-      "assembler/turbo-assembler-riscv-unittest.cc",
-      "compiler/riscv/instruction-selector-riscv-unittest.cc",
     ]
   } else if (v8_current_cpu == "x64") {
     sources += [
