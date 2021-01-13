@@ -735,17 +735,18 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
   // RVV Vector Arithmetic Instruction
   void vadd_vv(VRegister vd, VRegister vs1, VRegister vs2,
-               bool IsMask = false) {
-    GenInstrV(0b000000, OP_IVV, vd, vs1, vs2, IsMask);
+               MaskType mask = NoMask) {
+    GenInstrV(0b000000, OP_IVV, vd, vs1, vs2, mask);
   }
 
-  void vadd_vx(VRegister vd, Register rs1, VRegister vs2, bool IsMask = false) {
-    GenInstrV(0b000000, OP_IVX, vd, rs1, vs2, IsMask);
+  void vadd_vx(VRegister vd, Register rs1, VRegister vs2,
+               MaskType mask = NoMask) {
+    GenInstrV(0b000000, OP_IVX, vd, rs1, vs2, mask);
   }
 
   void vadd_vi(VRegister vd, uint8_t simm5, VRegister vs2,
-               bool IsMask = false) {
-    GenInstrV(0b000000, vd, simm5, vs2, IsMask);
+               MaskType mask = NoMask) {
+    GenInstrV(0b000000, vd, simm5, vs2, mask);
   }
 
   void uret();
@@ -1222,33 +1223,33 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void GenInstrV(Register rd, Register rs1, uint32_t zimm);
   // OPIVV OPFVV OPMVV
   void GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd, VRegister vs1,
-                 VRegister vs2, bool IsMask);
+                 VRegister vs2, MaskType mask);
   // OPMVV OPFVV
   void GenInstrV(uint8_t funct6, Opcode opcode, Register rd, VRegister vs1,
-                 VRegister vs2, bool IsMask);
+                 VRegister vs2, MaskType mask);
 
   // OPIVX OPFVF OPMVX
   void GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd, Register rs1,
-                 VRegister vs2, bool IsMask);
+                 VRegister vs2, MaskType mask);
 
   // OPMVX
   void GenInstrV(uint8_t funct6, Register rd, Register rs1, VRegister vs2,
-                 bool IsMask);
+                 MaskType mask);
   // OPIVI
   void GenInstrV(uint8_t funct6, VRegister vd, uint8_t simm5, VRegister vs2,
-                 bool IsMask);
+                 MaskType mask);
 
   // VL VS
   void GenInstrV(Opcode opcode, uint8_t width, VRegister vd, Register rs1,
-                 uint8_t umop, MaskType IsMask, uint8_t IsMop, bool IsMew,
+                 uint8_t umop, MaskType mask, uint8_t IsMop, bool IsMew,
                  uint8_t Nf);
 
   void GenInstrV(Opcode opcode, uint8_t width, VRegister vd, Register rs1,
-                 Register rs2, MaskType IsMask, uint8_t IsMop, bool IsMew,
+                 Register rs2, MaskType mask, uint8_t IsMop, bool IsMew,
                  uint8_t Nf);
   // VL VS AMO
   void GenInstrV(Opcode opcode, uint8_t width, VRegister vd, Register rs1,
-                 VRegister vs2, MaskType IsMask, uint8_t IsMop, bool IsMew,
+                 VRegister vs2, MaskType mask, uint8_t IsMop, bool IsMew,
                  uint8_t Nf);
 
   // ----- Instruction class templates match those in LLVM's RISCVInstrInfo.td

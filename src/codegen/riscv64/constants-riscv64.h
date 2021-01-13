@@ -77,6 +77,7 @@ const int kInvalidFPURegister = -1;
 
 // Number vectotr registers
 const int kNumVRegisters = 32;
+const int kInvalidVRegister = -1;
 // 'pref' instruction hints
 const int32_t kPrefHintLoad = 0;
 const int32_t kPrefHintStore = 1;
@@ -875,8 +876,8 @@ enum MaskAgnosticType {
   mu = 0x0,  // Mask undisturbed
 };
 enum MaskType {
-  Mask = 0x1,  // use the mask
-  NoMask = 0x0,
+  Mask = 0x0,  // use the mask
+  NoMask = 0x1,
 };
 
 // -----------------------------------------------------------------------------
@@ -1369,6 +1370,11 @@ class InstructionGetters : public T {
     uint32_t zimm = this->Rvvzimm();
     uint32_t vlmul = ((zimm & 20) >> 3) | (zimm & 0x3);
     return vlmul;
+  }
+
+  inline uint8_t RvvVM() const {
+    DCHECK(this->InstructionType() == InstructionBase::kVType);
+    return this->Bits(kRvvVmShift + kRvvVmBits - 1, kRvvVmShift);
   }
 
   inline const char* RvvSEW() const {
