@@ -141,7 +141,7 @@ int VRegisters::Number(const char* name) {
   }
 
   // No Cregister with the reguested name found.
-  return kInvalidFPURegister;
+  return kInvalidVRegister;
 }
 
 InstructionBase::Type InstructionBase::InstructionType() const {
