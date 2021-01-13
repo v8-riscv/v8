@@ -2648,13 +2648,21 @@ void Assembler::db(uint8_t data) {
   EmitHelper(data);
 }
 
-void Assembler::dd(uint32_t data) {
+void Assembler::dd(uint32_t data, RelocInfo::Mode rmode) {
+  if (!RelocInfo::IsNone(rmode)) {
+    DCHECK(RelocInfo::IsDataEmbeddedObject(rmode));
+    RecordRelocInfo(rmode);
+  }
   if (!is_buffer_growth_blocked()) CheckBuffer();
   DEBUG_PRINTF("%p: constant 0x%x\n", pc_, data);
   EmitHelper(data);
 }
 
-void Assembler::dq(uint64_t data) {
+void Assembler::dq(uint64_t data, RelocInfo::Mode rmode) {
+  if (!RelocInfo::IsNone(rmode)) {
+    DCHECK(RelocInfo::IsDataEmbeddedObject(rmode));
+    RecordRelocInfo(rmode);
+  }
   if (!is_buffer_growth_blocked()) CheckBuffer();
   DEBUG_PRINTF("%p: constant 0x%lx\n", pc_, data);
   EmitHelper(data);
