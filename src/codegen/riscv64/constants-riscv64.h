@@ -634,6 +634,7 @@ enum Opcode : uint32_t {
   RO_V_VS = STORE_FP | (0b00 << kRvvMopShift) | (0b000 << kRvvNfShift),
   RO_V_VSS = STORE_FP | (0b10 << kRvvMopShift) | (0b000 << kRvvNfShift),
   RO_V_VSX = STORE_FP | (0b11 << kRvvMopShift) | (0b000 << kRvvNfShift),
+  RO_V_VSU = STORE_FP | (0b01 << kRvvMopShift) | (0b000 << kRvvNfShift),
   // THE kFunct6Shift is mop
   RO_V_VLSEG2 = LOAD_FP | (0b00 << kRvvMopShift) | (0b001 << kRvvNfShift),
   RO_V_VLSEG3 = LOAD_FP | (0b00 << kRvvMopShift) | (0b010 << kRvvNfShift),
@@ -1051,6 +1052,7 @@ class InstructionGetters : public T {
            this->InstructionType() == InstructionBase::kIType ||
            this->InstructionType() == InstructionBase::kSType ||
            this->InstructionType() == InstructionBase::kBType ||
+           this->InstructionType() == InstructionBase::kIType ||
            this->InstructionType() == InstructionBase::kVType);
     return this->Bits(kRs1Shift + kRs1Bits - 1, kRs1Shift);
   }
@@ -1060,6 +1062,7 @@ class InstructionGetters : public T {
            this->InstructionType() == InstructionBase::kR4Type ||
            this->InstructionType() == InstructionBase::kSType ||
            this->InstructionType() == InstructionBase::kBType ||
+           this->InstructionType() == InstructionBase::kIType ||
            this->InstructionType() == InstructionBase::kVType);
     return this->Bits(kRs2Shift + kRs2Bits - 1, kRs2Shift);
   }
@@ -1070,17 +1073,23 @@ class InstructionGetters : public T {
   }
 
   inline int Vs1Value() const {
-    DCHECK(this->InstructionType() == InstructionBase::kVType);
+    DCHECK(this->InstructionType() == InstructionBase::kVType ||
+           this->InstructionType() == InstructionBase::kIType ||
+           this->InstructionType() == InstructionBase::kSType);
     return this->Bits(kVs1Shift + kVs1Bits - 1, kVs1Shift);
   }
 
   inline int Vs2Value() const {
-    DCHECK(this->InstructionType() == InstructionBase::kVType);
+    DCHECK(this->InstructionType() == InstructionBase::kVType ||
+           this->InstructionType() == InstructionBase::kIType ||
+           this->InstructionType() == InstructionBase::kSType);
     return this->Bits(kVs2Shift + kVs2Bits - 1, kVs2Shift);
   }
 
   inline int VdValue() const {
-    DCHECK(this->InstructionType() == InstructionBase::kVType);
+    DCHECK(this->InstructionType() == InstructionBase::kVType ||
+           this->InstructionType() == InstructionBase::kIType ||
+           this->InstructionType() == InstructionBase::kSType);
     return this->Bits(kVdShift + kVdBits - 1, kVdShift);
   }
 
@@ -1088,6 +1097,7 @@ class InstructionGetters : public T {
     DCHECK(this->InstructionType() == InstructionBase::kRType ||
            this->InstructionType() == InstructionBase::kR4Type ||
            this->InstructionType() == InstructionBase::kIType ||
+           this->InstructionType() == InstructionBase::kSType ||
            this->InstructionType() == InstructionBase::kUType ||
            this->InstructionType() == InstructionBase::kJType ||
            this->InstructionType() == InstructionBase::kVType);
@@ -1382,7 +1392,9 @@ class InstructionGetters : public T {
   }
 
   inline uint8_t RvvVM() const {
-    DCHECK(this->InstructionType() == InstructionBase::kVType);
+    DCHECK(this->InstructionType() == InstructionBase::kVType ||
+           this->InstructionType() == InstructionBase::kIType ||
+           this->InstructionType() == InstructionBase::kSType);
     return this->Bits(kRvvVmShift + kRvvVmBits - 1, kRvvVmShift);
   }
 

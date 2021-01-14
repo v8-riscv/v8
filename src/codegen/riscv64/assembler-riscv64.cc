@@ -1127,28 +1127,28 @@ void Assembler::GenInstrV(Opcode opcode, uint8_t width, VRegister vd,
                           Register rs1, uint8_t umop, MaskType mask,
                           uint8_t IsMop, bool IsMew, uint8_t Nf) {
   DCHECK(opcode == LOAD_FP || opcode == STORE_FP);
-  Instr instr = opcode | ((vd.code() & kRvvVdMask) << kRvvVdShift) |
-                ((width & kRvvWidthMask) << kRvvWidthShift) |
-                ((rs1.code() & kRvvRs1Mask) << kRvvRs1Shift) |
-                ((umop & kRvvRs2Mask) << kRvvRs2Shift) |
-                ((mask & kRvvVmMask) << kRvvVmShift) |
-                ((IsMop & kRvvMopMask) << kRvvMopShift) |
-                ((IsMew & kRvvMewMask) << kRvvMewShift) |
-                ((Nf & kRvvNfMask) << kRvvNfShift);
+  Instr instr = opcode | ((vd.code() << kRvvVdShift) & kRvvVdMask) |
+                ((width << kRvvWidthShift) & kRvvWidthMask) |
+                ((rs1.code() << kRvvRs1Shift) & kRvvRs1Mask) |
+                ((umop << kRvvRs2Shift) & kRvvRs2Mask) |
+                ((mask << kRvvVmShift) & kRvvVmMask) |
+                ((IsMop << kRvvMopShift) & kRvvMopMask) |
+                ((IsMew << kRvvMewShift) & kRvvMewMask) |
+                ((Nf << kRvvNfShift) & kRvvNfMask);
   emit(instr);
 }
 void Assembler::GenInstrV(Opcode opcode, uint8_t width, VRegister vd,
                           Register rs1, Register rs2, MaskType mask,
                           uint8_t IsMop, bool IsMew, uint8_t Nf) {
   DCHECK(opcode == LOAD_FP || opcode == STORE_FP);
-  Instr instr = opcode | ((vd.code() & kRvvVdMask) << kRvvVdShift) |
-                ((width & kRvvWidthMask) << kRvvWidthShift) |
-                ((rs1.code() & kRvvRs1Mask) << kRvvRs1Shift) |
-                ((rs2.code() & kRvvRs2Mask) << kRvvRs2Shift) |
-                ((mask & kRvvVmMask) << kRvvVmShift) |
-                ((IsMop & kRvvMopMask) << kRvvMopShift) |
-                ((IsMew & kRvvMewMask) << kRvvMewShift) |
-                ((Nf & kRvvNfMask) << kRvvNfShift);
+  Instr instr = opcode | ((vd.code() << kRvvVdShift) & kRvvVdMask) |
+                ((width << kRvvWidthShift) & kRvvWidthMask) |
+                ((rs1.code() << kRvvRs1Shift) & kRvvRs1Mask) |
+                ((rs2.code() << kRvvRs2Shift) & kRvvRs2Mask) |
+                ((mask << kRvvVmShift) & kRvvVmMask) |
+                ((IsMop << kRvvMopShift) & kRvvMopMask) |
+                ((IsMew << kRvvMewShift) & kRvvMewMask) |
+                ((Nf << kRvvNfShift) & kRvvNfMask);
   emit(instr);
 }
 // VL VS AMO
@@ -1156,14 +1156,14 @@ void Assembler::GenInstrV(Opcode opcode, uint8_t width, VRegister vd,
                           Register rs1, VRegister vs2, MaskType mask,
                           uint8_t IsMop, bool IsMew, uint8_t Nf) {
   DCHECK(opcode == LOAD_FP || opcode == STORE_FP || opcode == AMO);
-  Instr instr = opcode | ((vd.code() & kRvvVdMask) << kRvvVdShift) |
-                ((width & kRvvWidthMask) << kRvvWidthShift) |
-                ((rs1.code() & kRvvRs1Mask) << kRvvRs1Shift) |
-                ((vs2.code() & kRvvRs2Mask) << kRvvRs2Shift) |
-                ((mask & kRvvVmMask) << kRvvVmShift) |
-                ((IsMop & kRvvMopMask) << kRvvMopShift) |
-                ((IsMew & kRvvMewMask) << kRvvMewShift) |
-                ((Nf & kRvvNfMask) << kRvvNfShift);
+  Instr instr = opcode | ((vd.code() << kRvvVdShift) & kRvvVdMask) |
+                ((width << kRvvWidthShift) & kRvvWidthMask) |
+                ((rs1.code() << kRvvRs1Shift) & kRvvRs1Mask) |
+                ((vs2.code() << kRvvRs2Shift) & kRvvRs2Mask) |
+                ((mask << kRvvVmShift) & kRvvVmMask) |
+                ((IsMop << kRvvMopShift) & kRvvMopMask) |
+                ((IsMew << kRvvMewShift) & kRvvMewMask) |
+                ((Nf << kRvvNfShift) & kRvvNfMask);
   emit(instr);
 }
 // ----- Instruction class templates match those in the compiler
@@ -2327,20 +2327,26 @@ void Assembler::vs(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
                    MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
-  GenInstrV(LOAD_FP, width, vd, rs1, sumop, mask, 0b00, IsMew, 0b000);
+  GenInstrV(STORE_FP, width, vd, rs1, sumop, mask, 0b00, IsMew, 0b000);
 }
-void Assembler::vss(VRegister vd, Register rs1, Register rs2, VSew vsew,
+void Assembler::vss(VRegister vs3, Register rs1, Register rs2, VSew vsew,
                     MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
-  GenInstrV(LOAD_FP, width, vd, rs1, rs2, mask, 0b10, IsMew, 0b000);
+  GenInstrV(STORE_FP, width, vs3, rs1, rs2, mask, 0b10, IsMew, 0b000);
 }
 
 void Assembler::vsx(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
                     MaskType mask) {
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
-  GenInstrV(LOAD_FP, width, vd, rs1, vs2, mask, 0b11, IsMew, 0b000);
+  GenInstrV(STORE_FP, width, vd, rs1, vs2, mask, 0b11, IsMew, 0b000);
+}
+void Assembler::vsu(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+                    MaskType mask) {
+  bool IsMew = vsew >= E128 ? true : false;
+  uint8_t width = vsew_switch(vsew);
+  GenInstrV(STORE_FP, width, vd, rs1, vs2, mask, 0b01, IsMew, 0b000);
 }
 
 void Assembler::vlseg2(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
