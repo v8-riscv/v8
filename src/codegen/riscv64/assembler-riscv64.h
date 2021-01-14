@@ -655,6 +655,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void vss(VRegister vd, Register rs1, Register rs2, VSew vsew, MaskType mask);
   void vsx(VRegister vd, Register rs1, VRegister vs3, VSew vsew, MaskType Type);
 
+  void vsu(VRegister vd, Register rs1, VRegister vs3, VSew vsew, MaskType Type);
   void vlseg2(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
               MaskType mask);
   void vlseg3(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
