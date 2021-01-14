@@ -1778,6 +1778,68 @@ void Decoder::DecodeVType(Instruction* instr) {
       UNSUPPORTED_RISCV();
       break;
   }
+  uint16_t width=0;
+  switch(instr->InstructionBits()&(kRvvWidthMask|kRvvMewMask)){
+     case 0x0:
+	  width=8;
+	  break;
+     case 0x00005000:
+          width=16;break;
+    case 0x00006000:
+         width=32;break;
+    case 0x00007000:
+         width=64;break;
+    case 0x10000000:
+         width=128;break;
+    case 0x10005000:
+         width=256;break;
+    case 0x10006000:
+        width=512;break;
+    case 0x10007000:
+       width=1024;	break;
+  }
+  switch (instr->InstructionBits() &
+          (kRvvMopMask | kRvvNfShift | kBaseOpcodeMask)) {
+    case RO_V_VL:
+      if (!(instr->InstructionBits() & (kRvvRs2Mask))) switch (width) {
+          case 8:
+            Format(instr, "vle8      'vd,'rs1,'vm");break;
+          case 16:
+            Format(instr, "vle16     'vd,'rs1,'vm");break;
+          case 32:
+            Format(instr, "vle32       'vd,'rs1,'vm");break;
+          case 64:
+            Format(instr, "vle64       'vd,'rs1,'vm");break;
+          case 128:
+            Format(instr, "vle128       'vd,'rs1,'vm");break;
+          case 256:
+            Format(instr, "vle256       'vd,'rs1,'vm");break;
+          case 512:
+            Format(instr, "vle512       'vd,'rs1,'vm");break;
+          case 1024:
+            Format(instr, "vle1024       'vd,'rs1,'vm");break;
+        }
+      else {
+        switch (width) {
+          case 8:
+            Format(instr, "vle8ff      'vd,'rs1,'vm");break;
+          case 16:
+            Format(instr, "vle16ff     'vd,'rs1,'vm");break;
+          case 32:
+            Format(instr, "vle32ff       'vd,'rs1,'vm");break;
+          case 64:
+            Format(instr, "vle64ff       'vd,'rs1,'vm");break;
+          case 128:
+            Format(instr, "vle128ff       'vd,'rs1,'vm");break;
+          case 256:
+            Format(instr, "vle256ff       'vd,'rs1,'vm");break;
+          case 512:
+            Format(instr, "vle512ff       'vd,'rs1,'vm");break;
+          case 1024:
+            Format(instr, "vle1024ff       'vd,'rs1,'vm");break;
+        }
+      }
+  }
 }
 
 void Decoder::DecodeCJType(Instruction* instr) {
