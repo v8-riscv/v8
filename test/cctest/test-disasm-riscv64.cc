@@ -516,6 +516,41 @@ TEST(RVV) {
           , "004372d7       vsetvli       t0, t1, E16, m1");
   COMPARE(vadd_vv(v0, v1, v2), "02208057       vadd.vv       v0, v2, v1  ");
   COMPARE(vmv_vv(v0, v1, v2), "5e208057       vmv.vv       v0, v1");
+  COMPARE(vl(v0, t0, 0, E8, Mask), "00028007       vle8.v       v0, (t0) vm");
+  COMPARE(vs(v0, t0, 0, E8, Mask), "00028027       vse8.v       v0, (t0) vm");
+  COMPARE(vls(v0, t0, t1, E8, Mask),
+          "08628007       vlse8.v       v0, (t0), t1 vm");
+  COMPARE(vss(v0, t0, t1, E8, Mask),
+          "08628027       vsse8.v       v0, (t0), t1 vm");
+  COMPARE(vlx(v0, t0, v1, E8, Mask),
+          "0c128007       vlxei8.v       v0, (t0), v1 vm");
+  COMPARE(vsx(v0, t0, v1, E8, Mask),
+          "0c128027       vsxei8.v       v0, (t0), v1 vm");
+  COMPARE(vsu(v0, t0, v1, E8, Mask),
+          "04128027       vsuxei8.v       v0, (t0), v1 vm");
+  COMPARE(vsu(v0, t0, v1, E128, Mask),
+          "14128027       vsuxei128.v       v0, (t0), v1 vm");
+  COMPARE(vsu(v0, t0, v1, E256, Mask),
+          "1412d027       vsuxei256.v       v0, (t0), v1 vm");
+  COMPARE(vsu(v0, t0, v1, E256, NoMask),
+          "1612d027       vsuxei256.v       v0, (t0), v1 ");
+  COMPARE(vlseg2(v0, t0, 0, E8, Mask),
+          "20028007       vlseg2e8.v       v0, (t0) vm");
+  COMPARE(vlseg3(v0, t0, 0, E8, Mask),
+          "40028007       vlseg3e8.v       v0, (t0) vm");
+  COMPARE(vlsseg3(v0, t0, t1, E8, Mask),
+          "48628007       vlsseg3e8.v       v0, (t0), t1 vm");
+  COMPARE(vlxseg3(v0, t0, v1, E8, Mask),
+          "4c128007       vlxseg3ei8.v       v0, (t0), v1 vm");
+  COMPARE(vsseg2(v0, t0, 0, E8, Mask),
+          "20028027       vsseg2e8.v       v0, (t0) vm");
+  COMPARE(vsseg3(v0, t0, 0, E8, Mask),
+          "40028027       vsseg3e8.v       v0, (t0) vm");
+  COMPARE(vssseg3(v0, t0, t1, E8, Mask),
+          "48628027       vssseg3e8.v       v0, (t0), t1 vm");
+  COMPARE(vsxseg3(v0, t0, v1, E8, Mask),
+          "4c128027       vsxseg3ei8.v       v0, (t0), v1 vm");
+
   VERIFY_RUN();
 }
 
