@@ -684,10 +684,19 @@ enum Opcode : uint32_t {
   RO_V_VSXSEG8 = STORE_FP | (0b11 << kRvvMopShift) | (0b111 << kRvvNfShift),
 
   // RVV Vector Arithmetic Instruction
-  RO_V_VADD_VI = OP_IVI | (0b000000 << kRvvFunct6Shift),
-  RO_V_VADD_VV = OP_IVV | (0b000000 << kRvvFunct6Shift),
-  RO_V_VADD_VX = OP_IVX | (0b000000 << kRvvFunct6Shift),
+  VADD_FUNCT6 = 0b000000,
+  RO_V_VADD_VI = OP_IVI | (VADD_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VADD_VV = OP_IVV | (VADD_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VADD_VX = OP_IVX | (VADD_FUNCT6 << kRvvFunct6Shift),
 
+  VMV_FUNCT6 = 0b010111,
+  RO_V_VMV_VI = OP_IVI | (VMV_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VMV_VV = OP_IVV | (VMV_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VMV_VX = OP_IVX | (VMV_FUNCT6 << kRvvFunct6Shift),
+
+  RO_V_VMERGE_VI = RO_V_VMV_VI,
+  RO_V_VMERGE_VV = RO_V_VMV_VV,
+  RO_V_VMERGE_VX = RO_V_VMV_VX
 };
 
 // ----- Emulated conditions.
@@ -1401,6 +1410,11 @@ class InstructionGetters : public T {
         return "unknown";
 #undef CAST_VSEW
     }
+  }
+
+  inline int RvvSimm5() const {
+    DCHECK(this->InstructionType() == InstructionBase::kVType);
+    return this->Bits(kRvvSimm5Shift + kRvvSimm5Bits - 1, kRvvSimm5Shift);
   }
 
   inline bool AqValue() const { return this->Bits(kAqShift, kAqShift); }

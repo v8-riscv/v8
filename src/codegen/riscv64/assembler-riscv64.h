@@ -633,6 +633,18 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
   void vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
                TailAgnosticType tail = tu, MaskAgnosticType mask = mu);
+
+  inline void vsetvlmax(Register rd, VSew vsew, Vlmul vlmul,
+                        TailAgnosticType tail = tu,
+                        MaskAgnosticType mask = mu) {
+    vsetvli(rd, zero_reg, vsew, vlmul, tu, mu);
+  }
+
+  inline void vsetvlmax(VSew vsew, Vlmul vlmul, TailAgnosticType tail = tu,
+                        MaskAgnosticType mask = mu) {
+    vsetvli(zero_reg, zero_reg, vsew, vlmul, tu, mu);
+  }
+
   void vsetvl(Register rd, Register rs1, Register rs2);
   // Privileged
   void vl(VRegister vd, Register rs1, uint8_t lumop, VSew vsew, MaskType mask);
@@ -734,20 +746,52 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
                MaskType mask);
 
   // RVV Vector Arithmetic Instruction
-  void vadd_vv(VRegister vd, VRegister vs1, VRegister vs2,
-               MaskType mask = NoMask) {
-    GenInstrV(0b000000, OP_IVV, vd, vs1, vs2, mask);
+
+  void vmv_vv(VRegister vd, VRegister vs1, VRegister vs2) {
+    GenInstrV(VMV_FUNCT6, OP_IVV, vd, vs1, vs2, NoMask);
   }
 
-  void vadd_vx(VRegister vd, Register rs1, VRegister vs2,
-               MaskType mask = NoMask) {
-    GenInstrV(0b000000, OP_IVX, vd, rs1, vs2, mask);
+  void vmv_vx(VRegister vd, Register rs1, VRegister vs2) {
+    GenInstrV(VMV_FUNCT6, OP_IVX, vd, rs1, vs2, NoMask);
   }
 
-  void vadd_vi(VRegister vd, uint8_t simm5, VRegister vs2,
-               MaskType mask = NoMask) {
-    GenInstrV(0b000000, vd, simm5, vs2, mask);
+  void vmv_vi(VRegister vd, uint8_t simm5, VRegister vs2) {
+    GenInstrV(VMV_FUNCT6, vd, simm5, vs2, NoMask);
   }
+
+  void vmerge_vv(VRegister vd, VRegister vs1, VRegister vs2) {
+    GenInstrV(VMV_FUNCT6, OP_IVV, vd, vs1, vs2, Mask);
+  }
+
+  void vmerge_vx(VRegister vd, Register rs1, VRegister vs2) {
+    GenInstrV(VMV_FUNCT6, OP_IVX, vd, rs1, vs2, Mask);
+  }
+
+  void vmerge_vi(VRegister vd, uint8_t simm5, VRegister vs2) {
+    GenInstrV(VMV_FUNCT6, vd, simm5, vs2, Mask);
+  }
+
+#define DEFINE_OPIVV(name, funct6)                           \
+  void name##_vv(VRegister vd, VRegister vs1, VRegister vs2, \
+                 MaskType mask = NoMask) {                   \
+    GenInstrV(funct6, OP_IVV, vd, vs1, vs2, mask);           \
+  }
+
+#define DEFINE_OPIVX(name, funct6)                          \
+  void name##_vx(VRegister vd, Register rs1, VRegister vs2, \
+                 MaskType mask = NoMask) {                  \
+    GenInstrV(funct6, OP_IVX, vd, rs1, vs2, mask);          \
+  }
+
+#define DEFINE_OPIVI(name, funct6)                           \
+  void name##_vx(VRegister vd, uint8_t simm5, VRegister vs2, \
+                 MaskType mask = NoMask) {                   \
+    GenInstrV(funct6, vd, simm5, vs2, mask);                 \
+  }
+
+  DEFINE_OPIVV(vadd, VADD_FUNCT6)
+  DEFINE_OPIVX(vadd, VADD_FUNCT6)
+  DEFINE_OPIVI(vadd, VADD_FUNCT6)
 
   void uret();
   void sret();

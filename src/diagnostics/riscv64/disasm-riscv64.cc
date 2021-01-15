@@ -104,6 +104,7 @@ class Decoder {
   void PrintCSRReg(Instruction* instr);
   void PrintRvvSEW(Instruction* instr);
   void PrintRvvLMUL(Instruction* instr);
+  void PrintRvvSimm5(Instruction* instr);
   void PrintRoundingMode(Instruction* instr);
   void PrintMemoryOrder(Instruction* instr, bool is_pred);
 
@@ -127,6 +128,8 @@ class Decoder {
   void DecodeCJType(Instruction* instr);
   void DecodeVType(Instruction* instr);
   void DecodeRvvIVV(Instruction* instr);
+  void DecodeRvvIVI(Instruction* instr);
+  void DecodeRvvIVX(Instruction* instr);
   // Printing of instruction name.
   void PrintInstructionName(Instruction* instr);
 
@@ -261,6 +264,11 @@ void Decoder::PrintRvvSEW(Instruction* instr) {
 void Decoder::PrintRvvLMUL(Instruction* instr) {
   const char* lmul = instr->RvvLMUL();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%s", lmul);
+}
+
+void Decoder::PrintRvvSimm5(Instruction* instr) {
+  const int simm5 = instr->RvvSimm5();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", simm5);
 }
 
 void Decoder::PrintImm20U(Instruction* instr) {
@@ -739,6 +747,10 @@ int Decoder::FormatOption(Instruction* instr, const char* format) {
         DCHECK(STRING_STARTS_WITH(format, "sew"));
         PrintRvvSEW(instr);
         return 3;
+      } else if (format[1] == 'i') {
+        DCHECK(STRING_STARTS_WITH(format, "simm5"));
+        PrintRvvSimm5(instr);
+        return 5;
       }
       UNREACHABLE();
     }
@@ -1794,10 +1806,55 @@ void Decoder::DecodeCSType(Instruction* instr) {
 }
 
 void Decoder::DecodeRvvIVV(Instruction* instr) {
-  DCHECK_EQ(instr->InstructionBits() & kVTypeMask, OP_IVV);
+  DCHECK_EQ(instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVV);
   switch (instr->InstructionBits() & kVTypeMask) {
     case RO_V_VADD_VV:
       Format(instr, "vadd.vv       'vd, 'vs2, 'vs1  'vm");
+      break;
+    case RO_V_VMV_VV:
+      if (instr->RvvVM()) {
+        Format(instr, "vmv.vv       'vd, 'vs1");
+      } else {
+        Format(instr, "vmerge.vvm       'vd, 'vs1");
+      }
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+      break;
+  }
+}
+
+void Decoder::DecodeRvvIVI(Instruction* instr) {
+  DCHECK_EQ(instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVI);
+  switch (instr->InstructionBits() & kVTypeMask) {
+    case RO_V_VADD_VI:
+      Format(instr, "vadd.vi       'vd, 'vs2, 'vs1  'vm");
+      break;
+    case RO_V_VMV_VI:
+      if (instr->RvvVM()) {
+        Format(instr, "vmv.vi       'vd, 'simm5");
+      } else {
+        Format(instr, "vmerge.vim       'vd, 'simm5");
+      }
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+      break;
+  }
+}
+
+void Decoder::DecodeRvvIVX(Instruction* instr) {
+  DCHECK_EQ(instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVX);
+  switch (instr->InstructionBits() & kVTypeMask) {
+    case RO_V_VADD_VX:
+      Format(instr, "vadd.vx       'vd, 'vs2, 'vs1  'vm");
+      break;
+    case RO_V_VMV_VX:
+      if (instr->RvvVM()) {
+        Format(instr, "vmv.vx       'vd, 'rs1");
+      } else {
+        Format(instr, "vmerge.vxm       'vd, 'rs1");
+      }
       break;
     default:
       UNSUPPORTED_RISCV();
@@ -1820,11 +1877,11 @@ void Decoder::DecodeVType(Instruction* instr) {
       return;
       break;
     case OP_IVI:
-      UNSUPPORTED_RISCV();
+      DecodeRvvIVI(instr);
       return;
       break;
     case OP_IVX:
-      UNSUPPORTED_RISCV();
+      DecodeRvvIVX(instr);
       return;
       break;
     case OP_FVF:

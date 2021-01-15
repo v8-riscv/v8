@@ -1115,7 +1115,7 @@ void Assembler::GenInstrV(uint8_t funct6, Register rd, Register rs1,
 void Assembler::GenInstrV(uint8_t funct6, VRegister vd, uint8_t simm5,
                           VRegister vs2, MaskType mask) {
   DCHECK(is_uint5(simm5));
-  Instr instr = (funct6 << kRvvFunct6Shift) | (mask << kRvvVmShift) |
+  Instr instr = (funct6 << kRvvFunct6Shift) | OP_IVI | (mask << kRvvVmShift) |
                 ((vd.code() & 0x1F) << kRvvVdShift) |
                 (((uint32_t)simm5 << kRvvSimm5Shift) & kRvvSimm5Mask) |
                 ((vs2.code() & 0x1F) << kRvvVs2Shift);
