@@ -515,6 +515,7 @@ TEST(RVV) {
   COMPARE(vsetvli(t0, t1, E16, m1);
           , "004372d7       vsetvli       t0, t1, E16, m1");
   COMPARE(vadd_vv(v0, v1, v2), "02208057       vadd.vv       v0, v2, v1  ");
+  COMPARE(vmv_vv(v0, v1, v2), "5e208057       vmv.vv       v0, v1");
   VERIFY_RUN();
 }
 
