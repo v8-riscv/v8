@@ -66,6 +66,9 @@ void CpuFeatures::ProbeImpl(bool cross_compile) {
   // Only use statically determined features for cross compile (snapshot).
   if (cross_compile) return;
 
+  // #ifdef USE_SIMULATOR
+  //   supported_ |= 1u << RISCV_SIMD;
+  // #endif
   // Probe for additional features at runtime.
   base::CPU cpu;
   if (cpu.has_fpu()) supported_ |= 1u << FPU;
@@ -3326,7 +3329,7 @@ UseScratchRegisterScope::~UseScratchRegisterScope() {
 Register UseScratchRegisterScope::Acquire() {
   DCHECK_NOT_NULL(available_);
   DCHECK_NE(*available_, 0);
-  int index = static_cast<int>(base::bits::CountTrailingZeros32(*available_));
+  int index = static_cast<int>(base::bits::CountTrailingZeros(*available_));
   *available_ &= ~(1UL << index);
 
   return Register::from_code(index);

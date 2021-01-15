@@ -1825,10 +1825,11 @@ void Decoder::DecodeRvvIVV(Instruction* instr) {
       break;
     case RO_V_VMV_VV:
       if (instr->RvvVM()) {
-        Format(instr, "vmerge.vvm       'vd, 'vs1");
-      } else {
         Format(instr, "vmv.vv       'vd, 'vs1");
+      } else {
+        Format(instr, "vmerge.vvm       'vd, 'vs1");
       }
+      break;
     default:
       UNSUPPORTED_RISCV();
       break;
@@ -1836,17 +1837,18 @@ void Decoder::DecodeRvvIVV(Instruction* instr) {
 }
 
 void Decoder::DecodeRvvIVI(Instruction* instr) {
-  DCHECK_EQ(instr->InstructionBits() & kVTypeMask, OP_IVX);
+  DCHECK_EQ(instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVX);
   switch (instr->InstructionBits() & kVTypeMask) {
     case RO_V_VADD_VI:
       Format(instr, "vadd.vi       'vd, 'vs2, 'vs1  'vm");
       break;
     case RO_V_VMV_VI:
       if (instr->RvvVM()) {
-        Format(instr, "vmerge.vim       'vd, 'simm5");
-      } else {
         Format(instr, "vmv.vi       'vd, 'simm5");
+      } else {
+        Format(instr, "vmerge.vim       'vd, 'simm5");
       }
+      break;
     default:
       UNSUPPORTED_RISCV();
       break;
@@ -1854,17 +1856,18 @@ void Decoder::DecodeRvvIVI(Instruction* instr) {
 }
 
 void Decoder::DecodeRvvIVX(Instruction* instr) {
-  DCHECK_EQ(instr->InstructionBits() & kVTypeMask, OP_IVX);
+  DCHECK_EQ(instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVX);
   switch (instr->InstructionBits() & kVTypeMask) {
     case RO_V_VADD_VX:
       Format(instr, "vadd.vx       'vd, 'vs2, 'vs1  'vm");
       break;
     case RO_V_VMV_VX:
       if (instr->RvvVM()) {
-        Format(instr, "vmerge.vxm       'vd, 'rs1");
-      } else {
         Format(instr, "vmv.vx       'vd, 'rs1");
+      } else {
+        Format(instr, "vmerge.vxm       'vd, 'rs1");
       }
+      break;
     default:
       UNSUPPORTED_RISCV();
       break;

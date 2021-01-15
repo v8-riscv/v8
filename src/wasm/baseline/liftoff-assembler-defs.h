@@ -105,8 +105,7 @@ constexpr RegList kLiftoffAssemblerFpCacheRegs =
                            fa2, fa3, fa4, fa5, fa6, fa7, ft8, ft9, ft10, ft11);
 
 constexpr RegList kLiftoffAssemblerVpCacheRegs =
-    Simd128Register::ListOf(v1, v2, v3, v3, v4, v5, v6, v7, v0, v1, v2, v3, v4,
-                            v5, v6, v7, v8, v9, v10, v11);
+    Simd128Register::ListOf(v1, v2, v3, v4, v5, v6);
 
 #elif V8_TARGET_ARCH_RISCV
 

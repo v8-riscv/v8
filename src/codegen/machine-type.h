@@ -256,7 +256,16 @@ std::ostream& operator<<(std::ostream& os, MachineSemantic type);
 V8_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os, MachineType type);
 
 inline bool IsFloatingPoint(MachineRepresentation rep) {
+#ifdef V8_TARGET_ARCH_RISCV64
+  return rep >= MachineRepresentation::kFirstFPRepresentation &&
+         rep <= MachineRepresentation::kFloat64;
+#else
   return rep >= MachineRepresentation::kFirstFPRepresentation;
+#endif
+}
+
+inline bool IsSimd128(MachineRepresentation rep) {
+  return rep == MachineRepresentation::kSimd128;
 }
 
 inline bool CanBeTaggedPointer(MachineRepresentation rep) {

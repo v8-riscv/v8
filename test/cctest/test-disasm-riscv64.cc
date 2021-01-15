@@ -550,7 +550,7 @@ TEST(RVV) {
           "48628027       vssseg3e8.v       v0, (t0), t1 vm");
   COMPARE(vsxseg3(v0, t0, v1, E8, Mask),
           "4c128027       vsxseg3ei8.v       v0, (t0), v1 vm");
-
+  COMPARE(vmv_vv(v0, v1), "5e208057       vmv.vv       v0, v1");
   VERIFY_RUN();
 }
 
