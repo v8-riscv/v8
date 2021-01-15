@@ -748,28 +748,28 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
   // RVV Vector Arithmetic Instruction
 
-  void vmv_vv(VRegister vd, VRegister vs1, VRegister vs2) {
-    GenInstrV(VMV_FUNCT6, OP_IVV, vd, vs1, vs2, NoMask);
+  void vmv_vv(VRegister vd, VRegister vs1) {
+    GenInstrV(VMV_FUNCT6, OP_IVV, vd, vs1, v0, NoMask);
   }
 
-  void vmv_vx(VRegister vd, Register rs1, VRegister vs2) {
-    GenInstrV(VMV_FUNCT6, OP_IVX, vd, rs1, vs2, NoMask);
+  void vmv_vx(VRegister vd, Register rs1) {
+    GenInstrV(VMV_FUNCT6, OP_IVX, vd, rs1, v0, NoMask);
   }
 
-  void vmv_vi(VRegister vd, uint8_t simm5, VRegister vs2) {
-    GenInstrV(VMV_FUNCT6, vd, simm5, vs2, NoMask);
+  void vmv_vi(VRegister vd, uint8_t simm5) {
+    GenInstrV(VMV_FUNCT6, vd, simm5, v0, NoMask);
   }
 
-  void vmerge_vv(VRegister vd, VRegister vs1, VRegister vs2) {
-    GenInstrV(VMV_FUNCT6, OP_IVV, vd, vs1, vs2, Mask);
+  void vmerge_vv(VRegister vd, VRegister vs1) {
+    GenInstrV(VMV_FUNCT6, OP_IVV, vd, vs1, v0, Mask);
   }
 
-  void vmerge_vx(VRegister vd, Register rs1, VRegister vs2) {
-    GenInstrV(VMV_FUNCT6, OP_IVX, vd, rs1, vs2, Mask);
+  void vmerge_vx(VRegister vd, Register rs1) {
+    GenInstrV(VMV_FUNCT6, OP_IVX, vd, rs1, v0, Mask);
   }
 
-  void vmerge_vi(VRegister vd, uint8_t simm5, VRegister vs2) {
-    GenInstrV(VMV_FUNCT6, vd, simm5, vs2, Mask);
+  void vmerge_vi(VRegister vd, uint8_t simm5) {
+    GenInstrV(VMV_FUNCT6, vd, simm5, v0, Mask);
   }
 
 #define DEFINE_OPIVV(name, funct6)                           \

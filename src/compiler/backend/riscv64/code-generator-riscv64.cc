@@ -1836,8 +1836,26 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ Assert(eq, static_cast<AbortReason>(i.InputOperand(2).immediate()),
                 i.InputRegister(0), Operand(i.InputRegister(1)));
       break;
-
+    case kRiscvI8x16Add:
+      __ vsetvlmax(E8, m1);
+      __ vadd_vv(i.OutputSimd128Register(), i.InputSimd128Register(0),
+                 i.InputSimd128Register(1));
+      break;
+    case kRiscvI32x4ExtractLane:
+      __ vsetvlmax(E32, m1);
+      UNIMPLEMENTED();
+      break;
     default:
+      //       switch (arch_opcode) {
+      // #define Print(name)      \
+//   case k##name:          \
+//     printf("%s", #name); \
+//     break;
+      //         TARGET_ARCH_OPCODE_LIST(Print);
+      // #undef Print
+      //         default:
+      //           break;
+      //       }
       UNIMPLEMENTED();
   }
   return kSuccess;

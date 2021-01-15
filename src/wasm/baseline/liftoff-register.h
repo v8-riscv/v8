@@ -125,8 +125,9 @@ static constexpr int kMaxFpRegCode =
     8 * sizeof(kLiftoffAssemblerFpCacheRegs) -
     base::bits::CountLeadingZeros(kLiftoffAssemblerFpCacheRegs) - 1;
 static constexpr int kMaxVpRegCode =
-    8 * sizeof(kLiftoffAssemblerVpCacheRegs) -
-    base::bits::CountLeadingZeros(kLiftoffAssemblerVpCacheRegs) - 1;
+    (int)(8 * sizeof(kLiftoffAssemblerVpCacheRegs) -
+          base::bits::CountLeadingZeros(kLiftoffAssemblerVpCacheRegs)) -
+    1;
 static constexpr int kAfterMaxLiftoffGpRegCode = kMaxGpRegCode + 1;
 static constexpr int kAfterMaxLiftoffFpRegCode =
     kAfterMaxLiftoffGpRegCode + kMaxFpRegCode + 1;
@@ -143,7 +144,10 @@ static constexpr int kBitsPerFpRegCode =
 // GpRegPair requires 1 extra bit, S128RegPair also needs an extra bit.
 static constexpr int kBitsPerRegPair =
     (kNeedS128RegPair ? 2 : 1) + 2 * kBitsPerGpRegCode;
-
+static_assert((!kHasVReg)
+                  ? kAfterMaxLiftoffVpRegCode == kAfterMaxLiftoffFpRegCode
+                  : true,
+              "VReg error");
 static_assert(2 * kBitsPerGpRegCode >= kBitsPerFpRegCode,
               "encoding for gp pair and fp pair collides");
 
@@ -173,12 +177,13 @@ class LiftoffRegister {
     DCHECK_NE(0, kLiftoffAssemblerFpCacheRegs & reg.bit());
     DCHECK_EQ(reg, fp());
   }
+#ifdef V8_TARGET_ARCH_RISCV64
   explicit LiftoffRegister(Simd128Register reg)
       : LiftoffRegister(kAfterMaxLiftoffFpRegCode + reg.code()) {
-    DCHECK_NE(0, kLiftoffAssemblerFpCacheRegs & reg.bit());
+    DCHECK_NE(0, kLiftoffAssemblerVpCacheRegs & reg.bit());
     DCHECK_EQ(reg, vp());
   }
-
+#endif
   static LiftoffRegister from_liftoff_code(int code) {
     LiftoffRegister reg{static_cast<storage_t>(code)};
     // Check that the code is correct by round-tripping through the
@@ -392,10 +397,11 @@ class LiftoffRegList {
   DoubleRegister set(DoubleRegister reg) {
     return set(LiftoffRegister(reg)).fp();
   }
+#ifdef V8_TARGET_ARCH_RISCV64
   Simd128Register set(Simd128Register reg) {
     return set(LiftoffRegister(reg)).vp();
   }
-
+#endif
   LiftoffRegister set(LiftoffRegister reg) {
     if (reg.is_pair()) {
       regs_ |= storage_t{1} << reg.low().liftoff_code();
@@ -516,6 +522,8 @@ static constexpr LiftoffRegList kGpCacheRegList =
     LiftoffRegList::FromBits<LiftoffRegList::kGpMask>();
 static constexpr LiftoffRegList kFpCacheRegList =
     LiftoffRegList::FromBits<LiftoffRegList::kFpMask>();
+static constexpr LiftoffRegList kVpCacheRegList =
+    LiftoffRegList::FromBits<LiftoffRegList::kVpMask>();
 
 class LiftoffRegList::Iterator {
  public:
@@ -542,7 +550,20 @@ LiftoffRegList::Iterator LiftoffRegList::end() const {
 }
 
 static constexpr LiftoffRegList GetCacheRegList(RegClass rc) {
-  return rc == kFpReg ? kFpCacheRegList : kGpCacheRegList;
+  switch (rc) {
+    case kFpReg:
+      return kFpCacheRegList;
+      break;
+    case kGpReg:
+      return kGpCacheRegList;
+      break;
+    case kVpReg:
+      return kVpCacheRegList;
+      break;
+    default:
+      UNREACHABLE();
+      return kGpCacheRegList;
+  }
 }
 
 inline std::ostream& operator<<(std::ostream& os, LiftoffRegList reglist) {

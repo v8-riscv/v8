@@ -1355,7 +1355,8 @@ void LiftoffAssembler::emit_i32x4_splat(LiftoffRegister dst,
 
 void LiftoffAssembler::emit_i64x2_splat(LiftoffRegister dst,
                                         LiftoffRegister src) {
-  bailout(kSimd, "emit_i64x2_splat");
+  vsetvlmax(E64, m1);
+  vmv_vx(dst.vp(), src.gp());
 }
 
 void LiftoffAssembler::emit_i64x2_eq(LiftoffRegister dst, LiftoffRegister lhs,
