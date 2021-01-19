@@ -166,7 +166,6 @@ void CodeGenerator::AssembleDeoptImmediateArgs(
   for (int i = 0; i < kImmediateArgCount; i++) {
     ImmediateOperand* op = immediate_args->at(i);
     Constant constant = instructions()->GetImmediate(op);
-
     DCHECK_EQ(tasm()->SizeOfCodeGeneratedSince(deopt_exit),
               expected_offsets[i] + Deoptimizer::kNonLazyDeoptExitSize);
     USE(expected_offsets);
@@ -199,7 +198,6 @@ void CodeGenerator::AssembleDeoptImmediateArgs(
         UNREACHABLE();
     }
   }
-
   DCHECK_EQ(tasm()->SizeOfCodeGeneratedSince(deopt_exit),
             Deoptimizer::kEagerWithResumeDeoptExitSize);
 }
