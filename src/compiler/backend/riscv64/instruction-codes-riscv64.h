@@ -219,6 +219,7 @@ namespace compiler {
   V(RiscvI64x2Shl)                          \
   V(RiscvI64x2ShrS)                         \
   V(RiscvI64x2ShrU)                         \
+  V(RiscvI64x2BitMask)                      \
   V(RiscvF32x4Abs)                          \
   V(RiscvF32x4Neg)                          \
   V(RiscvF32x4Sqrt)                         \
@@ -278,6 +279,7 @@ namespace compiler {
   V(RiscvI16x8GtU)                          \
   V(RiscvI16x8GeU)                          \
   V(RiscvI16x8RoundingAverageU)             \
+  V(RiscvI16x8Q15MulRSatS)                  \
   V(RiscvI16x8Abs)                          \
   V(RiscvI16x8BitMask)                      \
   V(RiscvI8x16Splat)                        \
