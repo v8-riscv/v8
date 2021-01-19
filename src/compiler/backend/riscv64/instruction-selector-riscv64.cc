@@ -2584,6 +2584,7 @@ void InstructionSelector::VisitInt64AbsWithOverflow(Node* node) {
   V(F64x2Trunc, kRiscvF64x2Trunc)                         \
   V(F64x2NearestInt, kRiscvF64x2NearestInt)               \
   V(I64x2Neg, kRiscvI64x2Neg)                             \
+  V(I64x2BitMask, kRiscvI64x2BitMask)                     \
   V(F32x4SConvertI32x4, kRiscvF32x4SConvertI32x4)         \
   V(F32x4UConvertI32x4, kRiscvF32x4UConvertI32x4)         \
   V(F32x4Abs, kRiscvF32x4Abs)                             \
@@ -2695,6 +2696,7 @@ void InstructionSelector::VisitInt64AbsWithOverflow(Node* node) {
   V(I16x8GtU, kRiscvI16x8GtU)                           \
   V(I16x8GeU, kRiscvI16x8GeU)                           \
   V(I16x8RoundingAverageU, kRiscvI16x8RoundingAverageU) \
+  V(I16x8Q15MulRSatS, kRiscvI16x8Q15MulRSatS)           \
   V(I16x8SConvertI32x4, kRiscvI16x8SConvertI32x4)       \
   V(I16x8UConvertI32x4, kRiscvI16x8UConvertI32x4)       \
   V(I8x16Add, kRiscvI8x16Add)                           \
@@ -2967,6 +2969,22 @@ void InstructionSelector::VisitF64x2Pmin(Node* node) {
 void InstructionSelector::VisitF64x2Pmax(Node* node) {
   VisitUniqueRRR(this, kRiscvF64x2Pmax, node);
 }
+
+#define VISIT_EXT_MUL(OPCODE1, OPCODE2)                                       \
+  void InstructionSelector::Visit##OPCODE1##ExtMulLow##OPCODE2(Node* node) {  \
+    UNREACHABLE();                                                            \
+  }                                                                           \
+  void InstructionSelector::Visit##OPCODE1##ExtMulHigh##OPCODE2(Node* node) { \
+    UNREACHABLE();                                                            \
+  }
+
+VISIT_EXT_MUL(I64x2, I32x4S)
+VISIT_EXT_MUL(I64x2, I32x4U)
+VISIT_EXT_MUL(I32x4, I16x8S)
+VISIT_EXT_MUL(I32x4, I16x8U)
+VISIT_EXT_MUL(I16x8, I8x16S)
+VISIT_EXT_MUL(I16x8, I8x16U)
+#undef VISIT_EXT_MUL
 
 // static
 MachineOperatorBuilder::Flags

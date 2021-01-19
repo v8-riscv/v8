@@ -98,6 +98,7 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvI64x2Shl:
     case kRiscvI64x2ShrS:
     case kRiscvI64x2ShrU:
+    case kRiscvI64x2BitMask:
     case kRiscvF32x4Abs:
     case kRiscvF32x4Add:
     case kRiscvF32x4AddHoriz:
@@ -182,6 +183,7 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvI16x8UConvertI8x16High:
     case kRiscvI16x8UConvertI8x16Low:
     case kRiscvI16x8RoundingAverageU:
+    case kRiscvI16x8Q15MulRSatS:
     case kRiscvI16x8Abs:
     case kRiscvI16x8BitMask:
     case kRiscvI32x4Add:
