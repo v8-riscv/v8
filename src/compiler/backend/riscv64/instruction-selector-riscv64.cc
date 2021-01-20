@@ -1543,8 +1543,6 @@ void InstructionSelector::EmitPrepareResults(
 
 bool InstructionSelector::IsTailCallAddressImmediate() { return false; }
 
-int InstructionSelector::GetTempsCountForTailCallFromJSFunction() { return 3; }
-
 void InstructionSelector::VisitUnalignedLoad(Node* node) {
   LoadRepresentation load_rep = LoadRepresentationOf(node->op());
   RiscvOperandGenerator g(this);
