@@ -130,6 +130,10 @@
 
    # SIMD is not fully implemented yet.
    'proposals/simd/*': [SKIP],
+
+   # See issue #403
+   'proposals/js-types/exports': [SKIP],
+   'proposals/js-types/imports': [SKIP],
 }],  # 'arch == riscv64
 
 ['arch == ppc or arch == ppc64', {
