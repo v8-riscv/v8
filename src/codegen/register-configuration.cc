@@ -315,7 +315,8 @@ bool RegisterConfiguration::AreAliases(MachineRepresentation rep, int index,
                                        MachineRepresentation other_rep,
                                        int other_index) const {
   DCHECK(fp_aliasing_kind_ == COMBINE);
-  DCHECK(IsFloatingPoint(rep) && IsFloatingPoint(other_rep));
+  DCHECK((IsFloatingPoint(rep) && IsFloatingPoint(other_rep)) ||
+         (IsSimd128(rep) && IsSimd128(other_rep)));
   if (rep == other_rep) {
     return index == other_index;
   }
