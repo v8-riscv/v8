@@ -94,36 +94,42 @@ TEST_F(RegisterConfigurationUnitTest, CombineAliasing) {
   // in 4's to alias a simd128 with index / 4.
   EXPECT_TRUE(test.AreAliases(kFloat32, 0, kFloat64, 0));
   EXPECT_TRUE(test.AreAliases(kFloat32, 1, kFloat64, 0));
+#ifndef V8_TARGET_ARCH_RISCV64
   EXPECT_TRUE(test.AreAliases(kFloat32, 0, kSimd128, 0));
   EXPECT_TRUE(test.AreAliases(kFloat32, 1, kSimd128, 0));
   EXPECT_TRUE(test.AreAliases(kFloat32, 2, kSimd128, 0));
   EXPECT_TRUE(test.AreAliases(kFloat32, 3, kSimd128, 0));
+#endif
   EXPECT_TRUE(test.AreAliases(kFloat64, 0, kFloat32, 0));
   EXPECT_TRUE(test.AreAliases(kFloat64, 0, kFloat32, 1));
+#ifndef V8_TARGET_ARCH_RISCV64
   EXPECT_TRUE(test.AreAliases(kSimd128, 0, kFloat32, 0));
   EXPECT_TRUE(test.AreAliases(kSimd128, 0, kFloat32, 1));
   EXPECT_TRUE(test.AreAliases(kSimd128, 0, kFloat32, 2));
   EXPECT_TRUE(test.AreAliases(kSimd128, 0, kFloat32, 3));
+#endif
 
   EXPECT_FALSE(test.AreAliases(kFloat32, 0, kFloat64, 1));
   EXPECT_FALSE(test.AreAliases(kFloat32, 1, kFloat64, 1));
+#ifndef V8_TARGET_ARCH_RISCV64
   EXPECT_FALSE(test.AreAliases(kFloat32, 0, kSimd128, 1));
   EXPECT_FALSE(test.AreAliases(kFloat32, 1, kSimd128, 1));
   EXPECT_FALSE(test.AreAliases(kFloat64, 0, kSimd128, 1));
   EXPECT_FALSE(test.AreAliases(kFloat64, 1, kSimd128, 1));
+#endif
 
   EXPECT_TRUE(test.AreAliases(kFloat64, 0, kFloat32, 1));
   EXPECT_TRUE(test.AreAliases(kFloat64, 1, kFloat32, 2));
   EXPECT_TRUE(test.AreAliases(kFloat64, 1, kFloat32, 3));
   EXPECT_TRUE(test.AreAliases(kFloat64, 2, kFloat32, 4));
   EXPECT_TRUE(test.AreAliases(kFloat64, 2, kFloat32, 5));
-
+#ifndef V8_TARGET_ARCH_RISCV64
   EXPECT_TRUE(test.AreAliases(kSimd128, 0, kFloat64, 1));
   EXPECT_TRUE(test.AreAliases(kSimd128, 1, kFloat64, 2));
   EXPECT_TRUE(test.AreAliases(kSimd128, 1, kFloat64, 3));
   EXPECT_TRUE(test.AreAliases(kSimd128, 2, kFloat64, 4));
   EXPECT_TRUE(test.AreAliases(kSimd128, 2, kFloat64, 5));
-
+#endif
   int alias_base_index = -1;
   EXPECT_EQ(test.GetAliases(kFloat32, 0, kFloat32, &alias_base_index), 1);
   EXPECT_EQ(alias_base_index, 0);

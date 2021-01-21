@@ -515,7 +515,6 @@ TEST(RVV) {
   COMPARE(vsetvli(t0, t1, E16, m1);
           , "004372d7       vsetvli       t0, t1, E16, m1");
   COMPARE(vadd_vv(v0, v1, v2), "02208057       vadd.vv       v0, v2, v1  ");
-  COMPARE(vmv_vv(v0, v1, v2), "5e208057       vmv.vv       v0, v1");
   COMPARE(vl(v0, t0, 0, E8, Mask), "00028007       vle8.v       v0, (t0) vm");
   COMPARE(vs(v0, t0, 0, E8, Mask), "00028027       vse8.v       v0, (t0) vm");
   COMPARE(vls(v0, t0, t1, E8, Mask),
@@ -550,7 +549,7 @@ TEST(RVV) {
           "48628027       vssseg3e8.v       v0, (t0), t1 vm");
   COMPARE(vsxseg3(v0, t0, v1, E8, Mask),
           "4c128027       vsxseg3ei8.v       v0, (t0), v1 vm");
-  COMPARE(vmv_vv(v0, v1), "5e208057       vmv.vv       v0, v1");
+  COMPARE(vmv_vv(v0, v1), "5e008057       vmv.vv       v0, v1");
   VERIFY_RUN();
 }
 

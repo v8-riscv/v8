@@ -301,8 +301,6 @@ class LinkageAllocator {
   const Simd128Register* const vp_regs_;
   const int vp_count_;
   int vp_offset_ = 0;
-
-  AlignedSlotAllocator slot_allocator_;
 };
 
 }  // namespace wasm

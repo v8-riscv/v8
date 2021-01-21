@@ -434,7 +434,7 @@ class LiftoffAssembler : public TurboAssembler {
       DoubleRegister low_fp = SpillAdjacentFpRegisters(pinned).fp();
       return LiftoffRegister::ForFpPair(low_fp);
     }
-    DCHECK(rc == kGpReg || rc == kFpReg || (kHasVReg ? rc == kVpReg : 0));
+    DCHECK(rc == kGpReg || rc == kFpReg || (kHasVReg ? rc == kVReg : 0));
     LiftoffRegList candidates = GetCacheRegList(rc);
     return GetUnusedRegister(candidates, pinned);
   }

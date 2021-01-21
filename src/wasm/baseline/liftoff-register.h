@@ -25,8 +25,8 @@ enum RegClass : uint8_t {
   kGpRegPair = kFpReg + 1 + (kNeedS128RegPair && !kNeedI64RegPair) +
                (kHasVReg && !kNeedI64RegPair),
   kFpRegPair = kFpReg + 1 + kNeedI64RegPair + (kHasVReg && !kNeedS128RegPair),
-  kVpReg = kFpReg + 1 + kNeedI64RegPair + kNeedS128RegPair,
-  kNoReg = kVpReg + kHasVReg,
+  kVReg = kFpReg + 1 + kNeedI64RegPair + kNeedS128RegPair,
+  kNoReg = kVReg + kHasVReg,
   // +------------------+-------------------------------+
   // |                  |        kNeedI64RegPair        |
   // +------------------+---------------+---------------+
@@ -67,7 +67,7 @@ static inline constexpr RegClass reg_class_for(ValueType::Kind kind) {
     case ValueType::kI64:
       return kNeedI64RegPair ? kGpRegPair : kGpReg;
     case ValueType::kS128:
-      return kNeedS128RegPair ? kFpRegPair : kHasVReg ? kVpReg : kFpReg;
+      return kNeedS128RegPair ? kFpRegPair : kHasVReg ? kVReg : kFpReg;
     case ValueType::kRef:
     case ValueType::kOptRef:
     case ValueType::kRtt:
@@ -204,7 +204,7 @@ class LiftoffRegister {
         return LiftoffRegister(Register::from_code(code));
       case kFpReg:
         return LiftoffRegister(DoubleRegister::from_code(code));
-      case kVpReg:
+      case kVReg:
         DCHECK(kHasVReg);
         return LiftoffRegister(Simd128Register::from_code(code));
       default:
@@ -331,7 +331,7 @@ class LiftoffRegister {
                : is_gp_pair()
                      ? kGpRegPair
                      : is_gp() ? kGpReg
-                               : is_fp() ? kFpReg : is_vp() ? kVpReg : kNoReg;
+                               : is_fp() ? kFpReg : is_vp() ? kVReg : kNoReg;
   }
 
   bool operator==(const LiftoffRegister other) const {
@@ -557,7 +557,7 @@ static constexpr LiftoffRegList GetCacheRegList(RegClass rc) {
     case kGpReg:
       return kGpCacheRegList;
       break;
-    case kVpReg:
+    case kVReg:
       return kVpCacheRegList;
       break;
     default:
