@@ -700,12 +700,12 @@ enum Opcode : uint32_t {
   RO_V_VMERGE_VX = RO_V_VMV_VX,
 
   VSLIDEUP_FUNCT6 = 0b001110,
-  RO_V_VSLIDEUP_VI = OP_IVI | (VSLIDEUP_FUNCT6 << kRvvFunct6Shift);
-  RO_V_VSLIDEUP_VX = OP_IVX | (VSLIDEUP_FUNCT6 << kRvvFunct6Shift);
+  RO_V_VSLIDEUP_VI = OP_IVI | (VSLIDEUP_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VSLIDEUP_VX = OP_IVX | (VSLIDEUP_FUNCT6 << kRvvFunct6Shift),
 
   VSLIDEDOWN_FUNCT6 = 0b001111,
-  RO_V_VSLIDEDOWN_VI = OP_IVI | (VSLIDEDOWN_FUNCT6 << kRvvFunct6Shift);
-  RO_V_VSLIDEDOWN_VX = OP_IVX | (VSLIDEDOWN_FUNCT6 << kRvvFunct6Shift);
+  RO_V_VSLIDEDOWN_VI = OP_IVI | (VSLIDEDOWN_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VSLIDEDOWN_VX = OP_IVX | (VSLIDEDOWN_FUNCT6 << kRvvFunct6Shift)
 };
 
 // ----- Emulated conditions.
@@ -1432,8 +1432,8 @@ class InstructionGetters : public T {
     }
   }
 
-#define sext(x, len) (((int32_t)(x) << (64 - xlen)) >> (64 - xlen))
-#define zext(x, len) (((uint32_t)(x) << (64 - xlen)) >> (64 - xlen))
+#define sext(x, len) (((int32_t)(x) << (32 - len)) >> (32 - len))
+#define zext(x, len) (((uint32_t)(x) << (32 - len)) >> (32 - len))
 
   inline int32_t RvvSimm5() const {
     DCHECK(this->InstructionType() == InstructionBase::kVType);
