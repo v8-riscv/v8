@@ -1115,12 +1115,12 @@ void Assembler::GenInstrV(uint8_t funct6, Register rd, Register rs1,
   UNIMPLEMENTED();
 }
 // OPIVI
-void Assembler::GenInstrV(uint8_t funct6, VRegister vd, uint8_t simm5,
+void Assembler::GenInstrV(uint8_t funct6, VRegister vd, uint8_t imm5,
                           VRegister vs2, MaskType mask) {
-  DCHECK(is_uint5(simm5));
+  DCHECK(is_uint5(imm5) || is_int5(imm5));
   Instr instr = (funct6 << kRvvFunct6Shift) | OP_IVI | (mask << kRvvVmShift) |
                 ((vd.code() & 0x1F) << kRvvVdShift) |
-                (((uint32_t)simm5 << kRvvSimm5Shift) & kRvvSimm5Mask) |
+                (((uint32_t)imm5 << kRvvSimm5Shift) & kRvvSimm5Mask) |
                 ((vs2.code() & 0x1F) << kRvvVs2Shift);
   emit(instr);
 }

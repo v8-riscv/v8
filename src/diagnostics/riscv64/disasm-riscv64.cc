@@ -105,6 +105,7 @@ class Decoder {
   void PrintRvvSEW(Instruction* instr);
   void PrintRvvLMUL(Instruction* instr);
   void PrintRvvSimm5(Instruction* instr);
+  void PrintRvvUimm5(Instruction* instr);
   void PrintRoundingMode(Instruction* instr);
   void PrintMemoryOrder(Instruction* instr, bool is_pred);
 
@@ -273,6 +274,12 @@ void Decoder::PrintRvvSimm5(Instruction* instr) {
   const int simm5 = instr->RvvSimm5();
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", simm5);
 }
+
+void Decoder::PrintRvvUimm5(Instruction* instr) {
+  const int simm5 = instr->RvvUimm5();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", simm5);
+}
+
 
 void Decoder::PrintImm20U(Instruction* instr) {
   int32_t imm = instr->Imm20UValue();

@@ -269,9 +269,9 @@ const int kRvvRs2Bits = 5;
 const int kRvvRs2Shift = 20;
 const int kRvvRs2Mask = (((1 << kRvvRs2Bits) - 1) << kRvvRs2Shift);
 
-const int kRvvSimm5Bits = kRvvVs1Bits;
-const int kRvvSimm5Shift = kRvvVs1Shift;
-const int kRvvSimm5Mask = (((1 << kRvvSimm5Bits) - 1) << kRvvSimm5Shift);
+const int kRvvImm5Bits = kRvvVs1Bits;
+const int kRvvImm5Shift = kRvvVs1Shift;
+const int kRvvImm5Mask = (((1 << kRvvImm5Bits) - 1) << kRvvImm5Shift);
 
 const int kRvvVdBits = 5;
 const int kRvvVdShift = 7;
@@ -697,7 +697,15 @@ enum Opcode : uint32_t {
 
   RO_V_VMERGE_VI = RO_V_VMV_VI,
   RO_V_VMERGE_VV = RO_V_VMV_VV,
-  RO_V_VMERGE_VX = RO_V_VMV_VX
+  RO_V_VMERGE_VX = RO_V_VMV_VX,
+
+  VSLIDEUP_FUNCT6 = 0b001110,
+  RO_V_VSLIDEUP_VI = OP_IVI | (VSLIDEUP_FUNCT6 << kRvvFunct6Shift);
+  RO_V_VSLIDEUP_VX = OP_IVX | (VSLIDEUP_FUNCT6 << kRvvFunct6Shift);
+
+  VSLIDEDOWN_FUNCT6 = 0b001111,
+  RO_V_VSLIDEDOWN_VI = OP_IVI | (VSLIDEDOWN_FUNCT6 << kRvvFunct6Shift);
+  RO_V_VSLIDEDOWN_VX = OP_IVX | (VSLIDEDOWN_FUNCT6 << kRvvFunct6Shift);
 };
 
 // ----- Emulated conditions.
@@ -1424,11 +1432,22 @@ class InstructionGetters : public T {
     }
   }
 
-  inline int RvvSimm5() const {
+#define sext(x, len) (((int32_t)(x) << (64 - xlen)) >> (64 - xlen))
+#define zext(x, len) (((uint32_t)(x) << (64 - xlen)) >> (64 - xlen))
+
+  inline int32_t RvvSimm5() const {
     DCHECK(this->InstructionType() == InstructionBase::kVType);
-    return this->Bits(kRvvSimm5Shift + kRvvSimm5Bits - 1, kRvvSimm5Shift);
+    return sext(this->Bits(kRvvImm5Shift + kRvvImm5Bits - 1, kRvvImm5Shift),
+                kRvvImm5Bits);
   }
 
+  inline uint32_t RvvUimm5() const {
+    DCHECK(this->InstructionType() == InstructionBase::kVType);
+    return zext(this->Bits(kRvvImm5Shift + kRvvImm5Bits - 1, kRvvImm5Shift),
+                kRvvImm5Bits);
+  }
+#undef sext
+#undef zext
   inline bool AqValue() const { return this->Bits(kAqShift, kAqShift); }
 
   inline bool RlValue() const { return this->Bits(kRlShift, kRlShift); }
