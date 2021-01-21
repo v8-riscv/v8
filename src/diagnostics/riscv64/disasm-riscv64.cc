@@ -789,8 +789,12 @@ int Decoder::FormatOption(Instruction* instr, const char* format) {
       return 4;
     }
     case 'u': {
-      DCHECK(STRING_STARTS_WITH(format, "uimm"));
-      PrintUimm(instr);
+      if (STRING_STARTS_WITH(format, "uimm5")) {
+        PrintRvvUimm5(instr);
+      } else {
+        DCHECK(STRING_STARTS_WITH(format, "uimm"));
+        PrintUimm(instr);
+      }
       return 4;
     }
   }
@@ -1855,6 +1859,9 @@ void Decoder::DecodeRvvIVI(Instruction* instr) {
       } else {
         Format(instr, "vmerge.vim       'vd, 'simm5");
       }
+      break;
+    case VSLIDEDOWN_FUNCT6:
+      Format(instr, "vslidedown.vi 'vd, 'vs2, 'uimm5 'vm");
       break;
     default:
       UNSUPPORTED_RISCV();

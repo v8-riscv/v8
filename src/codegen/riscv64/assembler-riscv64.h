@@ -794,6 +794,10 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   DEFINE_OPIVX(vadd, VADD_FUNCT6)
   DEFINE_OPIVI(vadd, VADD_FUNCT6)
 
+  DEFINE_OPIVX(vslidedown, VSLIDEDOWN_FUNCT6)
+  DEFINE_OPIVI(vslidedown, VSLIDEDOWN_FUNCT6)
+  DEFINE_OPIVX(vslideup, VSLIDEUP_FUNCT6)
+  DEFINE_OPIVI(vslideup, VSLIDEUP_FUNCT6)
 
   void uret();
   void sret();
