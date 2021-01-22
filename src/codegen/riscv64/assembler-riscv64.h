@@ -646,7 +646,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   }
 
   void vsetvl(Register rd, Register rs1, Register rs2);
-  // Privileged
+
   void vl(VRegister vd, Register rs1, uint8_t lumop, VSew vsew, MaskType mask);
   void vls(VRegister vd, Register rs1, Register rs2, VSew vsew, MaskType mask);
   void vlx(VRegister vd, Register rs1, VRegister vs3, VSew vsew, MaskType mask);
@@ -1038,13 +1038,34 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
   inline int UnboundLabelsCount() { return unbound_labels_count_; }
 
- protected:
-  // Readable constants for base and offset adjustment helper, these indicate if
-  // aside from offset, another value like offset + 4 should fit into int16.
-  enum class OffsetAccessType : bool {
-    SINGLE_ACCESS = false,
-    TWO_ACCESSES = true
+  class VectorUnit {
+  public:
+    VectorUnit(Assembler* assm) : assm_(assm) {}
+
+    void set(VSew sew, Vlmul lmul) {
+      if (sew != sew_ || lmul != lmul_) {
+        sew_ = sew;
+        lmul_ = lmul;
+        assm_->vsetvlmax(sew_, lmul_);
+      }
+    }
+
+   private:
+    VSew sew_ = E8;
+    Vlmul lmul_ = m1;
+    Assembler* assm_;
   };
+
+  VectorUnit VU;
+
+  protected :
+      // Readable constants for base and offset adjustment helper, these
+      // indicate if aside from offset, another value like offset + 4 should fit
+      // into int16.
+      enum class OffsetAccessType : bool {
+        SINGLE_ACCESS = false,
+        TWO_ACCESSES = true
+      };
 
   // Determine whether need to adjust base and offset of memroy load/store
   bool NeedAdjustBaseAndOffset(
