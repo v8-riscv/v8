@@ -56,7 +56,6 @@ static unsigned CpuFeaturesImpliedByCompiler() {
 #ifdef CAN_USE_FPU_INSTRUCTIONS
   answer |= 1u << FPU;
 #endif  // def CAN_USE_FPU_INSTRUCTIONS
-
   return answer;
 }
 
@@ -65,7 +64,6 @@ void CpuFeatures::ProbeImpl(bool cross_compile) {
 
   // Only use statically determined features for cross compile (snapshot).
   if (cross_compile) return;
-
   // #ifdef USE_SIMULATOR
   //   supported_ |= 1u << RISCV_SIMD;
   // #endif
@@ -235,7 +233,7 @@ void Assembler::AllocateAndInstallRequestedHeapObjects(Isolate* isolate) {
 
 Assembler::Assembler(const AssemblerOptions& options,
                      std::unique_ptr<AssemblerBuffer> buffer)
-    : AssemblerBase(options, std::move(buffer)),
+    : AssemblerBase(options, std::move(buffer)),VU(this),
       scratch_register_list_(t3.bit() | t5.bit() | t6.bit()),
       constpool_(this) {
   reloc_info_writer.Reposition(buffer_start_ + buffer_->size(), pc_);

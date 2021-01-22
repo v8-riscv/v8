@@ -550,6 +550,10 @@ TEST(RVV) {
   COMPARE(vsxseg3(v0, t0, v1, E8, Mask),
           "4c128027       vsxseg3ei8.v       v0, (t0), v1 vm");
   COMPARE(vmv_vv(v0, v1), "5e008057       vmv.vv       v0, v1");
+  COMPARE(vslidedown_vx(v0, a1, v2), "3e25c057       vslidedown.vx v0, v2, a1 ");
+  COMPARE(vslidedown_vi(v0, 5, v2), "3e22b057       vslidedown.vi v0, v2, 5 ");
+  COMPARE(vmv_xs(a1, v2), "422025d7       vmv.x.s       a1, v2");
+  COMPARE(vmv_sx(v2, a1), "4205e157       vmv.s.x       v2, a1");
   VERIFY_RUN();
 }
 
