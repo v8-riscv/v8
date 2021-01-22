@@ -233,7 +233,8 @@ void Assembler::AllocateAndInstallRequestedHeapObjects(Isolate* isolate) {
 
 Assembler::Assembler(const AssemblerOptions& options,
                      std::unique_ptr<AssemblerBuffer> buffer)
-    : AssemblerBase(options, std::move(buffer)),VU(this),
+    : AssemblerBase(options, std::move(buffer)),
+      VU(this),
       scratch_register_list_(t3.bit() | t5.bit() | t6.bit()),
       constpool_(this) {
   reloc_info_writer.Reposition(buffer_start_ + buffer_->size(), pc_);
@@ -1085,6 +1086,7 @@ void Assembler::GenInstrV(Register rd, Register rs1, uint32_t zimm) {
 // OPIVV OPFVV OPMVV
 void Assembler::GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd,
                           VRegister vs1, VRegister vs2, MaskType mask) {
+  DCHECK(opcode == OP_MVV || opcode == OP_FVV || opcode == OP_IVV);
   Instr instr = (funct6 << kRvvFunct6Shift) | opcode | (mask << kRvvVmShift) |
                 ((vd.code() & 0x1F) << kRvvVdShift) |
                 ((vs1.code() & 0x1F) << kRvvVs1Shift) |
@@ -1094,12 +1096,18 @@ void Assembler::GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd,
 // OPMVV OPFVV
 void Assembler::GenInstrV(uint8_t funct6, Opcode opcode, Register rd,
                           VRegister vs1, VRegister vs2, MaskType mask) {
-  UNIMPLEMENTED();
+  DCHECK(opcode == OP_MVV || opcode == OP_FVV);
+  Instr instr = (funct6 << kRvvFunct6Shift) | opcode | (mask << kRvvVmShift) |
+                ((rd.code() & 0x1F) << kRvvVdShift) |
+                ((vs1.code() & 0x1F) << kRvvVs1Shift) |
+                ((vs2.code() & 0x1F) << kRvvVs2Shift);
+  emit(instr);
 }
 
 // OPIVX OPFVF OPMVX
 void Assembler::GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd,
                           Register rs1, VRegister vs2, MaskType mask) {
+  DCHECK(opcode == OP_IVX || opcode == OP_FVF || opcode == OP_MVX);
   Instr instr = (funct6 << kRvvFunct6Shift) | opcode | (mask << kRvvVmShift) |
                 ((vd.code() & 0x1F) << kRvvVdShift) |
                 ((rs1.code() & 0x1F) << kRvvRs1Shift) |
@@ -1110,7 +1118,11 @@ void Assembler::GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd,
 // OPMVX
 void Assembler::GenInstrV(uint8_t funct6, Register rd, Register rs1,
                           VRegister vs2, MaskType mask) {
-  UNIMPLEMENTED();
+  Instr instr = (funct6 << kRvvFunct6Shift) | OP_MVX | (mask << kRvvVmShift) |
+                ((rd.code() & 0x1F) << kRvvVdShift) |
+                ((rs1.code() & 0x1F) << kRvvRs1Shift) |
+                ((vs2.code() & 0x1F) << kRvvVs2Shift);
+  emit(instr);
 }
 // OPIVI
 void Assembler::GenInstrV(uint8_t funct6, VRegister vd, uint8_t imm5,

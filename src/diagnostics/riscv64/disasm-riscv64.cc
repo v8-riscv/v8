@@ -133,6 +133,8 @@ class Decoder {
   void DecodeRvvIVX(Instruction* instr);
   void DecodeRvvVL(Instruction* instr);
   void DecodeRvvVS(Instruction* instr);
+  void DecodeRvvMVV(Instruction* instr);
+  void DecodeRvvMVX(Instruction* instr);
   // Printing of instruction name.
   void PrintInstructionName(Instruction* instr);
 
@@ -276,10 +278,9 @@ void Decoder::PrintRvvSimm5(Instruction* instr) {
 }
 
 void Decoder::PrintRvvUimm5(Instruction* instr) {
-  const int simm5 = instr->RvvUimm5();
-  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%d", simm5);
+  const uint32_t uimm5 = instr->RvvUimm5();
+  out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%u", uimm5);
 }
-
 
 void Decoder::PrintImm20U(Instruction* instr) {
   int32_t imm = instr->Imm20UValue();
@@ -791,11 +792,12 @@ int Decoder::FormatOption(Instruction* instr, const char* format) {
     case 'u': {
       if (STRING_STARTS_WITH(format, "uimm5")) {
         PrintRvvUimm5(instr);
+        return 5;
       } else {
         DCHECK(STRING_STARTS_WITH(format, "uimm"));
         PrintUimm(instr);
+        return 4;
       }
-      return 4;
     }
   }
   UNREACHABLE();
@@ -1848,7 +1850,7 @@ void Decoder::DecodeRvvIVV(Instruction* instr) {
 }
 
 void Decoder::DecodeRvvIVI(Instruction* instr) {
-  DCHECK_EQ(instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVX);
+  DCHECK_EQ(instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVI);
   switch (instr->InstructionBits() & kVTypeMask) {
     case RO_V_VADD_VI:
       Format(instr, "vadd.vi       'vd, 'vs2, 'vs1  'vm");
@@ -1860,7 +1862,7 @@ void Decoder::DecodeRvvIVI(Instruction* instr) {
         Format(instr, "vmerge.vim       'vd, 'simm5");
       }
       break;
-    case VSLIDEDOWN_FUNCT6:
+    case RO_V_VSLIDEDOWN_VI:
       Format(instr, "vslidedown.vi 'vd, 'vs2, 'uimm5 'vm");
       break;
     default:
@@ -1882,6 +1884,37 @@ void Decoder::DecodeRvvIVX(Instruction* instr) {
         Format(instr, "vmerge.vxm       'vd, 'rs1");
       }
       break;
+    case RO_V_VSLIDEDOWN_VX:
+      Format(instr, "vslidedown.vx 'vd, 'vs2, 'rs1 'vm");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+      break;
+  }
+}
+
+void Decoder::DecodeRvvMVV(Instruction* instr) {
+  DCHECK_EQ(instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_MVV);
+  switch (instr->InstructionBits() & kVTypeMask) {
+    case RO_V_VWXUNARY0:
+      if (instr->Vs1Value() == 0x0) {
+        Format(instr, "vmv.x.s       'rd, 'vs2");
+      }
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+      break;
+  }
+}
+
+void Decoder::DecodeRvvMVX(Instruction* instr) {
+  DCHECK_EQ(instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_MVX);
+  switch (instr->InstructionBits() & kVTypeMask) {
+    case RO_V_VRXUNARY0:
+      if (instr->Vs2Value() == 0x0) {
+        Format(instr, "vmv.s.x       'vd, 'rs1");
+      }
+      break;
     default:
       UNSUPPORTED_RISCV();
       break;
@@ -1899,7 +1932,7 @@ void Decoder::DecodeVType(Instruction* instr) {
       return;
       break;
     case OP_MVV:
-      UNSUPPORTED_RISCV();
+      DecodeRvvMVV(instr);
       return;
       break;
     case OP_IVI:
@@ -1915,7 +1948,7 @@ void Decoder::DecodeVType(Instruction* instr) {
       return;
       break;
     case OP_MVX:
-      UNSUPPORTED_RISCV();
+      DecodeRvvMVX(instr);
       return;
       break;
   }
