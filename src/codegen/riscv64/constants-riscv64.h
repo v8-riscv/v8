@@ -705,7 +705,13 @@ enum Opcode : uint32_t {
 
   VSLIDEDOWN_FUNCT6 = 0b001111,
   RO_V_VSLIDEDOWN_VI = OP_IVI | (VSLIDEDOWN_FUNCT6 << kRvvFunct6Shift),
-  RO_V_VSLIDEDOWN_VX = OP_IVX | (VSLIDEDOWN_FUNCT6 << kRvvFunct6Shift)
+  RO_V_VSLIDEDOWN_VX = OP_IVX | (VSLIDEDOWN_FUNCT6 << kRvvFunct6Shift),
+
+  VWXUNARY0_FUNCT6 = 0b010000,
+  VRXUNARY0_FUNCT6 = 0b010000,
+
+  RO_V_VWXUNARY0 = OP_MVV | (VWXUNARY0_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VRXUNARY0 = OP_MVX | (VRXUNARY0_FUNCT6 << kRvvFunct6Shift)
 };
 
 // ----- Emulated conditions.
@@ -1443,8 +1449,8 @@ class InstructionGetters : public T {
 
   inline uint32_t RvvUimm5() const {
     DCHECK(this->InstructionType() == InstructionBase::kVType);
-    return zext(this->Bits(kRvvImm5Shift + kRvvImm5Bits - 1, kRvvImm5Shift),
-                kRvvImm5Bits);
+    uint32_t imm = this->Bits(kRvvImm5Shift + kRvvImm5Bits - 1, kRvvImm5Shift);
+    return zext(imm, kRvvImm5Bits);
   }
 #undef sext
 #undef zext

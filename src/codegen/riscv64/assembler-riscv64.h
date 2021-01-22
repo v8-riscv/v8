@@ -760,6 +760,14 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     GenInstrV(VMV_FUNCT6, vd, simm5, v0, NoMask);
   }
 
+  void vmv_xs(Register rd, VRegister vs2) {
+    GenInstrV(VWXUNARY0_FUNCT6, OP_MVV, rd, v0, vs2, NoMask);
+  }
+
+  void vmv_sx(VRegister vd, Register rs1) {
+    GenInstrV(VRXUNARY0_FUNCT6, OP_MVX, vd, rs1, v0, NoMask);
+  }
+
   void vmerge_vv(VRegister vd, VRegister vs1, VRegister vs2) {
     GenInstrV(VMV_FUNCT6, OP_IVV, vd, vs1, vs2, Mask);
   }
@@ -785,7 +793,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   }
 
 #define DEFINE_OPIVI(name, funct6)                          \
-  void name##_vx(VRegister vd, uint8_t imm5, VRegister vs2, \
+  void name##_vi(VRegister vd, uint8_t imm5, VRegister vs2, \
                  MaskType mask = NoMask) {                  \
     GenInstrV(funct6, vd, imm5, vs2, mask);                 \
   }
@@ -1039,7 +1047,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   inline int UnboundLabelsCount() { return unbound_labels_count_; }
 
   class VectorUnit {
-  public:
+   public:
     VectorUnit(Assembler* assm) : assm_(assm) {}
 
     void set(VSew sew, Vlmul lmul) {
@@ -1058,14 +1066,14 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
   VectorUnit VU;
 
-  protected :
-      // Readable constants for base and offset adjustment helper, these
-      // indicate if aside from offset, another value like offset + 4 should fit
-      // into int16.
-      enum class OffsetAccessType : bool {
-        SINGLE_ACCESS = false,
-        TWO_ACCESSES = true
-      };
+ protected:
+  // Readable constants for base and offset adjustment helper, these
+  // indicate if aside from offset, another value like offset + 4 should fit
+  // into int16.
+  enum class OffsetAccessType : bool {
+    SINGLE_ACCESS = false,
+    TWO_ACCESSES = true
+  };
 
   // Determine whether need to adjust base and offset of memroy load/store
   bool NeedAdjustBaseAndOffset(
