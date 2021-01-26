@@ -771,7 +771,7 @@ static void LeaveInterpreterFrame(MacroAssembler* masm, Register scratch1,
                                   Register scratch2) {
   Register params_size = scratch1;
 
-  // Get the arguments + receiver count.
+  // Get the size of the formal parameters + receiver (in bytes).
   __ Ld(params_size,
         MemOperand(fp, InterpreterFrameConstants::kBytecodeArrayFromFp));
   __ Lw(params_size,
@@ -2161,9 +2161,11 @@ void Builtins::Generate_Call(MacroAssembler* masm, ConvertReceiverMode mode) {
   Label non_callable, non_smi;
   __ JumpIfSmi(a1, &non_callable);
   __ bind(&non_smi);
-  __ GetObjectType(a1, t1, t2);
+  __ LoadMap(t1, a1);
+  __ GetInstanceTypeRange(t1, t2, FIRST_JS_FUNCTION_TYPE, t5);
   __ Jump(masm->isolate()->builtins()->CallFunction(mode),
-          RelocInfo::CODE_TARGET, eq, t2, Operand(JS_FUNCTION_TYPE));
+          RelocInfo::CODE_TARGET, ls, t5,
+          Operand(LAST_JS_FUNCTION_TYPE - FIRST_JS_FUNCTION_TYPE));
   __ Jump(BUILTIN_CODE(masm->isolate(), CallBoundFunction),
           RelocInfo::CODE_TARGET, eq, t2, Operand(JS_BOUND_FUNCTION_TYPE));
 
@@ -2318,9 +2320,10 @@ void Builtins::Generate_Construct(MacroAssembler* masm) {
   __ Branch(&non_constructor, eq, t4, Operand(zero_reg));
 
   // Dispatch based on instance type.
-  __ Lhu(t2, FieldMemOperand(t1, Map::kInstanceTypeOffset));
+  __ GetInstanceTypeRange(t1, t2, FIRST_JS_FUNCTION_TYPE, t5);
   __ Jump(BUILTIN_CODE(masm->isolate(), ConstructFunction),
-          RelocInfo::CODE_TARGET, eq, t2, Operand(JS_FUNCTION_TYPE));
+          RelocInfo::CODE_TARGET, ls, t5,
+          Operand(LAST_JS_FUNCTION_TYPE - FIRST_JS_FUNCTION_TYPE));
 
   // Only dispatch to bound functions after checking whether they are
   // constructors.
