@@ -3589,6 +3589,14 @@ void MacroAssembler::GetObjectType(Register object, Register map,
   Lhu(type_reg, FieldMemOperand(map, Map::kInstanceTypeOffset));
 }
 
+void MacroAssembler::GetInstanceTypeRange(Register map, Register type_reg,
+                                          InstanceType lower_limit,
+                                          Register range) {
+  DCHECK_LT(lower_limit, higher_limit);
+  Lhu(type_reg, FieldMemOperand(map, Map::kInstanceTypeOffset));
+  Dsubu(range, type_reg, Operand(lower_limit));
+}
+
 // -----------------------------------------------------------------------------
 // Runtime calls.
 
@@ -4122,9 +4130,12 @@ void MacroAssembler::AssertFunction(Register object) {
     SmiTst(object, scratch);
     Check(ne, AbortReason::kOperandIsASmiAndNotAFunction, scratch,
           Operand(zero_reg));
-    GetObjectType(object, scratch, scratch);
-    Check(eq, AbortReason::kOperandIsNotAFunction, scratch,
-          Operand(JS_FUNCTION_TYPE));
+    push(object);
+    LoadMap(object, object);
+    GetInstanceTypeRange(object, object, FIRST_JS_FUNCTION_TYPE, t5);
+    Check(ls, AbortReason::kOperandIsNotAFunction, t5,
+          Operand(LAST_JS_FUNCTION_TYPE - FIRST_JS_FUNCTION_TYPE));
+    pop(object);
   }
 }
 
