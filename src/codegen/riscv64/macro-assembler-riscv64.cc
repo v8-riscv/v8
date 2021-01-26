@@ -3437,8 +3437,8 @@ void MacroAssembler::InvokePrologue(Register expected_parameter_count,
     Ld(t1, MemOperand(src, 0));
     Sd(t1, MemOperand(dest, 0));
     Sub64(t0, t0, Operand(1));
-    Sub64(src, src, Operand(kSystemPointerSize));
-    Sub64(dest, dest, Operand(kSystemPointerSize));
+    Add64(src, src, Operand(kSystemPointerSize));
+    Add64(dest, dest, Operand(kSystemPointerSize));
     Branch(&copy, ge, t0, Operand(zero_reg));
   }
 
