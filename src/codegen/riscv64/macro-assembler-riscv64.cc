@@ -3592,9 +3592,8 @@ void MacroAssembler::GetObjectType(Register object, Register map,
 void MacroAssembler::GetInstanceTypeRange(Register map, Register type_reg,
                                           InstanceType lower_limit,
                                           Register range) {
-  DCHECK_LT(lower_limit, higher_limit);
   Lhu(type_reg, FieldMemOperand(map, Map::kInstanceTypeOffset));
-  Dsubu(range, type_reg, Operand(lower_limit));
+  Sub64(range, type_reg, Operand(lower_limit));
 }
 
 // -----------------------------------------------------------------------------
@@ -4133,7 +4132,7 @@ void MacroAssembler::AssertFunction(Register object) {
     push(object);
     LoadMap(object, object);
     GetInstanceTypeRange(object, object, FIRST_JS_FUNCTION_TYPE, t5);
-    Check(ls, AbortReason::kOperandIsNotAFunction, t5,
+    Check(Uless_equal, AbortReason::kOperandIsNotAFunction, t5,
           Operand(LAST_JS_FUNCTION_TYPE - FIRST_JS_FUNCTION_TYPE));
     pop(object);
   }
