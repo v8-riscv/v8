@@ -126,6 +126,7 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvF32x4Floor:
     case kRiscvF32x4Trunc:
     case kRiscvF32x4NearestInt:
+    case kRiscvI64x2Eq:
     case kRiscvF64x2Splat:
     case kRiscvF64x2ExtractLane:
     case kRiscvF64x2ReplaceLane:
@@ -148,6 +149,10 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvFloat64SilenceNaN:
     case kRiscvFloorWD:
     case kRiscvFloorWS:
+    case kRiscvI64x2SConvertI32x4Low:
+    case kRiscvI64x2SConvertI32x4High:
+    case kRiscvI64x2UConvertI32x4Low:
+    case kRiscvI64x2UConvertI32x4High:
     case kRiscvI16x8Add:
     case kRiscvI16x8AddHoriz:
     case kRiscvI16x8AddSatS:
@@ -1096,7 +1101,7 @@ int InstructionScheduler::GetInstructionLatency(const Instruction* instr) {
     case kArchCallCodeObject:
     case kArchCallWasmFunction:
       return CallLatency();
-    case kArchTailCallCodeObject: {
+    case kArchTailCallCodeObject:
     case kArchTailCallWasm:
     case kArchTailCallAddress:
       return JumpLatency();

@@ -1279,7 +1279,7 @@ void InstructionSelector::VisitTruncateInt64ToInt32(Node* node) {
 
   // Semantics of this machine IR is not clear. For example, x86 zero-extend the
   // truncated value; arm treats it as nop thus the upper 32-bit as undefined;
-  // mips emits ext instruction which zero-extend the 32-bit value; for riscv,
+  // Riscv emits ext instruction which zero-extend the 32-bit value; for riscv,
   // we do sign-extension of the truncated value
   Emit(kRiscvSignExtendWord, g.DefineAsRegister(node),
        g.UseRegister(node->InputAt(0)));
@@ -2583,6 +2583,7 @@ void InstructionSelector::VisitInt64AbsWithOverflow(Node* node) {
   V(F64x2NearestInt, kRiscvF64x2NearestInt)               \
   V(I64x2Neg, kRiscvI64x2Neg)                             \
   V(I64x2BitMask, kRiscvI64x2BitMask)                     \
+  V(I64x2Eq, kRiscvI64x2Eq)                               \
   V(F32x4SConvertI32x4, kRiscvF32x4SConvertI32x4)         \
   V(F32x4UConvertI32x4, kRiscvF32x4UConvertI32x4)         \
   V(F32x4Abs, kRiscvF32x4Abs)                             \
@@ -2594,6 +2595,10 @@ void InstructionSelector::VisitInt64AbsWithOverflow(Node* node) {
   V(F32x4Floor, kRiscvF32x4Floor)                         \
   V(F32x4Trunc, kRiscvF32x4Trunc)                         \
   V(F32x4NearestInt, kRiscvF32x4NearestInt)               \
+  V(I64x2SConvertI32x4Low, kRiscvI64x2SConvertI32x4Low)   \
+  V(I64x2SConvertI32x4High, kRiscvI64x2SConvertI32x4High) \
+  V(I64x2UConvertI32x4Low, kRiscvI64x2UConvertI32x4Low)   \
+  V(I64x2UConvertI32x4High, kRiscvI64x2UConvertI32x4High) \
   V(I32x4SConvertF32x4, kRiscvI32x4SConvertF32x4)         \
   V(I32x4UConvertF32x4, kRiscvI32x4UConvertF32x4)         \
   V(I32x4Neg, kRiscvI32x4Neg)                             \
