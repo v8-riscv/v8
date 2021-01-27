@@ -17,10 +17,6 @@ const int Deoptimizer::kEagerWithResumeImmedArgs1PcOffset = kInstrSize;
 const int Deoptimizer::kEagerWithResumeImmedArgs2PcOffset =
     kInstrSize + kSystemPointerSize;
 
-// Maximum size of a table entry generated below.
-// FIXME(RISCV): Is this value correct?
-const int Deoptimizer::table_entry_size_ = 2 * kInstrSize;
-
 Float32 RegisterValues::GetFloatRegister(unsigned n) const {
   return Float32::FromBits(
       static_cast<uint32_t>(double_registers_[n].get_bits()));
