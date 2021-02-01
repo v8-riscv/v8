@@ -648,6 +648,8 @@ void LiftoffAssembler::Spill(int offset, LiftoffRegister reg, ValueType type) {
       break;
     case ValueType::kF64:
       TurboAssembler::StoreDouble(reg.fp(), dst);
+    case ValueType::kS128:
+      UNIMPLEMENT();
       break;
     default:
       UNREACHABLE();
