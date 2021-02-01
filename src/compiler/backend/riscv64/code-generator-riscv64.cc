@@ -1195,6 +1195,14 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ fmul_s(i.OutputDoubleRegister(), i.InputDoubleRegister(0),
                 i.InputDoubleRegister(1));
       break;
+    case kRiscvMaddS:
+      __ fmadd_s(i.OutputDoubleRegister(), i.InputDoubleRegister(0),
+                 i.InputDoubleRegister(1), i.InputDoubleRegister(2));
+      break;
+    case kRiscvMsubS:
+      __ fmsub_s(i.OutputDoubleRegister(), i.InputDoubleRegister(0),
+                 i.InputDoubleRegister(1), i.InputDoubleRegister(2));
+      break;
     case kRiscvDivS:
       __ fdiv_s(i.OutputDoubleRegister(), i.InputDoubleRegister(0),
                 i.InputDoubleRegister(1));
@@ -1256,6 +1264,14 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       // TODO(plind): add special case: right op is -1.0, see arm port.
       __ fmul_d(i.OutputDoubleRegister(), i.InputDoubleRegister(0),
                 i.InputDoubleRegister(1));
+      break;
+    case kRiscvMaddD:
+      __ fmadd_d(i.OutputDoubleRegister(), i.InputDoubleRegister(0),
+                 i.InputDoubleRegister(1), i.InputDoubleRegister(2));
+      break;
+    case kRiscvMsubD:
+      __ fmsub_d(i.OutputDoubleRegister(), i.InputDoubleRegister(0),
+                 i.InputDoubleRegister(1), i.InputDoubleRegister(2));
       break;
     case kRiscvDivD:
       __ fdiv_d(i.OutputDoubleRegister(), i.InputDoubleRegister(0),

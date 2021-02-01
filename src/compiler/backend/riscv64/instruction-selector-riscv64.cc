@@ -1340,18 +1340,74 @@ void InstructionSelector::VisitBitcastInt64ToFloat64(Node* node) {
 }
 
 void InstructionSelector::VisitFloat32Add(Node* node) {
+  RiscvOperandGenerator g(this);
+  Float32BinopMatcher m(node);
+  if (m.left().IsFloat32Mul() && CanCover(node, m.left().node())) {
+    // For Add.S(Mul.S(x, y), z):
+    Float32BinopMatcher mleft(m.left().node());
+    Emit(kRiscvMaddS, g.DefineAsRegister(node),
+         g.UseRegister(mleft.left().node()),
+         g.UseRegister(mleft.right().node()), g.UseRegister(m.right().node()));
+    return;
+  }
+  if (m.right().IsFloat32Mul() && CanCover(node, m.right().node())) {
+    // For Add.S(x, Mul.S(y, z)):
+    Float32BinopMatcher mright(m.right().node());
+    Emit(kRiscvMaddS, g.DefineAsRegister(node),
+         g.UseRegister(mright.left().node()),
+         g.UseRegister(mright.right().node()), g.UseRegister(m.left().node()));
+    return;
+  }
   VisitRRR(this, kRiscvAddS, node);
 }
 
 void InstructionSelector::VisitFloat64Add(Node* node) {
+  RiscvOperandGenerator g(this);
+  Float64BinopMatcher m(node);
+  if (m.left().IsFloat64Mul() && CanCover(node, m.left().node())) {
+    // For Add.D(Mul.D(x, y), z):
+    Float64BinopMatcher mleft(m.left().node());
+    Emit(kRiscvMaddD, g.DefineAsRegister(node),
+         g.UseRegister(mleft.left().node()),
+         g.UseRegister(mleft.right().node()), g.UseRegister(m.right().node()));
+    return;
+  }
+  if (m.right().IsFloat64Mul() && CanCover(node, m.right().node())) {
+    // For Add.D(x, Mul.D(y, z)):
+    Float64BinopMatcher mright(m.right().node());
+    Emit(kRiscvMaddD, g.DefineAsRegister(node),
+         g.UseRegister(mright.left().node()),
+         g.UseRegister(mright.right().node()), g.UseRegister(m.left().node()));
+    return;
+  }
   VisitRRR(this, kRiscvAddD, node);
 }
 
 void InstructionSelector::VisitFloat32Sub(Node* node) {
+  RiscvOperandGenerator g(this);
+  Float32BinopMatcher m(node);
+  if (m.left().IsFloat32Mul() && CanCover(node, m.left().node())) {
+    // For Sub.S(Mul.S(x,y), z) select Msub.S(x, y, z).
+    Float32BinopMatcher mleft(m.left().node());
+    Emit(kRiscvMsubS, g.DefineAsRegister(node),
+         g.UseRegister(mleft.left().node()),
+         g.UseRegister(mleft.right().node()), g.UseRegister(m.right().node()));
+    return;
+  }
   VisitRRR(this, kRiscvSubS, node);
 }
 
 void InstructionSelector::VisitFloat64Sub(Node* node) {
+  RiscvOperandGenerator g(this);
+  Float64BinopMatcher m(node);
+  if (m.left().IsFloat64Mul() && CanCover(node, m.left().node())) {
+    // For Sub.D(Mul.D(x,y), z) select Msub.D(x, y, z).
+    Float64BinopMatcher mleft(m.left().node());
+    Emit(kRiscvMsubD, g.DefineAsRegister(node),
+         g.UseRegister(mleft.left().node()),
+         g.UseRegister(mleft.right().node()), g.UseRegister(m.right().node()));
+    return;
+  }
   VisitRRR(this, kRiscvSubD, node);
 }
 

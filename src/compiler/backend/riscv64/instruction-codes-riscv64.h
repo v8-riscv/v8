@@ -63,6 +63,8 @@ namespace compiler {
   V(RiscvAddS)                              \
   V(RiscvSubS)                              \
   V(RiscvMulS)                              \
+  V(RiscvMaddS)                             \
+  V(RiscvMsubS)                             \
   V(RiscvDivS)                              \
   V(RiscvModS)                              \
   V(RiscvAbsS)                              \
@@ -74,6 +76,8 @@ namespace compiler {
   V(RiscvAddD)                              \
   V(RiscvSubD)                              \
   V(RiscvMulD)                              \
+  V(RiscvMaddD)                             \
+  V(RiscvMsubD)                             \
   V(RiscvDivD)                              \
   V(RiscvModD)                              \
   V(RiscvAbsD)                              \
