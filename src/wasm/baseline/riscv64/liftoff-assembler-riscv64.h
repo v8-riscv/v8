@@ -1351,6 +1351,11 @@ void LiftoffAssembler::emit_i64x2_splat(LiftoffRegister dst,
   bailout(kSimd, "emit_i64x2_splat");
 }
 
+void LiftoffAssembler::emit_i64x2_eq(LiftoffRegister dst, LiftoffRegister lhs,
+                                     LiftoffRegister rhs) {
+  bailout(kSimd, "emit_i64x2_eq");
+}
+
 void LiftoffAssembler::emit_f32x4_splat(LiftoffRegister dst,
                                         LiftoffRegister src) {
   bailout(kSimd, "emit_f32x4_splat");

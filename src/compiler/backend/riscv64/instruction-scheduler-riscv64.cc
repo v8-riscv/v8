@@ -364,6 +364,8 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvS128Load16x4U:
     case kRiscvS128Load32x2S:
     case kRiscvS128Load32x2U:
+    case kRiscvS128LoadLane:
+    case kRiscvS128StoreLane:
     case kRiscvWord64AtomicLoadUint8:
     case kRiscvWord64AtomicLoadUint16:
     case kRiscvWord64AtomicLoadUint32:
