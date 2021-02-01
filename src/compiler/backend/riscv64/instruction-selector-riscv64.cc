@@ -381,6 +381,10 @@ void EmitLoad(InstructionSelector* selector, Node* node, InstructionCode opcode,
   }
 }
 
+void InstructionSelector::VisitStoreLane(Node* node) { UNIMPLEMENTED(); }
+
+void InstructionSelector::VisitLoadLane(Node* node) { UNIMPLEMENTED(); }
+
 void InstructionSelector::VisitLoadTransform(Node* node) {
   LoadTransformParameters params = LoadTransformParametersOf(node->op());
 
