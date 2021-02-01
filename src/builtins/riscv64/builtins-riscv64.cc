@@ -2162,9 +2162,9 @@ void Builtins::Generate_Call(MacroAssembler* masm, ConvertReceiverMode mode) {
   __ JumpIfSmi(a1, &non_callable);
   __ bind(&non_smi);
   __ LoadMap(t1, a1);
-  __ GetInstanceTypeRange(t1, t2, FIRST_JS_FUNCTION_TYPE, t5);
+  __ GetInstanceTypeRange(t1, t2, FIRST_JS_FUNCTION_TYPE, t4);
   __ Jump(masm->isolate()->builtins()->CallFunction(mode),
-          RelocInfo::CODE_TARGET, Uless_equal, t5,
+          RelocInfo::CODE_TARGET, Uless_equal, t4,
           Operand(LAST_JS_FUNCTION_TYPE - FIRST_JS_FUNCTION_TYPE));
   __ Jump(BUILTIN_CODE(masm->isolate(), CallBoundFunction),
           RelocInfo::CODE_TARGET, eq, t2, Operand(JS_BOUND_FUNCTION_TYPE));
@@ -2320,9 +2320,9 @@ void Builtins::Generate_Construct(MacroAssembler* masm) {
   __ Branch(&non_constructor, eq, t4, Operand(zero_reg));
 
   // Dispatch based on instance type.
-  __ GetInstanceTypeRange(t1, t2, FIRST_JS_FUNCTION_TYPE, t5);
+  __ GetInstanceTypeRange(t1, t2, FIRST_JS_FUNCTION_TYPE, t0);
   __ Jump(BUILTIN_CODE(masm->isolate(), ConstructFunction),
-          RelocInfo::CODE_TARGET, Uless_equal, t5,
+          RelocInfo::CODE_TARGET, Uless_equal, t0,
           Operand(LAST_JS_FUNCTION_TYPE - FIRST_JS_FUNCTION_TYPE));
 
   // Only dispatch to bound functions after checking whether they are
