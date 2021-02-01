@@ -144,6 +144,9 @@ inline void push(LiftoffAssembler* assm, LiftoffRegister reg, ValueType type) {
       assm->Sw(reg.gp(), MemOperand(sp, 0));
       break;
     case ValueType::kI64:
+    case ValueType::kOptRef:
+    case ValueType::kRef:
+    case ValueType::kRtt:
       assm->push(reg.gp());
       break;
     case ValueType::kF32:
