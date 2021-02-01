@@ -130,6 +130,17 @@
    # See issue #403
    'proposals/js-types/exports': [SKIP],
    'proposals/js-types/imports': [SKIP],
+
+   # riscv64 don't implemented some wasm atomic func
+   'left-to-right': [SKIP], 
+   'float_misc': [SKIP],
+   'f64_bitwise': [SKIP],
+   'f32_bitwise': [SKIP],
+   'proposals/tail-call/f32_bitwise': [SKIP],
+   'proposals/tail-call/f64_bitwise': [SKIP],
+   'proposals/tail-call/float_misc': [SKIP],
+   'proposals/tail-call/left-to-right': [SKIP],
+
 }],  # 'arch == riscv64
 
 ['arch == ppc or arch == ppc64', {
