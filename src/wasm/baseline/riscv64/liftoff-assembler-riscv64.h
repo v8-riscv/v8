@@ -641,6 +641,7 @@ void LiftoffAssembler::Spill(int offset, LiftoffRegister reg, ValueType type) {
     case ValueType::kRef:
     case ValueType::kOptRef:
     case ValueType::kRtt:
+    case ValueType::kRttWithDepth:
       Sd(reg.gp(), dst);
       break;
     case ValueType::kF32:
@@ -648,6 +649,9 @@ void LiftoffAssembler::Spill(int offset, LiftoffRegister reg, ValueType type) {
       break;
     case ValueType::kF64:
       TurboAssembler::StoreDouble(reg.fp(), dst);
+      break;
+    case ValueType::kS128:
+      bailout(kSimd, "Spill S128");
       break;
     default:
       UNREACHABLE();
