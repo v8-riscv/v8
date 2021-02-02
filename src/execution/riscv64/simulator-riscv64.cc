@@ -3323,12 +3323,32 @@ void Simulator::DecodeCJType() {
 }
 
 void Simulator::DecodeRvvIVV() {
-  DCHECK_EQ(instr_.InstructionBits() & kVTypeMask, OP_IVV);
+  DCHECK_EQ(instr_.InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVV);
   switch (instr_.InstructionBits() & kVTypeMask) {
     case RO_V_VADD_VV: {
       RVV_VI_VV_LOOP({ vd = vs1 + vs2; });
       break;
     }
+    default:
+      UNSUPPORTED_RISCV();
+      break;
+  }
+  set_rvv_vstart(0);
+}
+
+void Simulator::DecodeRvvIVI() {
+  DCHECK_EQ(instr_.InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVI);
+  switch (instr_.InstructionBits() & kVTypeMask) {
+    case RO_V_VADD_VI:
+      UNSUPPORTED_RISCV();
+      break;
+    case RO_V_VMV_VI:
+      if (instr_.RvvVM()) {
+        UNSUPPORTED_RISCV();
+      } else {
+        UNSUPPORTED_RISCV();
+      }
+      break;
     default:
       UNSUPPORTED_RISCV();
       break;
@@ -3351,7 +3371,7 @@ void Simulator::DecodeVType() {
       return;
       break;
     case OP_IVI:
-      UNIMPLEMENTED_RISCV();
+      DecodeRvvIVI();
       return;
       break;
     case OP_IVX:
