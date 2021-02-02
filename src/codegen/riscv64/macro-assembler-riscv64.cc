@@ -3215,9 +3215,10 @@ void TurboAssembler::Push(Smi smi) {
   push(scratch);
 }
 
-void TurboAssembler::PushArray(Register array, Register size, Register scratch,
-                               Register scratch2, PushArrayOrder order) {
-  DCHECK(!AreAliased(array, size, scratch, scratch2));
+void TurboAssembler::PushArray(Register array, Register size, PushArrayOrder order) {
+  UseScratchRegisterScope temps(this);
+  Register scratch = temps.Acquire();
+  Register scratch2 = temps.Acquire();
   Label loop, entry;
   if (order == PushArrayOrder::kReverse) {
     mv(scratch, zero_reg);
