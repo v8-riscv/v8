@@ -555,6 +555,10 @@ TEST(RVV) {
   COMPARE(vslidedown_vi(v0, 5, v2), "3e22b057       vslidedown.vi v0, v2, 5 ");
   COMPARE(vmv_xs(a1, v2), "422025d7       vmv.x.s       a1, v2");
   COMPARE(vmv_sx(v2, a1), "4205e157       vmv.s.x       v2, a1");
+  COMPARE(vmerge_vx(v17, a1, v21), "5d55c8d7       vmerge.vxm       v17, v21, a1, v0");
+  COMPARE(vmerge_vi(v17, 17, v21), "5d58b8d7       vmerge.vim       v17, v21, -15, v0");
+  COMPARE(vmerge_vi(v17, 15, v21), "5d57b8d7       vmerge.vim       v17, v21, 15, v0");
+  COMPARE(vmerge_vv(v17, v10, v21), "5d5508d7       vmerge.vvm       v17, v21, v10, v0");
   VERIFY_RUN();
 }
 

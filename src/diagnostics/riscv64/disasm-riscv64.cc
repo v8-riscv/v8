@@ -1840,7 +1840,7 @@ void Decoder::DecodeRvvIVV(Instruction* instr) {
       if (instr->RvvVM()) {
         Format(instr, "vmv.vv       'vd, 'vs1");
       } else {
-        Format(instr, "vmerge.vvm       'vd, 'vs1");
+        Format(instr, "vmerge.vvm       'vd, 'vs2, 'vs1, v0");
       }
       break;
     default:
@@ -1859,7 +1859,7 @@ void Decoder::DecodeRvvIVI(Instruction* instr) {
       if (instr->RvvVM()) {
         Format(instr, "vmv.vi       'vd, 'simm5");
       } else {
-        Format(instr, "vmerge.vim       'vd, 'simm5");
+        Format(instr, "vmerge.vim       'vd, 'vs2, 'simm5, v0");
       }
       break;
     case RO_V_VSLIDEDOWN_VI:
@@ -1881,7 +1881,7 @@ void Decoder::DecodeRvvIVX(Instruction* instr) {
       if (instr->RvvVM()) {
         Format(instr, "vmv.vx       'vd, 'rs1");
       } else {
-        Format(instr, "vmerge.vxm       'vd, 'rs1");
+        Format(instr, "vmerge.vxm       'vd, 'vs2, 'rs1, v0");
       }
       break;
     case RO_V_VSLIDEDOWN_VX:
