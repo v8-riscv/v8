@@ -18,7 +18,7 @@
 #define UNIMPLEMENTED_RISCV()
 #endif
 
-#define UNSUPPORTED_RISCV() v8::internal::PrintF("Unsupported instruction.\n")
+#define UNSUPPORTED_RISCV() v8::internal::PrintF("Unsupported instruction %d.\n", __LINE__)
 
 enum Endianness { kLittle, kBig };
 
