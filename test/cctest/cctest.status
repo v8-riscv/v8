@@ -380,9 +380,9 @@
 
   # SIMD not fully implemented yet
   'test-run-wasm-simd-liftoff/*': [SKIP],
-  
+
   # riscv64 don't implemented some wasm function
-  'test-run-wasm-atomics64/*': [SKIP],  
+  'test-run-wasm-atomics64/*': [SKIP],
   'test-run-wasm-atomics/*': [SKIP],
   'test-run-wasm-64/*': [SKIP],
   'test-run-wasm/*': [SKIP],

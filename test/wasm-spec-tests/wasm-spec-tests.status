@@ -136,7 +136,7 @@
    'proposals/js-types/imports': [SKIP],
 
    # riscv64 don't implemented some wasm atomic func
-   'left-to-right': [SKIP], 
+   'left-to-right': [SKIP],
    'float_misc': [SKIP],
    'f64_bitwise': [SKIP],
    'f32_bitwise': [SKIP],
