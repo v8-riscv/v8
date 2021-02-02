@@ -120,7 +120,7 @@ class RiscvDebugger {
 };
 
 inline void UNSUPPORTED() {
-  printf("Sim: Unsupported instruction.\n");
+  printf("Sim: Unsupported instruction. %d\n",__LINE__);
   base::OS::Abort();
 }
 
@@ -3330,7 +3330,7 @@ void Simulator::DecodeRvvIVV() {
       break;
     }
     default:
-      UNSUPPORTED_RISCV();
+      UNIMPLEMENTED_RISCV();
       break;
   }
   set_rvv_vstart(0);
@@ -3340,20 +3340,47 @@ void Simulator::DecodeRvvIVI() {
   DCHECK_EQ(instr_.InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVI);
   switch (instr_.InstructionBits() & kVTypeMask) {
     case RO_V_VADD_VI:
-      UNSUPPORTED_RISCV();
+      UNIMPLEMENTED_RISCV();
       break;
     case RO_V_VMV_VI:
       if (instr_.RvvVM()) {
-        UNSUPPORTED_RISCV();
+        UNIMPLEMENTED_RISCV();
       } else {
-        UNSUPPORTED_RISCV();
+        UNIMPLEMENTED_RISCV();
       }
       break;
     default:
-      UNSUPPORTED_RISCV();
+      UNIMPLEMENTED_RISCV();
       break;
   }
-  set_rvv_vstart(0);
+}
+
+void Simulator::DecodeRvvIVX() {
+  DCHECK_EQ(instr_.InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVX);
+  switch (instr_.InstructionBits() & kVTypeMask) {
+    case RO_V_VADD_VX:
+      UNIMPLEMENTED_RISCV();
+      break;
+    case RO_V_VMV_VX:
+      if (instr_.RvvVM()) {
+      UNIMPLEMENTED_RISCV();
+      } else {
+        RVV_VI_VVXI_MERGE_LOOP
+        ({
+          bool use_first = (Rvvelt<uint64_t>(0, (i / 64)) >> (i % 64)) & 0x1;
+          vd = use_first ? rs1 : vs2;
+          USE(vs1);
+          USE(simm5);
+        });
+      }
+      break;
+    case RO_V_VSLIDEDOWN_VX:
+      UNIMPLEMENTED_RISCV();
+      break;
+    default:
+      UNIMPLEMENTED_RISCV();
+      break;
+  }
 }
 
 void Simulator::DecodeVType() {
@@ -3375,7 +3402,7 @@ void Simulator::DecodeVType() {
       return;
       break;
     case OP_IVX:
-      UNIMPLEMENTED_RISCV();
+      DecodeRvvIVX();
       return;
       break;
     case OP_FVF:
