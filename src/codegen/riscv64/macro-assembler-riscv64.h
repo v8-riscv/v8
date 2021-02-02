@@ -296,8 +296,7 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   }
 
   enum PushArrayOrder { kNormal, kReverse };
-  void PushArray(Register array, Register size, Register scratch,
-                 Register scratch2, PushArrayOrder order = kNormal);
+  void PushArray(Register array, Register size, PushArrayOrder order = kNormal);
 
   void SaveRegisters(RegList registers);
   void RestoreRegisters(RegList registers);

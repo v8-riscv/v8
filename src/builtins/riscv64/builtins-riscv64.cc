@@ -92,7 +92,7 @@ void Generate_JSBuiltinsConstructStubHelper(MacroAssembler* masm) {
         t2, fp,
         Operand(StandardFrameConstants::kCallerSPOffset + kSystemPointerSize));
     // Copy arguments and receiver to the expression stack.
-    __ PushArray(t2, a0, t3, t0);
+    __ PushArray(t2, a0);
     // The receiver for the builtin/api call.
     __ PushRoot(RootIndex::kTheHoleValue);
 
@@ -105,13 +105,13 @@ void Generate_JSBuiltinsConstructStubHelper(MacroAssembler* masm) {
     // Restore context from the frame.
     __ Ld(cp, MemOperand(fp, ConstructFrameConstants::kContextOffset));
     // Restore smi-tagged arguments count from the frame.
-    __ Ld(t3, MemOperand(fp, ConstructFrameConstants::kLengthOffset));
+    __ Ld(t0, MemOperand(fp, ConstructFrameConstants::kLengthOffset));
     // Leave construct frame.
   }
 
   // Remove caller arguments from the stack and return.
-  __ SmiScale(t3, t3, kPointerSizeLog2);
-  __ Add64(sp, sp, t3);
+  __ SmiScale(t0, t0, kPointerSizeLog2);
+  __ Add64(sp, sp, t0);
   __ Add64(sp, sp, kPointerSize);
   __ Ret();
 }
@@ -218,7 +218,7 @@ void Builtins::Generate_JSConstructStubGeneric(MacroAssembler* masm) {
   // InvokeFunction.
 
   // Copy arguments and receiver to the expression stack.
-  __ PushArray(t2, a0, t0, t1);
+  __ PushArray(t2, a0);
   // We need two copies because we may have to return the original one
   // and the calling conventions dictate that the called function pops the
   // receiver. The second copy is pushed after the arguments,
@@ -1210,7 +1210,7 @@ static void Generate_InterpreterPushArgs(MacroAssembler* masm,
   __ Sub64(start_address, start_address, scratch);
 
   // Push the arguments.
-  __ PushArray(start_address, num_args, scratch, scratch2,
+  __ PushArray(start_address, num_args,
                TurboAssembler::PushArrayOrder::kReverse);
 }
 
@@ -1464,7 +1464,8 @@ void Generate_ContinueToBuiltinHelper(MacroAssembler* masm,
                                       bool with_result) {
   const RegisterConfiguration* config(RegisterConfiguration::Default());
   int allocatable_register_count = config->num_allocatable_general_registers();
-  Register scratch = t3;
+  UseScratchRegisterScope temp(masm);
+  Register scratch = temp.Acquire();
   if (with_result) {
     if (java_script_builtin) {
       __ Move(scratch, a0);
@@ -1811,9 +1812,11 @@ void Builtins::Generate_CallOrConstructVarargs(MacroAssembler* masm,
     // Allow a2 to be a FixedArray, or a FixedDoubleArray if a4 == 0.
     Label ok, fail;
     __ AssertNotSmi(a2);
-    __ GetObjectType(a2, t5, t5);
-    __ Branch(&ok, eq, t5, Operand(FIXED_ARRAY_TYPE));
-    __ Branch(&fail, ne, t5, Operand(FIXED_DOUBLE_ARRAY_TYPE));
+    UseScratchRegisterScope temp(masm);
+    Register scratch = temp.Acquire();
+    __ GetObjectType(a2, scratch, scratch);
+    __ Branch(&ok, eq, scratch, Operand(FIXED_ARRAY_TYPE));
+    __ Branch(&fail, ne, scratch, Operand(FIXED_DOUBLE_ARRAY_TYPE));
     __ Branch(&ok, eq, a4, Operand(zero_reg));
     // Fall through.
     __ bind(&fail);
@@ -2546,9 +2549,11 @@ void Builtins::Generate_CEntry(MacroAssembler* masm, int result_size,
   __ ResetSpeculationPoisonRegister();
 
   // Compute the handler entry address and jump to it.
-  __ li(t6, pending_handler_entrypoint_address);
-  __ Ld(t6, MemOperand(t6));
-  __ Jump(t6);
+  UseScratchRegisterScope temp(masm);
+  Register scratch = temp.Acquire();
+  __ li(scratch, pending_handler_entrypoint_address);
+  __ Ld(scratch, MemOperand(scratch));
+  __ Jump(scratch);
 }
 
 void Builtins::Generate_DoubleToI(MacroAssembler* masm) {
@@ -2704,22 +2709,24 @@ void CallApiFunctionAndReturn(MacroAssembler* masm, Register function_address,
   DCHECK(function_address == a1 || function_address == a2);
 
   Label profiler_enabled, end_profiler_check;
-  __ li(t6, ExternalReference::is_profiling_address(isolate));
-  __ Lb(t6, MemOperand(t6, 0));
-  __ Branch(&profiler_enabled, ne, t6, Operand(zero_reg));
-  __ li(t6, ExternalReference::address_of_runtime_stats_flag());
-  __ Lw(t6, MemOperand(t6, 0));
-  __ Branch(&profiler_enabled, ne, t6, Operand(zero_reg));
+  UseScratchRegisterScope temp(masm);
+  Register scratch = temp.Acquire();
+  __ li(scratch, ExternalReference::is_profiling_address(isolate));
+  __ Lb(scratch, MemOperand(scratch, 0));
+  __ Branch(&profiler_enabled, ne, scratch, Operand(zero_reg));
+  __ li(scratch, ExternalReference::address_of_runtime_stats_flag());
+  __ Lw(scratch, MemOperand(scratch, 0));
+  __ Branch(&profiler_enabled, ne, scratch, Operand(zero_reg));
   {
     // Call the api function directly.
-    __ Move(t6, function_address);
+    __ Move(scratch, function_address);
     __ Branch(&end_profiler_check);
   }
 
   __ bind(&profiler_enabled);
   {
     // Additional parameter is the address of the actual callback.
-    __ li(t6, thunk_ref);
+    __ li(scratch, thunk_ref);
   }
   __ bind(&end_profiler_check);
 
@@ -2731,7 +2738,7 @@ void CallApiFunctionAndReturn(MacroAssembler* masm, Register function_address,
   __ Add32(s2, s2, Operand(1));
   __ Sw(s2, MemOperand(s5, kLevelOffset));
 
-  __ StoreReturnAddressAndCall(t6);
+  __ StoreReturnAddressAndCall(scratch);
 
   Label promote_scheduled_exception;
   Label delete_allocated_handles;
