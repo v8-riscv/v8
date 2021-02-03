@@ -849,6 +849,10 @@
   'wasm/shared-memory': [SKIP],
 }],  # 'arch == riscv64'
 
+['arch == riscv64 and variant == stress_incremental_marking', {
+  'wasm/externref-globals-liftoff': [SKIP], # issue 414
+}], #'arch == riscv64 and variant == stress-incremental-marking'
+
 ##############################################################################
 ['system == windows', {
   # Too slow with turbo fan.
