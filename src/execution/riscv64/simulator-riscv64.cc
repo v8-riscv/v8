@@ -3339,9 +3339,10 @@ void Simulator::DecodeRvvIVV() {
 void Simulator::DecodeRvvIVI() {
   DCHECK_EQ(instr_.InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVI);
   switch (instr_.InstructionBits() & kVTypeMask) {
-    case RO_V_VADD_VI:
-      UNIMPLEMENTED_RISCV();
+    case RO_V_VADD_VI: {
+      RVV_VI_VI_LOOP({ vd = simm5 + vs2; })
       break;
+    }
     case RO_V_VMV_VI:
       if (instr_.RvvVM()) {
         UNIMPLEMENTED_RISCV();
@@ -3358,15 +3359,15 @@ void Simulator::DecodeRvvIVI() {
 void Simulator::DecodeRvvIVX() {
   DCHECK_EQ(instr_.InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVX);
   switch (instr_.InstructionBits() & kVTypeMask) {
-    case RO_V_VADD_VX:
-      UNIMPLEMENTED_RISCV();
+    case RO_V_VADD_VX: {
+      RVV_VI_VX_LOOP({ vd = rs1 + vs2; })
       break;
+    }
     case RO_V_VMV_VX:
       if (instr_.RvvVM()) {
-      UNIMPLEMENTED_RISCV();
+        UNIMPLEMENTED_RISCV();
       } else {
-        RVV_VI_VVXI_MERGE_LOOP
-        ({
+        RVV_VI_VVXI_MERGE_LOOP({
           bool use_first = (Rvvelt<uint64_t>(0, (i / 64)) >> (i % 64)) & 0x1;
           vd = use_first ? rs1 : vs2;
           USE(vs1);
