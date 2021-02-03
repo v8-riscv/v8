@@ -44,7 +44,7 @@ BUILD_TARGETS_ALL = ["all"]
 ARCHES = ["ia32", "x64", "arm", "arm64", "mipsel", "mips64el", "ppc", "ppc64",
           "riscv64", "s390", "s390x", "android_arm", "android_arm64"]
 # Arches that get built/run when you don't specify any.
-DEFAULT_ARCHES = ["ia32", "x64", "arm", "arm64", "riscv64"]
+DEFAULT_ARCHES = ["ia32", "x64", "arm", "arm64"]
 # Modes that this script understands.
 MODES = ["release", "debug", "optdebug"]
 # Modes that get built/run when you don't specify any.
