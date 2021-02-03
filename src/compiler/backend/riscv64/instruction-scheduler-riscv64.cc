@@ -249,6 +249,7 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvI8x16RoundingAverageU:
     case kRiscvI8x16Abs:
     case kRiscvI8x16BitMask:
+    case kRiscvI8x16Popcnt:
     case kRiscvMaxD:
     case kRiscvMaxS:
     case kRiscvMinD:
