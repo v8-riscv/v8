@@ -1853,7 +1853,7 @@ void Decoder::DecodeRvvIVI(Instruction* instr) {
   DCHECK_EQ(instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVI);
   switch (instr->InstructionBits() & kVTypeMask) {
     case RO_V_VADD_VI:
-      Format(instr, "vadd.vi       'vd, 'vs2, 'vs1  'vm");
+      Format(instr, "vadd.vi       'vd, 'vs2, 'simm5  'vm");
       break;
     case RO_V_VMV_VI:
       if (instr->RvvVM()) {
