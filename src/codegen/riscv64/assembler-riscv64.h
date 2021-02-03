@@ -640,7 +640,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     vsetvli(rd, zero_reg, vsew, vlmul, tu, mu);
   }
 
-  inline void vsetvlmax(VSew vsew, Vlmul vlmul, TailAgnosticType tail = tu,
+  inline void vsetvl(VSew vsew, Vlmul vlmul, TailAgnosticType tail = tu,
                         MaskAgnosticType mask = mu) {
     vsetvli(zero_reg, zero_reg, vsew, vlmul, tu, mu);
   }
@@ -1050,11 +1050,19 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
    public:
     VectorUnit(Assembler* assm) : assm_(assm) {}
 
+    void set(Register rd, VSew sew, Vlmul lmul) {
+      if (sew != sew_ || lmul != lmul_) {
+        sew_ = sew;
+        lmul_ = lmul;
+        assm_->vsetvlmax(rd, sew_, lmul_);
+      }
+    }
+
     void set(VSew sew, Vlmul lmul) {
       if (sew != sew_ || lmul != lmul_) {
         sew_ = sew;
         lmul_ = lmul;
-        assm_->vsetvlmax(sew_, lmul_);
+        assm_->vsetvl(sew_, lmul_);
       }
     }
 

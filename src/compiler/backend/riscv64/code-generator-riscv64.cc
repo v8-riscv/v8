@@ -1837,12 +1837,12 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
                 i.InputRegister(0), Operand(i.InputRegister(1)));
       break;
     case kRiscvI8x16Add:
-      __ vsetvlmax(E8, m1);
+      __ vsetvlmax(kScratchReg, E8, m1);
       __ vadd_vv(i.OutputSimd128Register(), i.InputSimd128Register(0),
                  i.InputSimd128Register(1));
       break;
     case kRiscvI32x4ExtractLane:
-      __ vsetvlmax(E32, m1);
+      __ vsetvlmax(kScratchReg, E32, m1);
       UNIMPLEMENTED();
       break;
     default:
