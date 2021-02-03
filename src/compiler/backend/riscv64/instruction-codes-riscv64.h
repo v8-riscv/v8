@@ -315,6 +315,7 @@ namespace compiler {
   V(RiscvI8x16RoundingAverageU)             \
   V(RiscvI8x16Abs)                          \
   V(RiscvI8x16BitMask)                      \
+  V(RiscvI8x16Popcnt)                       \
   V(RiscvS128And)                           \
   V(RiscvS128Or)                            \
   V(RiscvS128Xor)                           \
