@@ -686,6 +686,18 @@ class Simulator : public SimulatorBase {
   type_sew_t<x>::type vs1 = Rvvelt<type_sew_t<x>::type>(rvv_vs1_reg(), i); \
   type_sew_t<x>::type vs2 = Rvvelt<type_sew_t<x>::type>(rvv_vs2_reg(), i);
 
+#define VX_PARAMS(x)                                                        \
+  type_sew_t<x>::type& vd =                                                 \
+      Rvvelt<type_sew_t<x>::type>(rvv_vd_reg(), i, true);                   \
+  type_sew_t<x>::type rs1 = (type_sew_t<x>::type)(get_register(rs1_reg())); \
+  type_sew_t<x>::type vs2 = Rvvelt<type_sew_t<x>::type>(rvv_vs2_reg(), i);
+
+#define VI_PARAMS(x)                                                    \
+  type_sew_t<x>::type& vd =                                             \
+      Rvvelt<type_sew_t<x>::type>(rvv_vd_reg(), i, true);               \
+  type_sew_t<x>::type simm5 = (type_sew_t<x>::type)(instr_.RvvSimm5()); \
+  type_sew_t<x>::type vs2 = Rvvelt<type_sew_t<x>::type>(rvv_vs2_reg(), i);
+
 #define VXI_PARAMS(x)                                                       \
   type_sew_t<x>::type& vd =                                                 \
       Rvvelt<type_sew_t<x>::type>(rvv_vd_reg(), i, true);                   \
@@ -695,9 +707,8 @@ class Simulator : public SimulatorBase {
   type_sew_t<x>::type simm5 = (type_sew_t<x>::type)(instr_.RvvSimm5());
 
 #define RVV_VI_GENERAL_LOOP_BASE \
-  uint32_t vsew = rvv_vsew();    \
   for (uint64_t i = rvv_vstart(); i < rvv_vl(); i++) {
-
+    
 #define RVV_VI_LOOP_END \
   set_rvv_vstart(0);    \
   }
@@ -739,43 +750,76 @@ class Simulator : public SimulatorBase {
            (uint64_t)(get_register(rs1_reg())));          \
   }
 
-#define RVV_VI_VV_LOOP(BODY) \
+#define RVV_VI_LOOP_MASK_SKIP(BODY) \
+  if (instr_.RvvVM() == 0) {    \
+    UNIMPLEMENTED();            \
+  }
+
+#define RVV_VI_VV_LOOP(BODY)      \
+  RVV_VI_GENERAL_LOOP_BASE        \
+  RVV_VI_LOOP_MASK_SKIP()         \
+  if (rvv_vsew() == E8) {         \
+    VV_PARAMS(8);                 \
+    BODY                          \
+  } else if (rvv_vsew() == E16) { \
+    VV_PARAMS(16);                \
+    BODY                          \
+  } else if (rvv_vsew() == E16) { \
+    VV_PARAMS(32);                \
+    BODY                          \
+  } else if (rvv_vsew() == E16) { \
+    VV_PARAMS(64);                \
+    BODY                          \
+  } else {                        \
+    UNREACHABLE();                \
+  }                               \
+  RVV_VI_LOOP_END                 \
+  TRACE_RVV_VD                    \
+  TRACE_RVV_VS1                   \
+  TRACE_RVV_VS2
+
+#define RVV_VI_VX_LOOP(BODY)      \
+  RVV_VI_GENERAL_LOOP_BASE        \
+  RVV_VI_LOOP_MASK_SKIP()         \
+  if (rvv_vsew() == E8) {         \
+    VX_PARAMS(8);                 \
+    BODY                          \
+  } else if (rvv_vsew() == E16) { \
+    VX_PARAMS(16);                \
+    BODY                          \
+  } else if (rvv_vsew() == E16) { \
+    VX_PARAMS(32);                \
+    BODY                          \
+  } else if (rvv_vsew() == E16) { \
+    VX_PARAMS(64);                \
+    BODY                          \
+  } else {                        \
+    UNREACHABLE();                \
+  }                               \
+  RVV_VI_LOOP_END                 \
+  TRACE_RVV_VD                    \
+  TRACE_RVV_RS1                   \
+  TRACE_RVV_VS2
+
+#define RVV_VI_VI_LOOP(BODY) \
   RVV_VI_GENERAL_LOOP_BASE   \
-  if (instr_.RvvVM() == 0) { \
-    UNIMPLEMENTED();         \
-  }                          \
-  if (vsew == E8) {          \
-    VV_PARAMS(8);            \
-    BODY                     \
-  } else if (vsew == E16) {  \
-    VV_PARAMS(16);           \
-    BODY                     \
-  } else if (vsew == E16) {  \
-    VV_PARAMS(32);           \
-    BODY                     \
-  } else if (vsew == E16) {  \
-    VV_PARAMS(64);           \
-    BODY                     \
-  } else {                   \
-    UNREACHABLE();           \
-  }                          \
+  RVV_VI_LOOP_MASK_SKIP()    \
   RVV_VI_LOOP_END            \
   TRACE_RVV_VD               \
-  TRACE_RVV_VS1              \
   TRACE_RVV_VS2
 
 #define RVV_VI_VVXI_MERGE_LOOP(BODY) \
   RVV_VI_GENERAL_LOOP_BASE           \
-  if (vsew == E8) {                  \
+  if (rvv_vsew() == E8) {            \
     VXI_PARAMS(8);                   \
     BODY;                            \
-  } else if (vsew == E16) {          \
+  } else if (rvv_vsew() == E16) {    \
     VXI_PARAMS(16);                  \
     BODY;                            \
-  } else if (vsew == E32) {          \
+  } else if (rvv_vsew() == E32) {    \
     VXI_PARAMS(32);                  \
     BODY;                            \
-  } else if (vsew == E64) {          \
+  } else if (rvv_vsew() == E64) {    \
     VXI_PARAMS(64);                  \
     BODY;                            \
   }                                  \
