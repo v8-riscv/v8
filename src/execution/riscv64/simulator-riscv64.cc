@@ -889,7 +889,6 @@ void Simulator::set_register(int reg, int64_t value) {
   // Zero register always holds 0.
   registers_[reg] = (reg == 0) ? 0 : value;
 }
-
 void Simulator::set_dw_register(int reg, const int* dbl) {
   DCHECK((reg >= 0) && (reg < kNumSimuRegisters));
   registers_[reg] = dbl[1];
@@ -2854,7 +2853,50 @@ void Simulator::DecodeRVR4Type() {
   }
 }
 
+
+
+void Simulator::DecodeRVVVL(){
+     if(instr_.InstructionBits()&){
+       reg_t nf=((instr_.InstructionBits()>>29)&(kRvvNfMask))+1;
+       reg_t vl=rvv_vl();
+       reg_t baseaddr=rs1();
+       reg_t vd=rvv_vd_reg();
+       uint32_t vsew=rvv_vsew();
+
+       // check
+       VI_CHECK_LOAD(vsew);
+       for(uint64_t i=0;i<vl;++i){
+	  VI_ELEMENT_SKIP(i); 
+          set_rvv_vstart(i);
+          for(uint64_t fn=0;fn<nf;++fn){
+	      int64_t addr=rs1();
+	      auto val;
+	      if(vsew==E8){
+	      val=ReadMem<type_sew_t<8>::type>(addr+i*nf+fn,instr_instr());
+	      Rvvelt<type_sew_t<8>::type>(vd+fn*emul,i,true)=val;
+	      }
+	      else if(vsew==E16){
+	      val=ReadMem<type_sew_t<16>::type>(addr+i*nf+fn,instr_instr());
+	      Rvvelt<type_sew_t<16>::type>(vd+fn*emul,i,true)=val;
+	      }
+	      else if(vsew==E32){
+	      val=ReadMem<type_sew_t<32>::type>(addr+i*nf+fn,instr_instr());
+	      Rvvelt<type_sew_t<32>::type>(vd+fn*emul,i,true)=val;
+	      }
+	      else if(vsew==E64){
+	      val=ReadMem<type_sew_t<64>::type>(addr+i*nf+fn,instr_instr());
+	      Rvvelt<type_sew_t<64>::type>(vd+fn*emul,i,true)=val;
+              }
+              
+	  }   
+
+       }
+     }
+     set_rvv_vstart(0);
+
+}
 void Simulator::DecodeRVIType() {
+
   switch (instr_.InstructionBits() & kITypeMask) {
     case RO_JALR: {
       set_rd(get_pc() + kInstrSize);
