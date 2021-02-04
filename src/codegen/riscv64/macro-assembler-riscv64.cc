@@ -337,11 +337,10 @@ void MacroAssembler::RecordWrite(Register object, Register address,
                                  RememberedSetAction remembered_set_action,
                                  SmiCheck smi_check) {
   if (emit_debug_code()) {
-    UseScratchRegisterScope temps(this);
-    Register scratch = temps.Acquire();
-    Ld(scratch, MemOperand(address));
-    Assert(eq, AbortReason::kWrongAddressOrValuePassedToRecordWrite, scratch,
-           Operand(value));
+    DCHECK(!AreAliased(object, address, value, kScratchReg));
+    Ld(kScratchReg, MemOperand(address));
+    Assert(eq, AbortReason::kWrongAddressOrValuePassedToRecordWrite,
+           kScratchReg, Operand(value));
   }
 
   if ((remembered_set_action == OMIT_REMEMBERED_SET &&
@@ -947,9 +946,10 @@ void TurboAssembler::ByteSwap(Register rd, Register rs, int operand_size) {
     // x0 = (((x0 & x1) << 8)  | ((x0 & (x1 << 8)) >> 8));
     UseScratchRegisterScope temps(this);
     BlockTrampolinePoolScope block_trampoline_pool(this);
+    DCHECK((rd != t6) && (rs != t6));
     Register x0 = temps.Acquire();
     Register x1 = temps.Acquire();
-    Register x2 = temps.Acquire();
+    Register x2 = t6;
     li(x1, 0x00FF00FF);
     slliw(x0, rs, 16);
     srliw(rd, rs, 16);
@@ -968,9 +968,10 @@ void TurboAssembler::ByteSwap(Register rd, Register rs, int operand_size) {
     // x0 = (x0 & x1) << 8  | (x0 & (x1 << 8)) >> 8;
     UseScratchRegisterScope temps(this);
     BlockTrampolinePoolScope block_trampoline_pool(this);
+    DCHECK((rd != t6) && (rs != t6));
     Register x0 = temps.Acquire();
     Register x1 = temps.Acquire();
-    Register x2 = temps.Acquire();
+    Register x2 = t6;
     li(x1, 0x0000FFFF0000FFFFl);
     slli(x0, rs, 32);
     srli(rd, rs, 32);
@@ -1078,18 +1079,18 @@ void TurboAssembler::UnalignedFLoadHelper(FPURegister frd,
   DCHECK(NBYTES == 4 || NBYTES == 8);
 
   BlockTrampolinePoolScope block_trampoline_pool(this);
-  UseScratchRegisterScope temps(this);
   MemOperand source = rs;
+  UseScratchRegisterScope temps(this);
+  Register scratch_base = temps.Acquire();
   if (NeedAdjustBaseAndOffset(rs, OffsetAccessType::TWO_ACCESSES, NBYTES - 1)) {
     // Adjust offset for two accesses and check if offset + 3 fits into int12.
-    Register scratch_base = temps.Acquire();
     DCHECK(scratch_base != rs.rm());
     AdjustBaseAndOffset(&source, scratch_base, OffsetAccessType::TWO_ACCESSES,
                         NBYTES - 1);
   }
-
   Register scratch_other = temps.Acquire();
-  Register scratch = temps.Acquire();
+  Register scratch = t2;
+  push(t2);
   DCHECK(scratch != rs.rm() && scratch_other != scratch &&
          scratch_other != rs.rm());
   LoadNBytes<NBYTES, true>(scratch, source, scratch_other);
@@ -1097,6 +1098,7 @@ void TurboAssembler::UnalignedFLoadHelper(FPURegister frd,
     fmv_w_x(frd, scratch);
   else
     fmv_d_x(frd, scratch);
+  pop(t2);
 }
 
 template <int NBYTES>
@@ -1104,19 +1106,25 @@ void TurboAssembler::UnalignedStoreHelper(Register rd, const MemOperand& rs,
                                           Register scratch_other) {
   DCHECK(scratch_other != rs.rm());
   DCHECK_LE(NBYTES, 8);
-
-  UseScratchRegisterScope temps(this);
   MemOperand source = rs;
+  UseScratchRegisterScope temps(this);
+  Register scratch_base = temps.Acquire();
   // Adjust offset for two accesses and check if offset + 3 fits into int12.
   if (NeedAdjustBaseAndOffset(rs, OffsetAccessType::TWO_ACCESSES, NBYTES - 1)) {
-    Register scratch_base = temps.Acquire();
     DCHECK(scratch_base != rd && scratch_base != rs.rm());
     AdjustBaseAndOffset(&source, scratch_base, OffsetAccessType::TWO_ACCESSES,
                         NBYTES - 1);
   }
 
   BlockTrampolinePoolScope block_trampoline_pool(this);
-  if (scratch_other == no_reg) scratch_other = temps.Acquire();
+  if (scratch_other == no_reg) {
+    if (temps.hasAvailable())
+      scratch_other = temps.Acquire();
+    else {
+      push(t2);
+      scratch_other = t2;
+    }
+  }
 
   DCHECK(scratch_other != rd && scratch_other != rs.rm() &&
          scratch_other != source.rm());
@@ -1125,6 +1133,9 @@ void TurboAssembler::UnalignedStoreHelper(Register rd, const MemOperand& rs,
   for (size_t i = 1; i <= (NBYTES - 1); i++) {
     srli(scratch_other, rd, i * 8);
     sb(scratch_other, source.rm(), source.offset() + i);
+  }
+  if (scratch_other == t2) {
+    pop(t2);
   }
 }
 
@@ -1810,7 +1821,6 @@ void TurboAssembler::RoundHelper(FPURegister dst, FPURegister src,
                                  FPURegister fpu_scratch, RoundingMode frm) {
   BlockTrampolinePoolScope block_trampoline_pool(this);
   UseScratchRegisterScope temps(this);
-  Register scratch = temps.Acquire();
   Register scratch2 = temps.Acquire();
 
   DCHECK((std::is_same<float, F>::value) || (std::is_same<double, F>::value));
@@ -1832,13 +1842,17 @@ void TurboAssembler::RoundHelper(FPURegister dst, FPURegister src,
 
   Label done;
 
-  // extract exponent value of the source floating-point to t6
-  if (std::is_same<F, double>::value) {
-    fmv_x_d(scratch, src);
-  } else {
-    fmv_x_w(scratch, src);
+  {
+    UseScratchRegisterScope temps2(this);
+    Register scratch = temps2.Acquire();
+    // extract exponent value of the source floating-point to t6
+    if (std::is_same<F, double>::value) {
+      fmv_x_d(scratch, src);
+    } else {
+      fmv_x_w(scratch, src);
+    }
+    ExtractBits(scratch2, scratch, kFloatMantissaBits, kFloatExponentBits);
   }
-  ExtractBits(scratch2, scratch, kFloatMantissaBits, kFloatExponentBits);
 
   // if src is NaN/+-Infinity/+-Zero or if the exponent is larger than # of bits
   // in mantissa, the result is the same as src, so move src to dest  (to avoid
@@ -1875,14 +1889,17 @@ void TurboAssembler::RoundHelper(FPURegister dst, FPURegister src,
   // (i.e., 23 or 52-bits) falls into this path, the value range of the input
   // falls into that of 23- or 53-bit integers. So we round the input to integer
   // values, then convert them back to floating-point.
-  if (std::is_same<F, double>::value) {
-    fcvt_l_d(scratch, src, frm);
-    fcvt_d_l(dst, scratch, frm);
-  } else {
-    fcvt_w_s(scratch, src, frm);
-    fcvt_s_w(dst, scratch, frm);
+  {
+    UseScratchRegisterScope temps(this);
+    Register scratch = temps.Acquire();
+    if (std::is_same<F, double>::value) {
+      fcvt_l_d(scratch, src, frm);
+      fcvt_d_l(dst, scratch, frm);
+    } else {
+      fcvt_w_s(scratch, src, frm);
+      fcvt_s_w(dst, scratch, frm);
+    }
   }
-
   // A special handling is needed if the input is a very small positive/negative
   // number that rounds to zero. JS semantics requires that the rounded result
   // retains the sign of the input, so a very small positive (negative)
@@ -2388,7 +2405,8 @@ void TurboAssembler::Popcnt32(Register rd, Register rs) {
   BlockTrampolinePoolScope block_trampoline_pool(this);
   Register scratch = temps.Acquire();
   Register scratch2 = temps.Acquire();
-  Register value = temps.Acquire();
+  Register value = t6;
+  DCHECK((rd != t6) && (rs != t6));
   li(value, 0x01010101);     // value = 0x01010101;
   li(scratch2, 0x55555555);  // B0 = 0x55555555;
   Srl32(scratch, rs, 1);
@@ -2422,7 +2440,8 @@ void TurboAssembler::Popcnt64(Register rd, Register rs) {
   BlockTrampolinePoolScope block_trampoline_pool(this);
   Register scratch = temps.Acquire();
   Register scratch2 = temps.Acquire();
-  Register value = temps.Acquire();
+  Register value = t6;
+  DCHECK((rd != t6) && (rs != t6));
   li(value, 0x1111111111111111l);  // value = 0x1111111111111111l;
   li(scratch2, 5);
   Mul64(scratch2, value, scratch2);  // B0 = 0x5555555555555555l;
@@ -2907,11 +2926,9 @@ void TurboAssembler::Jump(intptr_t target, RelocInfo::Mode rmode,
     Branch(&skip, NegateCondition(cond), rs, rt);
   }
   {
-    UseScratchRegisterScope temps(this);
-    Register scratch = temps.Acquire();
     BlockTrampolinePoolScope block_trampoline_pool(this);
-    li(scratch, Operand(target, rmode));
-    Jump(scratch, al, zero_reg, Operand(zero_reg));
+    li(t6, Operand(target, rmode));
+    Jump(t6, al, zero_reg, Operand(zero_reg));
     EmitConstPoolWithJumpIfNeeded();
     bind(&skip);
   }
@@ -2927,8 +2944,6 @@ void TurboAssembler::Jump(Handle<Code> code, RelocInfo::Mode rmode,
                           Condition cond, Register rs, const Operand& rt) {
   DCHECK(RelocInfo::IsCodeTarget(rmode));
 
-  UseScratchRegisterScope temps(this);
-  Register scratch = temps.Acquire();
   BlockTrampolinePoolScope block_trampoline_pool(this);
   int builtin_index = Builtins::kNoBuiltinId;
   bool target_is_isolate_independent_builtin =
@@ -2939,8 +2954,8 @@ void TurboAssembler::Jump(Handle<Code> code, RelocInfo::Mode rmode,
       target_is_isolate_independent_builtin) {
     int offset = code->builtin_index() * kSystemPointerSize +
                  IsolateData::builtin_entry_table_offset();
-    Ld(scratch, MemOperand(kRootRegister, offset));
-    Jump(scratch, cond, rs, rt);
+    Ld(t6, MemOperand(kRootRegister, offset));
+    Jump(t6, cond, rs, rt);
     return;
   } else if (options().inline_offheap_trampolines &&
              target_is_isolate_independent_builtin) {
@@ -2949,8 +2964,8 @@ void TurboAssembler::Jump(Handle<Code> code, RelocInfo::Mode rmode,
     CHECK_NE(builtin_index, Builtins::kNoBuiltinId);
     EmbeddedData d = EmbeddedData::FromBlob();
     Address entry = d.InstructionStartOfBuiltin(builtin_index);
-    li(scratch, Operand(entry, RelocInfo::OFF_HEAP_TARGET));
-    Jump(scratch, cond, rs, rt);
+    li(t6, Operand(entry, RelocInfo::OFF_HEAP_TARGET));
+    Jump(t6, cond, rs, rt);
     return;
   }
 
@@ -2958,10 +2973,8 @@ void TurboAssembler::Jump(Handle<Code> code, RelocInfo::Mode rmode,
 }
 
 void TurboAssembler::Jump(const ExternalReference& reference) {
-  UseScratchRegisterScope temps(this);
-  Register scratch = temps.Acquire();
-  li(scratch, reference);
-  Jump(scratch);
+  li(t6, reference);
+  Jump(t6);
 }
 
 // FIXME (RISCV): the comment does not make sense, where is t6 used?
@@ -2995,17 +3008,12 @@ void MacroAssembler::JumpIfIsInRange(Register value, unsigned lower_limit,
 
 void TurboAssembler::Call(Address target, RelocInfo::Mode rmode, Condition cond,
                           Register rs, const Operand& rt) {
-  UseScratchRegisterScope temps(this);
-  Register scratch = temps.Acquire();
-  li(scratch, Operand(static_cast<int64_t>(target), rmode), ADDRESS_LOAD);
-  Call(scratch, cond, rs, rt);
+  li(t6, Operand(static_cast<int64_t>(target), rmode), ADDRESS_LOAD);
+  Call(t6, cond, rs, rt);
 }
 
 void TurboAssembler::Call(Handle<Code> code, RelocInfo::Mode rmode,
                           Condition cond, Register rs, const Operand& rt) {
-  UseScratchRegisterScope temps(this);
-  Register scratch = temps.Acquire();
-
   int builtin_index = Builtins::kNoBuiltinId;
   bool target_is_isolate_independent_builtin =
       isolate()->builtins()->IsBuiltinHandle(code, &builtin_index) &&
@@ -3014,8 +3022,8 @@ void TurboAssembler::Call(Handle<Code> code, RelocInfo::Mode rmode,
       target_is_isolate_independent_builtin) {
     int offset = code->builtin_index() * kSystemPointerSize +
                  IsolateData::builtin_entry_table_offset();
-    LoadRootRelative(scratch, offset);
-    Call(scratch, cond, rs, rt);
+    LoadRootRelative(t6, offset);
+    Call(t6, cond, rs, rt);
     return;
   } else if (options().inline_offheap_trampolines &&
              target_is_isolate_independent_builtin) {
@@ -3024,8 +3032,8 @@ void TurboAssembler::Call(Handle<Code> code, RelocInfo::Mode rmode,
     CHECK_NE(builtin_index, Builtins::kNoBuiltinId);
     EmbeddedData d = EmbeddedData::FromBlob();
     Address entry = d.InstructionStartOfBuiltin(builtin_index);
-    li(scratch, Operand(entry, RelocInfo::OFF_HEAP_TARGET));
-    Call(scratch, cond, rs, rt);
+    li(t6, Operand(entry, RelocInfo::OFF_HEAP_TARGET));
+    Call(t6, cond, rs, rt);
     return;
   }
 
@@ -3055,10 +3063,9 @@ void TurboAssembler::CallBuiltinByIndex(Register builtin_index) {
 void TurboAssembler::PatchAndJump(Address target) {
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
-  Register scratch2 = temps.Acquire();
   auipc(scratch, 0);  // Load PC into scratch
-  Ld(scratch2, MemOperand(scratch, kInstrSize * 4));
-  jr(scratch2);
+  Ld(t6, MemOperand(scratch, kInstrSize * 4));
+  jr(t6);
   nop();  // For alignment
   DCHECK_EQ(reinterpret_cast<uint64_t>(pc_) % 8, 0);
   *reinterpret_cast<uint64_t*>(pc_) = target;  // pc_ should be align.
@@ -3077,8 +3084,6 @@ void TurboAssembler::StoreReturnAddressAndCall(Register target) {
   // pc is already at '+ 8' from the current instruction; but return is after
   // three instructions, so add another 4 to pc to get the return address.
 
-  UseScratchRegisterScope temps(this);
-  Register scratch = temps.Acquire();
   Assembler::BlockTrampolinePoolScope block_trampoline_pool(this);
   static constexpr int kNumInstructionsToJump = 5;
   Label find_ra;
@@ -3097,9 +3102,9 @@ void TurboAssembler::StoreReturnAddressAndCall(Register target) {
   // Stack is still aligned.
 
   // Call the C routine.
-  mv(scratch,
-     target);  // Function pointer to scratch to conform to ABI for PIC.
-  jalr(scratch);
+  mv(t6,
+     target);  // Function pointer to t6 to conform to ABI for PIC.
+  jalr(t6);
   // Make sure the stored 'ra' points to this position.
   DCHECK_EQ(kNumInstructionsToJump, InstructionsGeneratedSince(&find_ra));
 }
@@ -3113,31 +3118,27 @@ void TurboAssembler::Ret(Condition cond, Register rs, const Operand& rt) {
 
 void TurboAssembler::BranchLong(Label* L) {
   // Generate position independent long branch.
-  UseScratchRegisterScope temps(this);
-  Register scratch = temps.Acquire();
   BlockTrampolinePoolScope block_trampoline_pool(this);
   int64_t imm64;
   imm64 = branch_long_offset(L);
   DCHECK(is_int32(imm64));
   int32_t Hi20 = (((int32_t)imm64 + 0x800) >> 12);
   int32_t Lo12 = (int32_t)imm64 << 20 >> 20;
-  auipc(scratch, Hi20);  // Read PC + Hi20 into scratch.
-  jr(scratch, Lo12);     // jump PC + Hi20 + Lo12
+  auipc(t6, Hi20);  // Read PC + Hi20 into scratch.
+  jr(t6, Lo12);     // jump PC + Hi20 + Lo12
   EmitConstPoolWithJumpIfNeeded();
 }
 
 void TurboAssembler::BranchAndLinkLong(Label* L) {
   // Generate position independent long branch and link.
-  UseScratchRegisterScope temps(this);
-  Register scratch = temps.Acquire();
   BlockTrampolinePoolScope block_trampoline_pool(this);
   int64_t imm64;
   imm64 = branch_long_offset(L);
   DCHECK(is_int32(imm64));
   int32_t Hi20 = (((int32_t)imm64 + 0x800) >> 12);
   int32_t Lo12 = (int32_t)imm64 << 20 >> 20;
-  auipc(scratch, Hi20);  // Read PC + Hi20 into scratch.
-  jalr(scratch, Lo12);   // jump PC + Hi20 + Lo12 and read PC + 4 to ra
+  auipc(t6, Hi20);  // Read PC + Hi20 into scratch.
+  jalr(t6, Lo12);   // jump PC + Hi20 + Lo12 and read PC + 4 to ra
 }
 
 void TurboAssembler::DropAndRet(int drop) {
@@ -3215,7 +3216,8 @@ void TurboAssembler::Push(Smi smi) {
   push(scratch);
 }
 
-void TurboAssembler::PushArray(Register array, Register size, PushArrayOrder order) {
+void TurboAssembler::PushArray(Register array, Register size,
+                               PushArrayOrder order) {
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
   Register scratch2 = temps.Acquire();
@@ -4100,49 +4102,45 @@ void MacroAssembler::JumpIfNotSmi(Register value, Label* not_smi_label,
 void MacroAssembler::AssertNotSmi(Register object) {
   if (emit_debug_code()) {
     STATIC_ASSERT(kSmiTag == 0);
-    UseScratchRegisterScope temps(this);
-    Register scratch = temps.Acquire();
-    andi(scratch, object, kSmiTagMask);
-    Check(ne, AbortReason::kOperandIsASmi, scratch, Operand(zero_reg));
+    DCHECK(object != kScratchReg);
+    andi(kScratchReg, object, kSmiTagMask);
+    Check(ne, AbortReason::kOperandIsASmi, kScratchReg, Operand(zero_reg));
   }
 }
 
 void MacroAssembler::AssertSmi(Register object) {
   if (emit_debug_code()) {
     STATIC_ASSERT(kSmiTag == 0);
-    UseScratchRegisterScope temps(this);
-    Register scratch = temps.Acquire();
-    andi(scratch, object, kSmiTagMask);
-    Check(eq, AbortReason::kOperandIsASmi, scratch, Operand(zero_reg));
+    DCHECK(object != kScratchReg);
+    andi(kScratchReg, object, kSmiTagMask);
+    Check(eq, AbortReason::kOperandIsASmi, kScratchReg, Operand(zero_reg));
   }
 }
 
 void MacroAssembler::AssertConstructor(Register object) {
   if (emit_debug_code()) {
-    UseScratchRegisterScope temps(this);
-    Register scratch = temps.Acquire();
+    DCHECK(object != kScratchReg);
     BlockTrampolinePoolScope block_trampoline_pool(this);
     STATIC_ASSERT(kSmiTag == 0);
-    SmiTst(object, scratch);
-    Check(ne, AbortReason::kOperandIsASmiAndNotAConstructor, scratch,
+    SmiTst(object, kScratchReg);
+    Check(ne, AbortReason::kOperandIsASmiAndNotAConstructor, kScratchReg,
           Operand(zero_reg));
 
-    LoadMap(scratch, object);
-    Lbu(scratch, FieldMemOperand(scratch, Map::kBitFieldOffset));
-    And(scratch, scratch, Operand(Map::Bits1::IsConstructorBit::kMask));
-    Check(ne, AbortReason::kOperandIsNotAConstructor, scratch,
+    LoadMap(kScratchReg, object);
+    Lbu(kScratchReg, FieldMemOperand(kScratchReg, Map::kBitFieldOffset));
+    And(kScratchReg, kScratchReg, Operand(Map::Bits1::IsConstructorBit::kMask));
+    Check(ne, AbortReason::kOperandIsNotAConstructor, kScratchReg,
           Operand(zero_reg));
   }
 }
 
 void MacroAssembler::AssertFunction(Register object) {
   if (emit_debug_code()) {
-    UseScratchRegisterScope temps(this);
-    Register scratch = temps.Acquire();
     BlockTrampolinePoolScope block_trampoline_pool(this);
     STATIC_ASSERT(kSmiTag == 0);
-    SmiTst(object, scratch);
-    Check(ne, AbortReason::kOperandIsASmiAndNotAFunction, scratch,
+    DCHECK(object != kScratchReg);
+    SmiTst(object, kScratchReg);
+    Check(ne, AbortReason::kOperandIsASmiAndNotAFunction, kScratchReg,
           Operand(zero_reg));
     push(object);
     LoadMap(object, object);
@@ -4155,41 +4153,39 @@ void MacroAssembler::AssertFunction(Register object) {
 
 void MacroAssembler::AssertBoundFunction(Register object) {
   if (emit_debug_code()) {
-    UseScratchRegisterScope temps(this);
-    Register scratch = temps.Acquire();
     BlockTrampolinePoolScope block_trampoline_pool(this);
     STATIC_ASSERT(kSmiTag == 0);
-    SmiTst(object, scratch);
-    Check(ne, AbortReason::kOperandIsASmiAndNotABoundFunction, scratch,
+    DCHECK(object != kScratchReg);
+    SmiTst(object, kScratchReg);
+    Check(ne, AbortReason::kOperandIsASmiAndNotABoundFunction, kScratchReg,
           Operand(zero_reg));
-    GetObjectType(object, scratch, scratch);
-    Check(eq, AbortReason::kOperandIsNotABoundFunction, scratch,
+    GetObjectType(object, kScratchReg, kScratchReg);
+    Check(eq, AbortReason::kOperandIsNotABoundFunction, kScratchReg,
           Operand(JS_BOUND_FUNCTION_TYPE));
   }
 }
 
 void MacroAssembler::AssertGeneratorObject(Register object) {
   if (!emit_debug_code()) return;
-  UseScratchRegisterScope temps(this);
-  Register scratch = temps.Acquire();
   BlockTrampolinePoolScope block_trampoline_pool(this);
   STATIC_ASSERT(kSmiTag == 0);
-  SmiTst(object, scratch);
-  Check(ne, AbortReason::kOperandIsASmiAndNotAGeneratorObject, scratch,
+  DCHECK(object != kScratchReg);
+  SmiTst(object, kScratchReg);
+  Check(ne, AbortReason::kOperandIsASmiAndNotAGeneratorObject, kScratchReg,
         Operand(zero_reg));
 
-  GetObjectType(object, scratch, scratch);
+  GetObjectType(object, kScratchReg, kScratchReg);
 
   Label done;
 
   // Check if JSGeneratorObject
-  Branch(&done, eq, scratch, Operand(JS_GENERATOR_OBJECT_TYPE));
+  Branch(&done, eq, kScratchReg, Operand(JS_GENERATOR_OBJECT_TYPE));
 
   // Check if JSAsyncFunctionObject (See MacroAssembler::CompareInstanceType)
-  Branch(&done, eq, scratch, Operand(JS_ASYNC_FUNCTION_OBJECT_TYPE));
+  Branch(&done, eq, kScratchReg, Operand(JS_ASYNC_FUNCTION_OBJECT_TYPE));
 
   // Check if JSAsyncGeneratorObject
-  Branch(&done, eq, scratch, Operand(JS_ASYNC_GENERATOR_OBJECT_TYPE));
+  Branch(&done, eq, kScratchReg, Operand(JS_ASYNC_GENERATOR_OBJECT_TYPE));
 
   Abort(AbortReason::kOperandIsNotAGeneratorObject);
 
