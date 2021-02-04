@@ -1203,7 +1203,7 @@ void Builtins::Generate_InterpreterEntryTrampoline(MacroAssembler* masm) {
 static void Generate_InterpreterPushArgs(MacroAssembler* masm,
                                          Register num_args,
                                          Register start_address,
-                                         Register scratch, Register scratch2) {
+                                         Register scratch) {
   // Find the address of the last argument.
   __ Sub64(scratch, num_args, Operand(1));
   __ Sll64(scratch, scratch, kPointerSizeLog2);
@@ -1241,8 +1241,8 @@ void Builtins::Generate_InterpreterPushArgsThenCallImpl(
     __ Move(a3, a0);
   }
 
-  // This function modifies a2, t0 and a4.
-  Generate_InterpreterPushArgs(masm, a3, a2, a4, t0);
+  // This function modifies a2 and a4.
+  Generate_InterpreterPushArgs(masm, a3, a2, a4);
 
   if (receiver_mode == ConvertReceiverMode::kNullOrUndefined) {
     __ PushRoot(RootIndex::kUndefinedValue);
@@ -1291,8 +1291,8 @@ void Builtins::Generate_InterpreterPushArgsThenConstructImpl(
     __ Sub64(a0, a0, Operand(1));
   }
 
-  // Push the arguments, This function modifies t0, a4 and a5.
-  Generate_InterpreterPushArgs(masm, a0, a4, a5, t0);
+  // Push the arguments, This function modifies a4 and a5.
+  Generate_InterpreterPushArgs(masm, a0, a4, a5);
 
   // Push a slot for the receiver.
   __ push(zero_reg);
@@ -1812,11 +1812,9 @@ void Builtins::Generate_CallOrConstructVarargs(MacroAssembler* masm,
     // Allow a2 to be a FixedArray, or a FixedDoubleArray if a4 == 0.
     Label ok, fail;
     __ AssertNotSmi(a2);
-    UseScratchRegisterScope temp(masm);
-    Register scratch = temp.Acquire();
-    __ GetObjectType(a2, scratch, scratch);
-    __ Branch(&ok, eq, scratch, Operand(FIXED_ARRAY_TYPE));
-    __ Branch(&fail, ne, scratch, Operand(FIXED_DOUBLE_ARRAY_TYPE));
+    __ GetObjectType(a2, kScratchReg, kScratchReg);
+    __ Branch(&ok, eq, kScratchReg, Operand(FIXED_ARRAY_TYPE));
+    __ Branch(&fail, ne, kScratchReg, Operand(FIXED_DOUBLE_ARRAY_TYPE));
     __ Branch(&ok, eq, a4, Operand(zero_reg));
     // Fall through.
     __ bind(&fail);
@@ -2709,36 +2707,38 @@ void CallApiFunctionAndReturn(MacroAssembler* masm, Register function_address,
   DCHECK(function_address == a1 || function_address == a2);
 
   Label profiler_enabled, end_profiler_check;
-  UseScratchRegisterScope temp(masm);
-  Register scratch = temp.Acquire();
-  __ li(scratch, ExternalReference::is_profiling_address(isolate));
-  __ Lb(scratch, MemOperand(scratch, 0));
-  __ Branch(&profiler_enabled, ne, scratch, Operand(zero_reg));
-  __ li(scratch, ExternalReference::address_of_runtime_stats_flag());
-  __ Lw(scratch, MemOperand(scratch, 0));
-  __ Branch(&profiler_enabled, ne, scratch, Operand(zero_reg));
   {
-    // Call the api function directly.
-    __ Move(scratch, function_address);
-    __ Branch(&end_profiler_check);
+    UseScratchRegisterScope temp(masm);
+    Register scratch = temp.Acquire();
+    __ li(scratch, ExternalReference::is_profiling_address(isolate));
+    __ Lb(scratch, MemOperand(scratch, 0));
+    __ Branch(&profiler_enabled, ne, scratch, Operand(zero_reg));
+    __ li(scratch, ExternalReference::address_of_runtime_stats_flag());
+    __ Lw(scratch, MemOperand(scratch, 0));
+    __ Branch(&profiler_enabled, ne, scratch, Operand(zero_reg));
+    {
+      // Call the api function directly.
+      __ Move(scratch, function_address);
+      __ Branch(&end_profiler_check);
+    }
+
+    __ bind(&profiler_enabled);
+    {
+      // Additional parameter is the address of the actual callback.
+      __ li(scratch, thunk_ref);
+    }
+    __ bind(&end_profiler_check);
+
+    // Allocate HandleScope in callee-save registers.
+    __ li(s5, next_address);
+    __ Ld(s3, MemOperand(s5, kNextOffset));
+    __ Ld(s1, MemOperand(s5, kLimitOffset));
+    __ Lw(s2, MemOperand(s5, kLevelOffset));
+    __ Add32(s2, s2, Operand(1));
+    __ Sw(s2, MemOperand(s5, kLevelOffset));
+
+    __ StoreReturnAddressAndCall(scratch);
   }
-
-  __ bind(&profiler_enabled);
-  {
-    // Additional parameter is the address of the actual callback.
-    __ li(scratch, thunk_ref);
-  }
-  __ bind(&end_profiler_check);
-
-  // Allocate HandleScope in callee-save registers.
-  __ li(s5, next_address);
-  __ Ld(s3, MemOperand(s5, kNextOffset));
-  __ Ld(s1, MemOperand(s5, kLimitOffset));
-  __ Lw(s2, MemOperand(s5, kLevelOffset));
-  __ Add32(s2, s2, Operand(1));
-  __ Sw(s2, MemOperand(s5, kLevelOffset));
-
-  __ StoreReturnAddressAndCall(scratch);
 
   Label promote_scheduled_exception;
   Label delete_allocated_handles;
