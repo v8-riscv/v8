@@ -105,6 +105,15 @@ using F5 = void*(void* p0, void* p1, int p2, int p3, int p4);
     GenAndRunTestForLoadStore<value_type>(value, fn);       \
   }
 
+#define UTEST_LOAD_STORE_V(ldname, stname, value_type, value) \
+  TEST(RISCV_UTEST_##stname##ldname) {                      \
+    CcTest::InitializeVM();                                 \
+    auto fn = [](MacroAssembler& assm) {                    \
+      __ stname(v0, a0, 0,E8,NoMask);                                 \
+      __ ldname(v0, a0, 0,E8,NoMask);                                 \
+    };                                                      \
+    GenAndRunTestForLoadStore<value_type>(value, fn);       \
+  }
 // Since f.Call() is implemented as vararg calls and RISCV calling convention
 // passes all vararg arguments and returns (including floats) in GPRs, we have
 // to move from GPR to FPR and back in all floating point tests
@@ -311,6 +320,7 @@ using F5 = void*(void* p0, void* p1, int p2, int p3, int p4);
 
 // -- test load-store --
 UTEST_LOAD_STORE(ld, sd, int64_t, 0xFBB10A9C12345678)
+UTEST_LOAD_STORE_V(vl, vs, int32_t, 0x456AF894)
 // due to sign-extension of lw
 // instruction, value-to-stored must have
 // its 32th least significant bit be 0
@@ -1908,10 +1918,13 @@ UTEST_RVV_VMERGE(0b11, 5, E8, 0x0505, 0)
 TEST(RVV_assembler) {
   CcTest::InitializeVM();
   GenAndRunTest([](MacroAssembler& assm) {
-    __ vsetvlmax(t0, E128, m1);
+			    __ vsetvlmax(t0, E128, m1);
     __ vadd_vi(v0, 0x1, v0);
     __ vsetvlmax(t0, E8, m1);
     __ vmerge_vi(v1, 5, v3);
+    __ vsetvli(t0, zero_reg, E8, m1);
+    __ vadd_vv(v1, v2, v3);
+    __ vl(v1,t0,0,E8,Mask);
   });
 }
 

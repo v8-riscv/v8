@@ -89,6 +89,42 @@ static inline int32_t get_ebreak_code(Instruction* instr) {
     return -1;
 }
 
+int Simulator::switch_sew() {
+  int width = 0;
+  if ((instr_.InstructionBits() & kBaseOpcodeMask) != LOAD_FP &&
+      (instr_.InstructionBits() & kBaseOpcodeMask) != STORE_FP)
+    return -1;
+  switch (instr_.InstructionBits() & (kRvvWidthMask | kRvvMewMask)) {
+    case 0x0:
+      width = 8;
+      break;
+    case 0x00005000:
+      width = 16;
+      break;
+    case 0x00006000:
+      width = 32;
+      break;
+    case 0x00007000:
+      width = 64;
+      break;
+    case 0x10000000:
+      width = 128;
+      break;
+    case 0x10005000:
+      width = 256;
+      break;
+    case 0x10006000:
+      width = 512;
+      break;
+    case 0x10007000:
+      width = 1024;
+      break;
+    default:
+      width = -1;
+      break;
+  }
+  return width;
+}
 // This macro provides a platform independent use of sscanf. The reason for
 // SScanF not being implemented in a platform independent was through
 // ::v8::internal::OS in the same way as SNPrintF is that the Windows C Run-Time
@@ -2854,171 +2890,289 @@ void Simulator::DecodeRVIType() {
       set_rd(zext_xlen(val), false);
       TraceMemRd(addr, val, get_register(rd_reg()));
       break;
-    }
-    case RO_LHU: {
-      int64_t addr = rs1() + imm12();
-      uint16_t val = ReadMem<uint16_t>(addr, instr_.instr());
-      set_rd(zext_xlen(val), false);
-      TraceMemRd(addr, val, get_register(rd_reg()));
-      break;
-    }
-#ifdef V8_TARGET_ARCH_64_BIT
-    case RO_LWU: {
-      int64_t addr = rs1() + imm12();
-      uint32_t val = ReadMem<uint32_t>(addr, instr_.instr());
-      set_rd(zext_xlen(val), false);
-      TraceMemRd(addr, val, get_register(rd_reg()));
-      break;
-    }
-    case RO_LD: {
-      int64_t addr = rs1() + imm12();
-      int64_t val = ReadMem<int64_t>(addr, instr_.instr());
-      set_rd(sext_xlen(val), false);
-      TraceMemRd(addr, val, get_register(rd_reg()));
-      break;
-    }
-#endif /*V8_TARGET_ARCH_64_BIT*/
-    case RO_ADDI: {
-      set_rd(sext_xlen(rs1() + imm12()));
-      break;
-    }
-    case RO_SLTI: {
-      set_rd(sreg_t(rs1()) < sreg_t(imm12()));
-      break;
-    }
-    case RO_SLTIU: {
-      set_rd(reg_t(rs1()) < reg_t(imm12()));
-      break;
-    }
-    case RO_XORI: {
-      set_rd(imm12() ^ rs1());
-      break;
-    }
-    case RO_ORI: {
-      set_rd(imm12() | rs1());
-      break;
-    }
-    case RO_ANDI: {
-      set_rd(imm12() & rs1());
-      break;
-    }
-    case RO_SLLI: {
-      require(shamt6() < xlen);
-      set_rd(sext_xlen(rs1() << shamt6()));
-      break;
-    }
-    case RO_SRLI: {  //  RO_SRAI
-      if (!instr_.IsArithShift()) {
-        require(shamt6() < xlen);
-        set_rd(sext_xlen(zext_xlen(rs1()) >> shamt6()));
-      } else {
-        require(shamt6() < xlen);
-        set_rd(sext_xlen(sext_xlen(rs1()) >> shamt6()));
+void Simulator::DecodeRvvVL() {
+  uint32_t instr_temp =
+      instr_.InstructionBits() & (kRvvMopMask | kRvvNfMask | kBaseOpcodeMask);
+  if (instr_temp == RO_V_VL) {
+    reg_t nf = ((instr_.InstructionBits() >> 29) & (kRvvNfMask)) + 1;
+    reg_t vl = rvv_vl();
+    reg_t addr = rs1();
+    reg_t vd = rvv_vd_reg();
+    uint32_t vsew = rvv_vsew();
+
+    // check
+    VI_CHECK_LOAD(vsew);
+    for (reg_t i = 0; i < vl; ++i) {
+      VI_ELEMENT_SKIP(i);
+      set_rvv_vstart(i);
+      for (uint64_t fn = 0; fn < nf; ++fn) {
+        if (vsew == E8) {
+          auto val =
+              ReadMem<type_sew_t<8>::type>(addr + i * nf + fn, instr_.instr());
+	  std::cout<<"vl::"<<val<<std::endl;
+          Rvvelt<type_sew_t<8>::type>(vd + fn * emul, i, true) = val;
+        } else if (vsew == E16) {
+          auto val =
+              ReadMem<type_sew_t<16>::type>(addr + i * nf + fn, instr_.instr());
+          Rvvelt<type_sew_t<16>::type>(vd + fn * emul, i, true) = val;
+        } else if (vsew == E32) {
+          auto val =
+              ReadMem<type_sew_t<32>::type>(addr + i * nf + fn, instr_.instr());
+          Rvvelt<type_sew_t<32>::type>(vd + fn * emul, i, true) = val;
+        } else if (vsew == E64) {
+          auto val =
+              ReadMem<type_sew_t<64>::type>(addr + i * nf + fn, instr_.instr());
+          Rvvelt<type_sew_t<64>::type>(vd + fn * emul, i, true) = val;
+        }
       }
-      break;
     }
-#ifdef V8_TARGET_ARCH_64_BIT
-    case RO_ADDIW: {
-      set_rd(sext32(rs1() + imm12()));
-      break;
-    }
-    case RO_SLLIW: {
-      set_rd(sext32(rs1() << shamt5()));
-      break;
-    }
-    case RO_SRLIW: {  //  RO_SRAIW
-      if (!instr_.IsArithShift()) {
-        set_rd(sext32(uint32_t(rs1()) >> shamt5()));
-      } else {
-        set_rd(sext32(int32_t(rs1()) >> shamt5()));
+  }
+  set_rvv_vstart(0);
+}
+void Simulator::DecodeRvvVS() {
+  uint32_t instr_temp =
+      instr_.InstructionBits() & (kRvvMopMask | kRvvNfMask | kBaseOpcodeMask);
+  if (instr_temp == RO_V_VS) {
+    reg_t nf = ((instr_.InstructionBits() >> 29) & (kRvvNfMask)) + 1;
+    reg_t vl = rvv_vl();
+    reg_t addr = rs1();
+    reg_t vd = rvv_vd_reg();
+    uint32_t vsew = rvv_vsew();
+
+    // check
+    VI_CHECK_LOAD(vsew);
+    for (reg_t i = 0; i < vl; ++i) {
+      VI_ELEMENT_SKIP(i);
+      set_rvv_vstart(i);
+      for (uint64_t fn = 0; fn < nf; ++fn) {
+        if (vsew == E8) {
+          auto val=Rvvelt<type_sew_t<8>::type>(vd + fn * emul, i, true);
+	  std::cout<<"vs::"<<val<<std::endl;
+	  WriteMem<type_sew_t<8>::type>(addr+i*nf+fn,val,instr_.instr());
+        } else if (vsew == E16) {
+          auto val=Rvvelt<type_sew_t<16>::type>(vd + fn * emul, i, true);
+	  WriteMem<type_sew_t<16>::type>(addr+i*nf+fn,val,instr_.instr());
+        } else if (vsew == E32) {
+          auto val=Rvvelt<type_sew_t<8>::type>(vd + fn * emul, i, true);
+	  WriteMem<type_sew_t<32>::type>(addr+i*nf+fn,val,instr_.instr());
+        } else if (vsew == E64) {
+          auto val=Rvvelt<type_sew_t<8>::type>(vd + fn * emul, i, true);
+	  WriteMem<type_sew_t<64>::type>(addr+i*nf+fn,val,instr_.instr());
+        }
       }
-      break;
     }
+  }
+  set_rvv_vstart(0);
+}
+void Simulator::DecodeRVIType() {
+  if (switch_sew() != -1) {
+    DecodeRvvVL();
+  } else {
+    switch (instr_.InstructionBits() & kITypeMask) {
+      case RO_JALR: {
+        set_rd(get_pc() + kInstrSize);
+        // Note: No need to shift 2 for JALR's imm12, but set lowest bit to 0.
+        int64_t next_pc = (rs1() + imm12()) & ~reg_t(1);
+        set_pc(next_pc);
+        break;
+      }
+      case RO_LB: {
+        int64_t addr = rs1() + imm12();
+        int8_t val = ReadMem<int8_t>(addr, instr_.instr());
+        set_rd(sext_xlen(val), false);
+        TraceMemRd(addr, val, get_register(rd_reg()));
+        break;
+      }
+      case RO_LH: {
+        int64_t addr = rs1() + imm12();
+        int16_t val = ReadMem<int16_t>(addr, instr_.instr());
+        set_rd(sext_xlen(val), false);
+        TraceMemRd(addr, val, get_register(rd_reg()));
+        break;
+      }
+      case RO_LW: {
+        int64_t addr = rs1() + imm12();
+        int32_t val = ReadMem<int32_t>(addr, instr_.instr());
+        set_rd(sext_xlen(val), false);
+        TraceMemRd(addr, val, get_register(rd_reg()));
+        break;
+      }
+      case RO_LBU: {
+        int64_t addr = rs1() + imm12();
+        uint8_t val = ReadMem<uint8_t>(addr, instr_.instr());
+        set_rd(zext_xlen(val), false);
+        TraceMemRd(addr, val, get_register(rd_reg()));
+        break;
+      }
+      case RO_LHU: {
+        int64_t addr = rs1() + imm12();
+        uint16_t val = ReadMem<uint16_t>(addr, instr_.instr());
+        set_rd(zext_xlen(val), false);
+        TraceMemRd(addr, val, get_register(rd_reg()));
+        break;
+      }
+#ifdef V8_TARGET_ARCH_64_BIT
+      case RO_LWU: {
+        int64_t addr = rs1() + imm12();
+        uint32_t val = ReadMem<uint32_t>(addr, instr_.instr());
+        set_rd(zext_xlen(val), false);
+        TraceMemRd(addr, val, get_register(rd_reg()));
+        break;
+      }
+      case RO_LD: {
+        int64_t addr = rs1() + imm12();
+        int64_t val = ReadMem<int64_t>(addr, instr_.instr());
+        set_rd(sext_xlen(val), false);
+        TraceMemRd(addr, val, get_register(rd_reg()));
+        break;
+      }
 #endif /*V8_TARGET_ARCH_64_BIT*/
-    case RO_FENCE: {
-      // DO nothing in sumulator
-      break;
-    }
-    case RO_ECALL: {                   // RO_EBREAK
-      if (instr_.Imm12Value() == 0) {  // ECALL
-        SoftwareInterrupt();
-      } else if (instr_.Imm12Value() == 1) {  // EBREAK
-        SoftwareInterrupt();
-      } else {
+      case RO_ADDI: {
+        set_rd(sext_xlen(rs1() + imm12()));
+        break;
+      }
+      case RO_SLTI: {
+        set_rd(sreg_t(rs1()) < sreg_t(imm12()));
+        break;
+      }
+      case RO_SLTIU: {
+        set_rd(reg_t(rs1()) < reg_t(imm12()));
+        break;
+      }
+      case RO_XORI: {
+        set_rd(imm12() ^ rs1());
+        break;
+      }
+      case RO_ORI: {
+        set_rd(imm12() | rs1());
+        break;
+      }
+      case RO_ANDI: {
+        set_rd(imm12() & rs1());
+        break;
+      }
+      case RO_SLLI: {
+        require(shamt6() < xlen);
+        set_rd(sext_xlen(rs1() << shamt6()));
+        break;
+      }
+      case RO_SRLI: {  //  RO_SRAI
+        if (!instr_.IsArithShift()) {
+          require(shamt6() < xlen);
+          set_rd(sext_xlen(zext_xlen(rs1()) >> shamt6()));
+        } else {
+          require(shamt6() < xlen);
+          set_rd(sext_xlen(sext_xlen(rs1()) >> shamt6()));
+        }
+        break;
+      }
+#ifdef V8_TARGET_ARCH_64_BIT
+      case RO_ADDIW: {
+        set_rd(sext32(rs1() + imm12()));
+        break;
+      }
+      case RO_SLLIW: {
+        set_rd(sext32(rs1() << shamt5()));
+        break;
+      }
+      case RO_SRLIW: {  //  RO_SRAIW
+        if (!instr_.IsArithShift()) {
+          set_rd(sext32(uint32_t(rs1()) >> shamt5()));
+        } else {
+          set_rd(sext32(int32_t(rs1()) >> shamt5()));
+        }
+        break;
+      }
+#endif /*V8_TARGET_ARCH_64_BIT*/
+      case RO_FENCE: {
+        // DO nothing in sumulator
+        break;
+      }
+      case RO_ECALL: {                   // RO_EBREAK
+        if (instr_.Imm12Value() == 0) {  // ECALL
+          SoftwareInterrupt();
+        } else if (instr_.Imm12Value() == 1) {  // EBREAK
+          SoftwareInterrupt();
+        } else {
+          UNSUPPORTED();
+        }
+        break;
+      }
+        // TODO(riscv): use Zifencei Standard Extension macro block
+      case RO_FENCE_I: {
+        // spike: flush icache.
+        break;
+      }
+        // TODO(riscv): use Zicsr Standard Extension macro block
+      case RO_CSRRW: {
+        if (rd_reg() != zero_reg) {
+          set_rd(zext_xlen(read_csr_value(csr_reg())));
+        }
+        write_csr_value(csr_reg(), rs1());
+        break;
+      }
+      case RO_CSRRS: {
+        set_rd(zext_xlen(read_csr_value(csr_reg())));
+        if (rs1_reg() != zero_reg) {
+          set_csr_bits(csr_reg(), rs1());
+        }
+        break;
+      }
+      case RO_CSRRC: {
+        set_rd(zext_xlen(read_csr_value(csr_reg())));
+        if (rs1_reg() != zero_reg) {
+          clear_csr_bits(csr_reg(), rs1());
+        }
+        break;
+      }
+      case RO_CSRRWI: {
+        if (rd_reg() != zero_reg) {
+          set_rd(zext_xlen(read_csr_value(csr_reg())));
+        }
+        write_csr_value(csr_reg(), imm5CSR());
+        break;
+      }
+      case RO_CSRRSI: {
+        set_rd(zext_xlen(read_csr_value(csr_reg())));
+        if (imm5CSR() != 0) {
+          set_csr_bits(csr_reg(), imm5CSR());
+        }
+        break;
+      }
+      case RO_CSRRCI: {
+        set_rd(zext_xlen(read_csr_value(csr_reg())));
+        if (imm5CSR() != 0) {
+          clear_csr_bits(csr_reg(), imm5CSR());
+        }
+        break;
+      }
+      // TODO(riscv): use F Extension macro block
+      case RO_FLW: {
+        int64_t addr = rs1() + imm12();
+        float val = ReadMem<float>(addr, instr_.instr());
+        set_frd(val, false);
+        TraceMemRd(addr, val, get_fpu_register(frd_reg()));
+        break;
+      }
+      // TODO(riscv): use D Extension macro block
+      case RO_FLD: {
+        int64_t addr = rs1() + imm12();
+        double val = ReadMem<double>(addr, instr_.instr());
+        set_drd(val, false);
+        TraceMemRd(addr, val, get_fpu_register(frd_reg()));
+        break;
+      }
+      default:
         UNSUPPORTED();
-      }
-      break;
     }
-      // TODO(riscv): use Zifencei Standard Extension macro block
-    case RO_FENCE_I: {
-      // spike: flush icache.
-      break;
-    }
-      // TODO(riscv): use Zicsr Standard Extension macro block
-    case RO_CSRRW: {
-      if (rd_reg() != zero_reg) {
-        set_rd(zext_xlen(read_csr_value(csr_reg())));
-      }
-      write_csr_value(csr_reg(), rs1());
-      break;
-    }
-    case RO_CSRRS: {
-      set_rd(zext_xlen(read_csr_value(csr_reg())));
-      if (rs1_reg() != zero_reg) {
-        set_csr_bits(csr_reg(), rs1());
-      }
-      break;
-    }
-    case RO_CSRRC: {
-      set_rd(zext_xlen(read_csr_value(csr_reg())));
-      if (rs1_reg() != zero_reg) {
-        clear_csr_bits(csr_reg(), rs1());
-      }
-      break;
-    }
-    case RO_CSRRWI: {
-      if (rd_reg() != zero_reg) {
-        set_rd(zext_xlen(read_csr_value(csr_reg())));
-      }
-      write_csr_value(csr_reg(), imm5CSR());
-      break;
-    }
-    case RO_CSRRSI: {
-      set_rd(zext_xlen(read_csr_value(csr_reg())));
-      if (imm5CSR() != 0) {
-        set_csr_bits(csr_reg(), imm5CSR());
-      }
-      break;
-    }
-    case RO_CSRRCI: {
-      set_rd(zext_xlen(read_csr_value(csr_reg())));
-      if (imm5CSR() != 0) {
-        clear_csr_bits(csr_reg(), imm5CSR());
-      }
-      break;
-    }
-    // TODO(riscv): use F Extension macro block
-    case RO_FLW: {
-      int64_t addr = rs1() + imm12();
-      float val = ReadMem<float>(addr, instr_.instr());
-      set_frd(val, false);
-      TraceMemRd(addr, val, get_fpu_register(frd_reg()));
-      break;
-    }
-    // TODO(riscv): use D Extension macro block
-    case RO_FLD: {
-      int64_t addr = rs1() + imm12();
-      double val = ReadMem<double>(addr, instr_.instr());
-      set_drd(val, false);
-      TraceMemRd(addr, val, get_fpu_register(frd_reg()));
-      break;
-    }
-    default:
-      UNSUPPORTED();
   }
 }
 
 void Simulator::DecodeRVSType() {
+	if(switch_sew()!=-1){
+	  DecodeRvvVS();
+	  return;
+	}
   switch (instr_.InstructionBits() & kSTypeMask) {
     case RO_SB:
       WriteMem<uint8_t>(rs1() + s_imm12(), (uint8_t)rs2(), instr_.instr());
