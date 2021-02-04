@@ -847,6 +847,9 @@
   'wasm/grow-shared-memory': [SKIP],
   'wasm/origin-trial-flags': [SKIP],
   'wasm/shared-memory': [SKIP],
+
+  # It is time out 
+  'regress/regress-1138075': [SKIP], # issue 418
 }],  # 'arch == riscv64'
 
 ['arch == riscv64 and variant == stress_incremental_marking', {
