@@ -704,6 +704,11 @@ class Simulator : public SimulatorBase {
     using type = int64_t;
   };
 
+  template <>
+  struct type_sew_t<128> {
+    using type = __int128_t;
+  };
+
 #define VV_PARAMS(x)                                                       \
   type_sew_t<x>::type& vd =                                                \
       Rvvelt<type_sew_t<x>::type>(rvv_vd_reg(), i, true);                  \
@@ -790,75 +795,84 @@ class Simulator : public SimulatorBase {
     UNIMPLEMENTED();                \
   }
 
-#define RVV_VI_VV_LOOP(BODY)      \
-  RVV_VI_GENERAL_LOOP_BASE        \
-  RVV_VI_LOOP_MASK_SKIP()         \
-  if (rvv_vsew() == E8) {         \
-    VV_PARAMS(8);                 \
-    BODY                          \
-  } else if (rvv_vsew() == E16) { \
-    VV_PARAMS(16);                \
-    BODY                          \
-  } else if (rvv_vsew() == E16) { \
-    VV_PARAMS(32);                \
-    BODY                          \
-  } else if (rvv_vsew() == E16) { \
-    VV_PARAMS(64);                \
-    BODY                          \
-  } else {                        \
-    UNREACHABLE();                \
-  }                               \
-  RVV_VI_LOOP_END                 \
-  rvv_trace_vd();                 \
-  rvv_trace_vs1();                \
-  rvv_trace_vs2();                \
+#define RVV_VI_VV_LOOP(BODY)       \
+  RVV_VI_GENERAL_LOOP_BASE         \
+  RVV_VI_LOOP_MASK_SKIP()          \
+  if (rvv_vsew() == E8) {          \
+    VV_PARAMS(8);                  \
+    BODY                           \
+  } else if (rvv_vsew() == E16) {  \
+    VV_PARAMS(16);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E32) {  \
+    VV_PARAMS(32);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E64) {  \
+    VV_PARAMS(64);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E128) { \
+    VV_PARAMS(128);                \
+    BODY                           \
+  } else {                         \
+    UNREACHABLE();                 \
+  }                                \
+  RVV_VI_LOOP_END                  \
+  rvv_trace_vd();                  \
+  rvv_trace_vs1();                 \
+  rvv_trace_vs2();                 \
   rvv_trace_status();
 
-#define RVV_VI_VX_LOOP(BODY)      \
-  RVV_VI_GENERAL_LOOP_BASE        \
-  RVV_VI_LOOP_MASK_SKIP()         \
-  if (rvv_vsew() == E8) {         \
-    VX_PARAMS(8);                 \
-    BODY                          \
-  } else if (rvv_vsew() == E16) { \
-    VX_PARAMS(16);                \
-    BODY                          \
-  } else if (rvv_vsew() == E16) { \
-    VX_PARAMS(32);                \
-    BODY                          \
-  } else if (rvv_vsew() == E16) { \
-    VX_PARAMS(64);                \
-    BODY                          \
-  } else {                        \
-    UNREACHABLE();                \
-  }                               \
-  RVV_VI_LOOP_END                 \
-  rvv_trace_vd();                 \
-  rvv_trace_rs1();                \
-  rvv_trace_vs2();                \
+#define RVV_VI_VX_LOOP(BODY)       \
+  RVV_VI_GENERAL_LOOP_BASE         \
+  RVV_VI_LOOP_MASK_SKIP()          \
+  if (rvv_vsew() == E8) {          \
+    VX_PARAMS(8);                  \
+    BODY                           \
+  } else if (rvv_vsew() == E16) {  \
+    VX_PARAMS(16);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E32) {  \
+    VX_PARAMS(32);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E64) {  \
+    VX_PARAMS(64);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E128) { \
+    VX_PARAMS(128);                \
+    BODY                           \
+  } else {                         \
+    UNREACHABLE();                 \
+  }                                \
+  RVV_VI_LOOP_END                  \
+  rvv_trace_vd();                  \
+  rvv_trace_rs1();                 \
+  rvv_trace_vs2();                 \
   rvv_trace_status();
 
-#define RVV_VI_VI_LOOP(BODY)      \
-  RVV_VI_GENERAL_LOOP_BASE        \
-  RVV_VI_LOOP_MASK_SKIP()         \
-  if (rvv_vsew() == E8) {         \
-    VI_PARAMS(8);                 \
-    BODY                          \
-  } else if (rvv_vsew() == E16) { \
-    VI_PARAMS(16);                \
-    BODY                          \
-  } else if (rvv_vsew() == E16) { \
-    VI_PARAMS(32);                \
-    BODY                          \
-  } else if (rvv_vsew() == E16) { \
-    VI_PARAMS(64);                \
-    BODY                          \
-  } else {                        \
-    UNREACHABLE();                \
-  }                               \
-  RVV_VI_LOOP_END                 \
-  rvv_trace_vd();                 \
-  rvv_trace_vs2();                \
+#define RVV_VI_VI_LOOP(BODY)       \
+  RVV_VI_GENERAL_LOOP_BASE         \
+  RVV_VI_LOOP_MASK_SKIP()          \
+  if (rvv_vsew() == E8) {          \
+    VI_PARAMS(8);                  \
+    BODY                           \
+  } else if (rvv_vsew() == E16) {  \
+    VI_PARAMS(16);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E32) {  \
+    VI_PARAMS(32);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E64) {  \
+    VI_PARAMS(64);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E128) { \
+    VI_PARAMS(128);                \
+    BODY                           \
+  } else {                         \
+    UNREACHABLE();                 \
+  }                                \
+  RVV_VI_LOOP_END                  \
+  rvv_trace_vd();                  \
+  rvv_trace_vs2();                 \
   rvv_trace_status();
 
 #define RVV_VI_VVXI_MERGE_LOOP(BODY) \
@@ -875,6 +889,9 @@ class Simulator : public SimulatorBase {
   } else if (rvv_vsew() == E64) {    \
     VXI_PARAMS(64);                  \
     BODY;                            \
+  } else if (rvv_vsew() == E128) {   \
+    VXI_PARAMS(128);                 \
+    BODY                             \
   }                                  \
   RVV_VI_LOOP_END                    \
   rvv_trace_vd();                    \
@@ -907,9 +924,6 @@ class Simulator : public SimulatorBase {
   }
   inline void set_rvv_vl(uint64_t value, bool trace = true) {
     vl_ = value;
-    if (::v8::internal::FLAG_trace_sim) {
-      std::cout << "vl: " << vl_ << std::endl;
-    }
   }
   inline void set_rvv_vstart(uint64_t value, bool trace = true) {
     vstart_ = value;

@@ -3347,7 +3347,12 @@ void Simulator::DecodeRvvIVI() {
       if (instr_.RvvVM()) {
         UNIMPLEMENTED_RISCV();
       } else {
-        UNIMPLEMENTED_RISCV();
+        RVV_VI_VVXI_MERGE_LOOP({
+          bool use_first = (Rvvelt<uint64_t>(0, (i / 64)) >> (i % 64)) & 0x1;
+          vd = use_first ? simm5 : vs2;
+          USE(vs1);
+          USE(rs1);
+        });
       }
       break;
     default:
@@ -3430,6 +3435,7 @@ void Simulator::DecodeVType() {
       avl = avl <= rvv_vlmax() ? avl : rvv_vlmax();
       set_rvv_vl(avl);
       set_rd(rvv_vl());
+      rvv_trace_status();
       break;
     }
     case RO_V_VSETVL: {
@@ -3445,6 +3451,7 @@ void Simulator::DecodeVType() {
       avl = avl <= rvv_vlmax() ? avl : rvv_vlmax();
       set_rvv_vl(avl);
       set_rd(rvv_vl());
+      rvv_trace_status();
       break;
     }
     default:
