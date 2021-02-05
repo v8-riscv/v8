@@ -385,10 +385,8 @@ class Simulator : public SimulatorBase {
   inline uint64_t rvv_vcsr() const { return vcsr_; }
   inline uint64_t rvv_vlenb() const { return vlenb_; }
   inline uint32_t rvv_zimm() const { return instr_.Rvvzimm(); }
-  inline uint32_t rvv_vlmul() const {
-    return (rvv_vtype() & 0x20) >> 3 || (rvv_vtype() & 0x3);
-  }
-  inline uint32_t rvv_vsew() const { return (rvv_vtype() & 0x1C) >> 2; }
+  inline uint32_t rvv_vlmul() const { return (rvv_vtype() & 0x7); }
+  inline uint32_t rvv_vsew() const { return ((rvv_vtype() >> 3) & 0x7); }
 
   inline const char* rvv_sew_s() const {
     uint32_t vsew = rvv_vsew();

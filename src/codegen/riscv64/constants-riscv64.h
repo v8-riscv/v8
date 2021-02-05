@@ -1395,13 +1395,13 @@ class InstructionGetters : public T {
 
   inline uint32_t RvvVsew() const {
     uint32_t zimm = this->Rvvzimm();
-    uint32_t vsew = (zimm & 0x1c) >> 2;
+    uint32_t vsew = (zimm >> 3) & 0x7;
     return vsew;
   }
 
   inline uint32_t RvvVlmul() const {
     uint32_t zimm = this->Rvvzimm();
-    uint32_t vlmul = ((zimm & 20) >> 3) | (zimm & 0x3);
+    uint32_t vlmul = zimm & 0x7;
     return vlmul;
   }
 

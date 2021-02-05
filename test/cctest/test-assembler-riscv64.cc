@@ -1870,20 +1870,22 @@ TEST(li_estimate) {
 
 TEST(RVV_ZIMM) {
   CHECK_EQ(Assembler::GenZimm(VSew::E8, Vlmul::m1), 0b00000);
-  CHECK_EQ(Assembler::GenZimm(VSew::E16, Vlmul::m1), 0b00100);
-  CHECK_EQ(Assembler::GenZimm(VSew::E32, Vlmul::m1), 0b01000);
-  CHECK_EQ(Assembler::GenZimm(VSew::E64, Vlmul::m1), 0b01100);
-  CHECK_EQ(Assembler::GenZimm(VSew::E128, Vlmul::m1), 0b10000);
-  CHECK_EQ(Assembler::GenZimm(VSew::E256, Vlmul::m1), 0b10100);
-  CHECK_EQ(Assembler::GenZimm(VSew::E512, Vlmul::m1), 0b11000);
-  CHECK_EQ(Assembler::GenZimm(VSew::E1024, Vlmul::m1), 0b11100);
-  CHECK_EQ(Assembler::GenZimm(VSew::E8, Vlmul::m1), 0b000000);
-  CHECK_EQ(Assembler::GenZimm(VSew::E16, Vlmul::m2), 0b000101);
-  CHECK_EQ(Assembler::GenZimm(VSew::E32, Vlmul::m4), 0b001010);
-  CHECK_EQ(Assembler::GenZimm(VSew::E64, Vlmul::m8), 0b001111);
-  CHECK_EQ(Assembler::GenZimm(VSew::E128, Vlmul::mf2), 0b110011);
-  CHECK_EQ(Assembler::GenZimm(VSew::E256, Vlmul::mf4), 0b110110);
-  CHECK_EQ(Assembler::GenZimm(VSew::E512, Vlmul::mf8), 0b111001);
+  CHECK_EQ(Assembler::GenZimm(VSew::E16, Vlmul::m1), 0b001000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E32, Vlmul::m1), 0b010000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E64, Vlmul::m1), 0b011000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E128, Vlmul::m1), 0b100000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E256, Vlmul::m1), 0b101000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E512, Vlmul::m1), 0b110000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E1024, Vlmul::m1), 0b111000);
+  CHECK_EQ(Assembler::GenZimm(VSew::E16, Vlmul::m2), 0b001001);
+  CHECK_EQ(Assembler::GenZimm(VSew::E32, Vlmul::m4), 0b010010);
+  CHECK_EQ(Assembler::GenZimm(VSew::E64, Vlmul::m8), 0b011011);
+  CHECK_EQ(Assembler::GenZimm(VSew::E8, Vlmul::mf4), 0b000110);
+  CHECK_EQ(Assembler::GenZimm(VSew::E128, Vlmul::mf2), 0b100111);
+  CHECK_EQ(Assembler::GenZimm(VSew::E256, Vlmul::mf4), 0b101110);
+  CHECK_EQ(Assembler::GenZimm(VSew::E512, Vlmul::mf8), 0b110101);
+}
+
 }
 
 TEST(RVV_assembler) {
@@ -1893,17 +1895,21 @@ TEST(RVV_assembler) {
   });
 }
 
-TEST(RVV_VSETVL) {
-  CcTest::InitializeVM();
-#define TEST_VSETVL(SEW, LMUL, tail, mask, expected_value)                    \
-  GenAndRunTest([](MacroAssembler& assm) { __ vsetvli(t0, t1, SEW, LMUL); }); \
-  CHECK_EQ(Simulator::current(CcTest::i_isolate())->rvv_vtype(),              \
-           expected_value);
+#define TEST_VSETVL(SEW, LMUL, tail, mask, expected_value)            \
+  TEST(RVV_VSETVL_##SEW##LMUL##tail##mask) {                           \
+    CcTest::InitializeVM();                                           \
+    GenAndRunTest(                                                    \
+        [](MacroAssembler& assm) { __ vsetvli(t0, t1, SEW, LMUL); }); \
+    CHECK_EQ(Simulator::current(CcTest::i_isolate())->rvv_vtype(),    \
+             expected_value);                                         \
+  }
 
-  TEST_VSETVL(E8, m1, tu, mu, Assembler::GenZimm(E8, m1));
-  TEST_VSETVL(E16, m1, tu, mu, 0x4);
+TEST_VSETVL(E8, m1, tu, mu, Assembler::GenZimm(E8, m1))
+TEST_VSETVL(E8, mf2, tu, mu, Assembler::GenZimm(E8, mf2))
+TEST_VSETVL(E32, mf4, tu, mu, Assembler::GenZimm(E32, mf4))
+TEST_VSETVL(E64, mf8, tu, mu, Assembler::GenZimm(E64, mf8))
+TEST_VSETVL(E16, m1, tu, mu, 0b001000)
 #undef TEST_VSETVL
-}
 #undef __
 
 }  // namespace internal
