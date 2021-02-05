@@ -26,7 +26,7 @@ enum class AbortReason : uint8_t;
 // The programmer should know that the MacroAssembler may clobber these three,
 // but won't touch other registers except in special cases.
 //
-// FIXME(RISCV): Cannot find info about this ABI. We chose t6 for now.
+// TODO(RISCV): Cannot find info about this ABI. We chose t6 for now.
 // Per the RISC-V ABI, register t6 must be used for indirect function call
 // via 'jalr t6' or 'jr t6' instructions. This is relied upon by gcc when
 // trying to update gp register for position-independent-code. Whenever

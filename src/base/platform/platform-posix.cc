@@ -323,8 +323,8 @@ void* OS::GetRandomMmapAddr() {
   // to fulfill request.
   raw_addr &= uint64_t{0xFFFFFF0000};
 #elif V8_TARGET_ARCH_RISCV64
-  // FIXME(RISCV): We need more information from the kernel to correctly mask
-  // this address for RISC-V.
+  // TODO(RISCV): We need more information from the kernel to correctly mask
+  // this address for RISC-V. https://github.com/v8-riscv/v8/issues/375
   raw_addr &= uint64_t{0xFFFFFF0000};
 #else
   raw_addr &= 0x3FFFF000;
@@ -514,7 +514,7 @@ void OS::DebugBreak() {
 #elif V8_HOST_ARCH_S390
   // Software breakpoint instruction is 0x0001
   asm volatile(".word 0x0001");
-#elif V8_HOST_ARCH_RISCV64 || V8_HOST_ARCH_RISCV
+#elif V8_HOST_ARCH_RISCV64
   asm("ebreak");
 #else
 #error Unsupported host architecture.

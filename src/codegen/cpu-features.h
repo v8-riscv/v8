@@ -69,7 +69,6 @@ enum CpuFeature {
   VECTOR_ENHANCE_FACILITY_2,
   MISC_INSTR_EXT2,
 
-// FIXME (RISCV): add features for RISCV
 #elif V8_TARGET_ARCH_RISCV64
   FPU,
   FP64FPU,

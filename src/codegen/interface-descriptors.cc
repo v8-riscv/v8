@@ -403,7 +403,6 @@ void WasmFloat64ToNumberDescriptor::InitializePlatformSpecific(
 }
 #endif  // !V8_TARGET_ARCH_IA32
 
-// FIXME(RISCV): Review this once atomics are added
 #if !defined(V8_TARGET_ARCH_MIPS) && !defined(V8_TARGET_ARCH_MIPS64) && \
     !defined(V8_TARGET_ARCH_RISCV64)
 void WasmI32AtomicWait32Descriptor::InitializePlatformSpecific(
