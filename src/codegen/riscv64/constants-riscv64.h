@@ -259,11 +259,11 @@ const int kFcsrBits = kFcsrFlagsBits + kFcsrFrmBits;
 const int kFcsrMask = kFcsrFlagsMask | kFcsrFrmMask;
 
 // Original MIPS constants
-// FIXME (RISCV): to be cleaned up
+// TODO(RISCV): to be cleaned up
 const int kImm16Shift = 0;
 const int kImm16Bits = 16;
 const int kImm16Mask = ((1 << kImm16Bits) - 1) << kImm16Shift;
-// end of FIXME (RISCV): to be cleaned up
+// end of TODO(RISCV): to be cleaned up
 
 // ----- RISCV Base Opcodes
 

@@ -262,7 +262,8 @@ enum MSARegisterCode {
 };
 
 // MIPS SIMD (MSA) register
-// FIXME (RISCV)
+// TODO(RISCV): Remove MIPS MSA registers.
+//              https://github.com/v8-riscv/v8/issues/429
 class MSARegister : public RegisterBase<MSARegister, kMsaAfterLast> {
   friend class RegisterBase;
   explicit constexpr MSARegister(int code) : RegisterBase(code) {}

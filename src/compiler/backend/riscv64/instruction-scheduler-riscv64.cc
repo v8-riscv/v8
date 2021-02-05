@@ -439,7 +439,7 @@ enum Latency {
   RINT_S = 4,  // Estimated.
   RINT_D = 4,  // Estimated.
 
-  // FIXME (RISCV): remove MULT instructions (MIPS legacy)
+  // TODO(RISCV): remove MULT instructions (MIPS legacy).
   MULT = 4,
   MULTU = 4,
   DMULT = 4,
@@ -928,7 +928,7 @@ int MulOverflow32Latency() {
   return Mul32Latency() + Mulh32Latency() + 2;
 }
 
-// FIXME (RISCV): need update
+// TODO(RISCV): This is incorrect for RISC-V.
 int Clz64Latency() { return 1; }
 
 int Ctz32Latency() {
@@ -1096,8 +1096,8 @@ int Word32AtomicCompareExchangeLatency(bool sign_extend, int size) {
 }
 
 int InstructionScheduler::GetInstructionLatency(const Instruction* instr) {
-  // FIXME(RISCV): Verify these latencies for RISC-V (currently using MIPS
-  // numbers)
+  // TODO(RISCV): Verify these latencies for RISC-V (currently using MIPS
+  // numbers).
   switch (instr->arch_opcode()) {
     case kArchCallCodeObject:
     case kArchCallWasmFunction:

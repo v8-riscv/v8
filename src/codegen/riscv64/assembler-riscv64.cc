@@ -2529,7 +2529,6 @@ void Assembler::stop(uint32_t code) {
   DCHECK_GT(code, kMaxWatchpointCode);
   DCHECK_LE(code, kMaxStopCode);
 #if defined(V8_HOST_ARCH_RISCV64)
-  // FIXME: does RISCV expect a special value?
   break_(0x54321);
 #else  // V8_HOST_ARCH_RISCV64
   break_(code, true);
@@ -2566,7 +2565,6 @@ void Assembler::AdjustBaseAndOffset(MemOperand* src, Register scratch,
   // Must not overwrite the register 'base' while loading 'offset'.
   DCHECK(src->rm() != scratch);
 
-  // FIXME(RISC-V): There may be a more optimal way to do this
   RV_li(scratch, src->offset());
   add(scratch, scratch, src->rm());
   src->offset_ = 0;
