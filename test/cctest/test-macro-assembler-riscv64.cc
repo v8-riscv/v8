@@ -40,7 +40,7 @@
 #include "src/utils/ostreams.h"
 #include "test/cctest/cctest.h"
 #include "test/cctest/compiler/value-helper.h"
-#include "test/cctest/test-helper-riscv.h"
+#include "test/cctest/test-helper-riscv64.h"
 #include "test/common/assembler-tester.h"
 
 namespace v8 {

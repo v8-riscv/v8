@@ -1085,7 +1085,6 @@ void DebugEvaluate::VerifyTransitiveBuiltins(Isolate* isolate) {
     }
   }
   CHECK(!failed);
-  // FIXME (RISCV): does RISCV need this?
 #if defined(V8_TARGET_ARCH_PPC) || defined(V8_TARGET_ARCH_PPC64) || \
     defined(V8_TARGET_ARCH_MIPS64) || defined(V8_TARGET_ARCH_RISCV64)
   // Isolate-independent builtin calls and jumps do not emit reloc infos

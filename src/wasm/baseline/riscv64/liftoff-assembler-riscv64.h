@@ -508,7 +508,6 @@ void LiftoffAssembler::Store(Register dst_addr, Register offset_reg,
 
   if (protected_store_pc) *protected_store_pc = pc_offset();
 
-  // FIXME (RISCV): current implementation treats all stores as unaligned
   switch (type.value()) {
     case StoreType::kI32Store8:
     case StoreType::kI64Store8:
@@ -1096,8 +1095,6 @@ bool LiftoffAssembler::emit_type_conversion(WasmOpcode opcode,
           break;
         case kExprF32ConvertF64:
           fcvt_s_d(dst.fp(), src.fp());
-          // FIXME (?): what if double cannot be represented by float?
-          // Trunc_s_d(dst.gp(), src.fp(), kScratchReg);
           break;
         default:
           UNREACHABLE();

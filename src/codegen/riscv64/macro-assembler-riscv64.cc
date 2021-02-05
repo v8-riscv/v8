@@ -2977,7 +2977,6 @@ void TurboAssembler::Jump(const ExternalReference& reference) {
   Jump(t6);
 }
 
-// FIXME (RISCV): the comment does not make sense, where is t6 used?
 // Note: To call gcc-compiled C code on riscv64, you must call through t6.
 void TurboAssembler::Call(Register target, Condition cond, Register rs,
                           const Operand& rt) {
@@ -4405,8 +4404,9 @@ void TurboAssembler::CallCFunctionHelper(Register function,
     DCHECK(!AreAliased(pc_scratch, scratch, function));
 
     auipc(pc_scratch, 0);
-    // FIXME(RISCV): Does this need an offset? It seems like this should be the
+    // TODO(RISCV): Does this need an offset? It seems like this should be the
     // PC of the call, but MIPS does not seem to do that.
+    // https://github.com/v8-riscv/v8/issues/378
 
     // See x64 code for reasoning about how to address the isolate data fields.
     if (root_array_available()) {
@@ -4546,7 +4546,7 @@ void TurboAssembler::LoadCodeObjectEntry(Register destination,
     // table.
     bind(&if_code_is_off_heap);
     Lw(scratch, FieldMemOperand(code_object, Code::kBuiltinIndexOffset));
-    // FIXME(RISCV64):on other arch, don't need no_builtin_index.
+    // TODO(RISCV): https://github.com/v8-riscv/v8/issues/373
     Branch(&no_builtin_index, eq, scratch, Operand(Builtins::kNoBuiltinId));
     slli(destination, scratch, kSystemPointerSizeLog2);
     Add64(destination, destination, kRootRegister);
