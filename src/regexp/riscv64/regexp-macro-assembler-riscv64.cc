@@ -617,8 +617,6 @@ Handle<HeapObject> RegExpMacroAssemblerRISCV::GetCode(Handle<String> source) {
     // Order here should correspond to order of offset constants in header file.
     // TODO(plind): we save fp..s11, but ONLY use s3 here - use the regs
     // or dont save.
-    //
-    // FIXME (RISCV): how about saving only s*registers that are actually used?
     RegList registers_to_retain =
         fp.bit() | s1.bit() | s2.bit() | s3.bit() | s4.bit() | s5.bit() |
         s6.bit() | s7.bit() | s8.bit() /*| s9.bit() | s10.bit() | s11.bit()*/;

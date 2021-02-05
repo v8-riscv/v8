@@ -434,7 +434,7 @@ class Simulator : public SimulatorBase {
   template <typename T, typename OP>
   T amo(int64_t addr, OP f, Instruction* instr, TraceType t) {
     auto lhs = ReadMem<T>(addr, instr);
-    // FIXME: trace memory read for AMO
+    // TODO(RISCV): trace memory read for AMO
     WriteMem<T>(addr, (T)f(lhs), instr);
     return lhs;
   }

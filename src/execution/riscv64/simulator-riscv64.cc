@@ -1057,7 +1057,6 @@ T Simulator::FMaxMinHelper(T a, T b, MaxMinKind kind) {
   // set invalid bit for signaling nan
   if ((a == std::numeric_limits<T>::signaling_NaN()) ||
       (b == std::numeric_limits<T>::signaling_NaN())) {
-    // FIXME: NV -> kInvalidOperation
     set_csr_bits(csr_fflags, kInvalidOperation);
   }
 
@@ -1254,7 +1253,7 @@ void Simulator::TraceMemWr(int64_t addr, T value) {
 
 // RISCV Memory Read/Write functions
 
-// FIXME (RISCV): check whether the specific board supports unaligned load/store
+// TODO(RISCV): check whether the specific board supports unaligned load/store
 // (determined by EEI). For now, we assume the board does not support unaligned
 // load/store (e.g., trapping)
 template <typename T>
@@ -2403,7 +2402,7 @@ void Simulator::DecodeRVRFPType() {
       }
       break;
     }
-    // FIXME (RISCV): implement handling of NaN (quiet and signalling)
+    // TODO(RISCV): Implement handling of NaN (quiet and signalling).
     case RO_FLE_S: {  // RO_FEQ_S RO_FLT_S RO_FLE_S
       switch (instr_.Funct3Value()) {
         case 0b010: {  // RO_FEQ_S
