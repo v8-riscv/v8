@@ -848,7 +848,7 @@
   'wasm/origin-trial-flags': [SKIP],
   'wasm/shared-memory': [SKIP],
 
-  # It is time out 
+  # It is time out
   'regress/regress-1138075': [SKIP], # https://github.com/v8-riscv/v8/issues/418
 }],  # 'arch == riscv64'
 
