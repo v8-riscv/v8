@@ -3393,8 +3393,8 @@ void Simulator::InstructionDecode(Instruction* instr) {
   }
 
   if (::v8::internal::FLAG_trace_sim) {
-    PrintF("  0x%012" PRIxPTR "   %-44s   %s\n",
-           reinterpret_cast<intptr_t>(instr), buffer.begin(),
+    PrintF("  0x%012" PRIxPTR "  %ld    %-44s   %s\n",
+           reinterpret_cast<intptr_t>(instr), icount_, buffer.begin(),
            trace_buf_.begin());
   }
 
