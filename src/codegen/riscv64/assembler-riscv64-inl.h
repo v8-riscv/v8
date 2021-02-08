@@ -1,4 +1,3 @@
-
 // Copyright (c) 1994-2006 Sun Microsystems Inc.
 // All Rights Reserved.
 //
@@ -31,7 +30,7 @@
 
 // The original source code covered by the above license above has been
 // modified significantly by Google Inc.
-// Copyright 2012 the V8 project authors. All rights reserved.
+// Copyright 2021 the V8 project authors. All rights reserved.
 
 #ifndef V8_CODEGEN_RISCV64_ASSEMBLER_RISCV64_INL_H_
 #define V8_CODEGEN_RISCV64_ASSEMBLER_RISCV64_INL_H_
