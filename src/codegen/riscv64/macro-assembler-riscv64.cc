@@ -1118,9 +1118,9 @@ void TurboAssembler::UnalignedStoreHelper(Register rd, const MemOperand& rs,
 
   BlockTrampolinePoolScope block_trampoline_pool(this);
   if (scratch_other == no_reg) {
-    if (temps.hasAvailable())
+    if (temps.hasAvailable()) {
       scratch_other = temps.Acquire();
-    else {
+    } else {
       push(t2);
       scratch_other = t2;
     }

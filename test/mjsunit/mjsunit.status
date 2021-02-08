@@ -817,7 +817,8 @@
   'regress/regress-779407': [SKIP],
   'harmony/bigint/regressions': [SKIP],
 
-  'wasm/float-constant-folding': [SKIP], # https://github.com/v8-riscv/v8/issues/53
+  # https://github.com/v8-riscv/v8/issues/53
+  'wasm/float-constant-folding': [SKIP],
 
   'wasm/memory_2gb_oob': [SKIP], # OOM: sorry, best effort max memory size test
   'wasm/memory_4gb_oob': [SKIP], # OOM: sorry, best effort max memory size test
@@ -845,12 +846,13 @@
   'wasm/origin-trial-flags': [SKIP],
   'wasm/shared-memory': [SKIP],
 
-  # It is time out
-  'regress/regress-1138075': [SKIP], # https://github.com/v8-riscv/v8/issues/418
+  # https://github.com/v8-riscv/v8/issues/418
+  'regress/regress-1138075': [SKIP],
 }],  # 'arch == riscv64'
 
 ['arch == riscv64 and variant == stress_incremental_marking', {
-  'wasm/externref-globals-liftoff': [SKIP], # https://github.com/v8-riscv/v8/issues/414
+  # https://github.com/v8-riscv/v8/issues/414
+  'wasm/externref-globals-liftoff': [SKIP],
 }], #'arch == riscv64 and variant == stress-incremental-marking'
 
 ##############################################################################
