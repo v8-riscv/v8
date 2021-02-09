@@ -848,6 +848,7 @@
 
   # https://github.com/v8-riscv/v8/issues/418
   'regress/regress-1138075': [SKIP],
+  'regress/regress-1138611.js': [SKIP],
 }],  # 'arch == riscv64'
 
 ['arch == riscv64 and variant == stress_incremental_marking', {
