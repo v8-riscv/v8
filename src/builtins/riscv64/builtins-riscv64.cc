@@ -2365,15 +2365,25 @@ void Builtins::Generate_WasmCompileLazy(MacroAssembler* masm) {
     // Save all parameter registers (see kGpParamRegisters in wasm-linkage.cc).
     // They might be overwritten in the runtime call below. We don't have any
     // callee-saved registers in wasm, so no need to store anything else.
-    constexpr RegList gp_regs = Register::ListOf(a0, a2, a3, a4, a5, a6, a7);
-    constexpr RegList fp_regs =
-        DoubleRegister::ListOf(fa0, fa1, fa2, fa3, fa4, fa5, fa6);
-    static_assert(WasmCompileLazyFrameConstants::kNumberOfSavedGpParamRegs ==
-                      arraysize(wasm::kGpParamRegisters),
-                  "frame size mismatch");
-    static_assert(WasmCompileLazyFrameConstants::kNumberOfSavedFpParamRegs ==
-                      arraysize(wasm::kFpParamRegisters),
-                  "frame size mismatch");
+    RegList gp_regs = 0;
+    for (Register gp_param_reg : wasm::kGpParamRegisters) {
+      gp_regs |= gp_param_reg.bit();
+    }
+    // Also push x1, because we must push multiples of 16 bytes (see
+    // {TurboAssembler::PushCPURegList}.
+    CHECK_EQ(0, NumRegs(gp_regs) % 2);
+
+    RegList fp_regs = 0;
+    for (DoubleRegister fp_param_reg : wasm::kFpParamRegisters) {
+      fp_regs |= fp_param_reg.bit();
+    }
+
+    CHECK_EQ(NumRegs(gp_regs), arraysize(wasm::kGpParamRegisters));
+    CHECK_EQ(NumRegs(fp_regs), arraysize(wasm::kFpParamRegisters));
+    CHECK_EQ(WasmCompileLazyFrameConstants::kNumberOfSavedGpParamRegs,
+             NumRegs(gp_regs));
+    CHECK_EQ(WasmCompileLazyFrameConstants::kNumberOfSavedFpParamRegs,
+             NumRegs(fp_regs));
     __ MultiPush(gp_regs);
     __ MultiPushFPU(fp_regs);
 
