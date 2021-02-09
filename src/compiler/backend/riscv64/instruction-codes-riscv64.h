@@ -201,6 +201,9 @@ namespace compiler {
   V(RiscvF64x2Div)                          \
   V(RiscvF64x2Min)                          \
   V(RiscvF64x2Max)                          \
+  V(RiscvF64x2ConvertLowI32x4S)             \
+  V(RiscvF64x2ConvertLowI32x4U)             \
+  V(RiscvF64x2PromoteLowF32x4)              \
   V(RiscvF64x2Eq)                           \
   V(RiscvF64x2Ne)                           \
   V(RiscvF64x2Lt)                           \
@@ -243,6 +246,7 @@ namespace compiler {
   V(RiscvF32x4Le)                           \
   V(RiscvF32x4Pmin)                         \
   V(RiscvF32x4Pmax)                         \
+  V(RiscvF32x4DemoteF64x2Zero)              \
   V(RiscvF32x4Ceil)                         \
   V(RiscvF32x4Floor)                        \
   V(RiscvF32x4Trunc)                        \
@@ -257,6 +261,8 @@ namespace compiler {
   V(RiscvI32x4Abs)                          \
   V(RiscvI32x4BitMask)                      \
   V(RiscvI32x4DotI16x8S)                    \
+  V(RiscvI32x4TruncSatF64x2SZero)           \
+  V(RiscvI32x4TruncSatF64x2UZero)           \
   V(RiscvI16x8Splat)                        \
   V(RiscvI16x8ExtractLaneU)                 \
   V(RiscvI16x8ExtractLaneS)                 \
