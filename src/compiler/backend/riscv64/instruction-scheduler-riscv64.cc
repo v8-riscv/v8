@@ -131,6 +131,7 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvF32x4Trunc:
     case kRiscvF32x4NearestInt:
     case kRiscvI64x2Eq:
+    case kRiscvI64x2Ne:
     case kRiscvF64x2Splat:
     case kRiscvF64x2ExtractLane:
     case kRiscvF64x2ReplaceLane:
@@ -299,6 +300,7 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvV32x4AllTrue:
     case kRiscvV16x8AllTrue:
     case kRiscvV128AnyTrue:
+    case kRiscvV64x2AllTrue:
     case kRiscvS32x4InterleaveEven:
     case kRiscvS32x4InterleaveOdd:
     case kRiscvS32x4InterleaveLeft:
