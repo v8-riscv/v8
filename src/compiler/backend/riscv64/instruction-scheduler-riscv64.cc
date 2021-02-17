@@ -98,10 +98,13 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvI64x2Sub:
     case kRiscvI64x2Mul:
     case kRiscvI64x2Neg:
+    case kRiscvI64x2Abs:
     case kRiscvI64x2Shl:
     case kRiscvI64x2ShrS:
     case kRiscvI64x2ShrU:
     case kRiscvI64x2BitMask:
+    case kRiscvI64x2GtS:
+    case kRiscvI64x2GeS:
     case kRiscvF32x4Abs:
     case kRiscvF32x4Add:
     case kRiscvF32x4AddHoriz:
