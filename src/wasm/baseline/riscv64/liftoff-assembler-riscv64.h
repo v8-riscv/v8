@@ -375,21 +375,26 @@ void LiftoffAssembler::LoadConstant(LiftoffRegister reg, WasmValue value,
   }
 }
 
-void LiftoffAssembler::LoadFromInstance(Register dst, int32_t offset,
-                                        int size) {
-  DCHECK_LE(0, offset);
+void LiftoffAssembler::LoadInstanceFromFrame(Register dst) {
   Ld(dst, liftoff::GetInstanceOperand());
+}
+
+void LiftoffAssembler::LoadFromInstance(Register dst, Register instance,
+                                        int offset, int size) {
+  DCHECK_LE(0, offset);
   DCHECK(size == 4 || size == 8);
+  MemOperand src{instance, offset};
   if (size == 4) {
-    Lw(dst, MemOperand(dst, offset));
+    Lw(dst, src);
   } else {
-    Ld(dst, MemOperand(dst, offset));
+    Ld(dst, src);
   }
 }
 
 void LiftoffAssembler::LoadTaggedPointerFromInstance(Register dst,
-                                                     int32_t offset) {
-  LoadFromInstance(dst, offset, kTaggedSize);
+                                                     Register instance,
+                                                     int offset) {
+  LoadFromInstance(dst, instance, offset, kTaggedSize);
 }
 
 void LiftoffAssembler::SpillInstance(Register instance) {
@@ -1914,6 +1919,11 @@ void LiftoffAssembler::emit_i32x4_dot_i16x8_s(LiftoffRegister dst,
 void LiftoffAssembler::emit_i64x2_neg(LiftoffRegister dst,
                                       LiftoffRegister src) {
   bailout(kSimd, "emit_i64x2_neg");
+}
+
+void LiftoffAssembler::emit_v64x2_alltrue(LiftoffRegister dst,
+                                          LiftoffRegister src) {
+  bailout(kSimd, "emit_v64x2_alltrue");
 }
 
 void LiftoffAssembler::emit_i64x2_shl(LiftoffRegister dst, LiftoffRegister lhs,

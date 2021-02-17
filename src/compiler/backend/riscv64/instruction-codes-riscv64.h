@@ -193,6 +193,8 @@ namespace compiler {
   V(RiscvI32x4ShrU)                         \
   V(RiscvI32x4MaxU)                         \
   V(RiscvI32x4MinU)                         \
+  V(RiscvI64x2GtS)                          \
+  V(RiscvI64x2GeS)                          \
   V(RiscvI64x2Eq)                           \
   V(RiscvI64x2Ne)                           \
   V(RiscvF64x2Sqrt)                         \
@@ -224,6 +226,7 @@ namespace compiler {
   V(RiscvI64x2Add)                          \
   V(RiscvI64x2Sub)                          \
   V(RiscvI64x2Mul)                          \
+  V(RiscvI64x2Abs)                          \
   V(RiscvI64x2Neg)                          \
   V(RiscvI64x2Shl)                          \
   V(RiscvI64x2ShrS)                         \
