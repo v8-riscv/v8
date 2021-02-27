@@ -341,7 +341,8 @@ void BaselineOutOfLinePrologueDescriptor::InitializePlatformSpecific(
                           kJavaScriptCallArgCountRegister, ecx,
                           kJavaScriptCallNewTargetRegister};
   data->InitializePlatformSpecific(kParameterCount, registers);
-#elif V8_TARGET_ARCH_X64 || V8_TARGET_ARCH_ARM64 || V8_TARGET_ARCH_ARM
+#elif V8_TARGET_ARCH_X64 || V8_TARGET_ARCH_ARM64 || V8_TARGET_ARCH_ARM || \
+    V8_TARGET_ARCH_RISCV64
   Register registers[] = {
       kContextRegister, kJSFunctionRegister, kJavaScriptCallArgCountRegister,
       kInterpreterBytecodeArrayRegister, kJavaScriptCallNewTargetRegister};
@@ -355,7 +356,7 @@ void BaselineLeaveFrameDescriptor::InitializePlatformSpecific(
     CallInterfaceDescriptorData* data) {
   // TODO(v8:11421): Implement on other platforms.
 #if V8_TARGET_ARCH_IA32 || V8_TARGET_ARCH_X64 || V8_TARGET_ARCH_ARM64 || \
-    V8_TARGET_ARCH_ARM
+    V8_TARGET_ARCH_ARM || V8_TARGET_ARCH_RISCV64
   Register registers[] = {ParamsSizeRegister(), WeightRegister()};
   data->InitializePlatformSpecific(kParameterCount, registers);
 #else
