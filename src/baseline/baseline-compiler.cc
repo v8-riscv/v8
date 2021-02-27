@@ -428,6 +428,7 @@ void BaselineCompiler::VisitSingleBytecode() {
 #undef BYTECODE_CASE
   }
   __ RecordComment("]");
+  
 #ifdef V8_TRACE_UNOPTIMIZED
   TraceBytecode(Runtime::kTraceUnoptimizedBytecodeExit);
 #endif
