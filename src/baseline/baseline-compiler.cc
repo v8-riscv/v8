@@ -34,6 +34,8 @@
 #include "src/baseline/x64/baseline-compiler-x64-inl.h"
 #elif V8_TARGET_ARCH_ARM64
 #include "src/baseline/arm64/baseline-compiler-arm64-inl.h"
+#elif V8_TARGET_ARCH_RISCV64
+#include "src/baseline/riscv64/baseline-compiler-riscv64-inl.h"
 #else
 #error Unsupported target architecture.
 #endif
@@ -426,7 +428,6 @@ void BaselineCompiler::VisitSingleBytecode() {
 #undef BYTECODE_CASE
   }
   __ RecordComment("]");
-
 #ifdef V8_TRACE_UNOPTIMIZED
   TraceBytecode(Runtime::kTraceUnoptimizedBytecodeExit);
 #endif

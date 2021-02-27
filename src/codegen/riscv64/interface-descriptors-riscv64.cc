@@ -283,14 +283,21 @@ void ResumeGeneratorDescriptor::InitializePlatformSpecific(
 
 void BinaryOp_BaselineDescriptor::InitializePlatformSpecific(
     CallInterfaceDescriptorData* data) {
-  // TODO(v8:11421): Implement on this platform.
-  InitializePlatformUnimplemented(data, kParameterCount);
+  // x1: left operand
+  // x0: right operand
+  // x2: feedback slot
+  Register registers[] = {a1, a0, a2};
+  data->InitializePlatformSpecific(arraysize(registers), registers);
 }
+
 
 void Compare_BaselineDescriptor::InitializePlatformSpecific(
     CallInterfaceDescriptorData* data) {
-  // TODO(v8:11421): Implement on this platform.
-  InitializePlatformUnimplemented(data, kParameterCount);
+  // x1: left operand
+  // x0: right operand
+  // x2: feedback slot
+  Register registers[] = {a1, a0, a2};
+  data->InitializePlatformSpecific(arraysize(registers), registers);
 }
 
 void FrameDropperTrampolineDescriptor::InitializePlatformSpecific(
@@ -306,6 +313,9 @@ void RunMicrotasksEntryDescriptor::InitializePlatformSpecific(
   Register registers[] = {a0, a1};
   data->InitializePlatformSpecific(arraysize(registers), registers);
 }
+
+const Register BaselineLeaveFrameDescriptor::ParamsSizeRegister() { return a2; }
+const Register BaselineLeaveFrameDescriptor::WeightRegister() { return a3; }
 
 }  // namespace internal
 }  // namespace v8
