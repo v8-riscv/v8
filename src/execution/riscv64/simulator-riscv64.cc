@@ -2853,105 +2853,30 @@ void Simulator::DecodeRVR4Type() {
   }
 }
 
-
-
-void Simulator::DecodeRVVVL(){
-     if(instr_.InstructionBits()&){
-       reg_t nf=((instr_.InstructionBits()>>29)&(kRvvNfMask))+1;
-       reg_t vl=rvv_vl();
-       reg_t baseaddr=rs1();
-       reg_t vd=rvv_vd_reg();
-       uint32_t vsew=rvv_vsew();
-
-       // check
-       VI_CHECK_LOAD(vsew);
-       for(uint64_t i=0;i<vl;++i){
-	  VI_ELEMENT_SKIP(i); 
-          set_rvv_vstart(i);
-          for(uint64_t fn=0;fn<nf;++fn){
-	      int64_t addr=rs1();
-	      auto val;
-	      if(vsew==E8){
-	      val=ReadMem<type_sew_t<8>::type>(addr+i*nf+fn,instr_instr());
-	      Rvvelt<type_sew_t<8>::type>(vd+fn*emul,i,true)=val;
-	      }
-	      else if(vsew==E16){
-	      val=ReadMem<type_sew_t<16>::type>(addr+i*nf+fn,instr_instr());
-	      Rvvelt<type_sew_t<16>::type>(vd+fn*emul,i,true)=val;
-	      }
-	      else if(vsew==E32){
-	      val=ReadMem<type_sew_t<32>::type>(addr+i*nf+fn,instr_instr());
-	      Rvvelt<type_sew_t<32>::type>(vd+fn*emul,i,true)=val;
-	      }
-	      else if(vsew==E64){
-	      val=ReadMem<type_sew_t<64>::type>(addr+i*nf+fn,instr_instr());
-	      Rvvelt<type_sew_t<64>::type>(vd+fn*emul,i,true)=val;
-              }
-              
-	  }   
-
-       }
-     }
-     set_rvv_vstart(0);
-
-}
-void Simulator::DecodeRVIType() {
-
-  switch (instr_.InstructionBits() & kITypeMask) {
-    case RO_JALR: {
-      set_rd(get_pc() + kInstrSize);
-      // Note: No need to shift 2 for JALR's imm12, but set lowest bit to 0.
-      int64_t next_pc = (rs1() + imm12()) & ~reg_t(1);
-      set_pc(next_pc);
-      break;
-    }
-    case RO_LB: {
-      int64_t addr = rs1() + imm12();
-      int8_t val = ReadMem<int8_t>(addr, instr_.instr());
-      set_rd(sext_xlen(val), false);
-      TraceMemRd(addr, val, get_register(rd_reg()));
-      break;
-    }
-    case RO_LH: {
-      int64_t addr = rs1() + imm12();
-      int16_t val = ReadMem<int16_t>(addr, instr_.instr());
-      set_rd(sext_xlen(val), false);
-      TraceMemRd(addr, val, get_register(rd_reg()));
-      break;
-    }
-    case RO_LW: {
-      int64_t addr = rs1() + imm12();
-      int32_t val = ReadMem<int32_t>(addr, instr_.instr());
-      set_rd(sext_xlen(val), false);
-      TraceMemRd(addr, val, get_register(rd_reg()));
-      break;
-    }
-    case RO_LBU: {
-      int64_t addr = rs1() + imm12();
-      uint8_t val = ReadMem<uint8_t>(addr, instr_.instr());
-      set_rd(zext_xlen(val), false);
-      TraceMemRd(addr, val, get_register(rd_reg()));
-      break;
 void Simulator::DecodeRvvVL() {
+  std::cout << "ouside" << std::endl;
   uint32_t instr_temp =
       instr_.InstructionBits() & (kRvvMopMask | kRvvNfMask | kBaseOpcodeMask);
   if (instr_temp == RO_V_VL) {
     reg_t nf = ((instr_.InstructionBits() >> 29) & (kRvvNfMask)) + 1;
     reg_t vl = rvv_vl();
-    reg_t addr = rs1();
+    int64_t addr = rs1();
+    int64_t xx[2] = {12, 34};
+    addr = (int64_t)xx;
     reg_t vd = rvv_vd_reg();
     uint32_t vsew = rvv_vsew();
-
+    std::cout << "inside" << vl << std::endl;
     // check
     VI_CHECK_LOAD(vsew);
     for (reg_t i = 0; i < vl; ++i) {
-      VI_ELEMENT_SKIP(i);
+      //  VI_ELEMENT_SKIP(i);
       set_rvv_vstart(i);
       for (uint64_t fn = 0; fn < nf; ++fn) {
+        std::cout << "inside zhixing" << std::endl;
         if (vsew == E8) {
           auto val =
               ReadMem<type_sew_t<8>::type>(addr + i * nf + fn, instr_.instr());
-	  std::cout<<"vl::"<<val<<std::endl;
+          std::cout << "vl::" << (int)val << std::endl;
           Rvvelt<type_sew_t<8>::type>(vd + fn * emul, i, true) = val;
         } else if (vsew == E16) {
           auto val =
@@ -2988,18 +2913,22 @@ void Simulator::DecodeRvvVS() {
       set_rvv_vstart(i);
       for (uint64_t fn = 0; fn < nf; ++fn) {
         if (vsew == E8) {
-          auto val=Rvvelt<type_sew_t<8>::type>(vd + fn * emul, i, true);
-	  std::cout<<"vs::"<<val<<std::endl;
-	  WriteMem<type_sew_t<8>::type>(addr+i*nf+fn,val,instr_.instr());
+          auto val = Rvvelt<type_sew_t<8>::type>(vd + fn * emul, i, true);
+          std::cout << "vs::" << (int)val << std::endl;
+          WriteMem<type_sew_t<8>::type>(addr + i * nf + fn, val,
+                                        instr_.instr());
         } else if (vsew == E16) {
-          auto val=Rvvelt<type_sew_t<16>::type>(vd + fn * emul, i, true);
-	  WriteMem<type_sew_t<16>::type>(addr+i*nf+fn,val,instr_.instr());
+          auto val = Rvvelt<type_sew_t<16>::type>(vd + fn * emul, i, true);
+          WriteMem<type_sew_t<16>::type>(addr + i * nf + fn, val,
+                                         instr_.instr());
         } else if (vsew == E32) {
-          auto val=Rvvelt<type_sew_t<8>::type>(vd + fn * emul, i, true);
-	  WriteMem<type_sew_t<32>::type>(addr+i*nf+fn,val,instr_.instr());
+          auto val = Rvvelt<type_sew_t<8>::type>(vd + fn * emul, i, true);
+          WriteMem<type_sew_t<32>::type>(addr + i * nf + fn, val,
+                                         instr_.instr());
         } else if (vsew == E64) {
-          auto val=Rvvelt<type_sew_t<8>::type>(vd + fn * emul, i, true);
-	  WriteMem<type_sew_t<64>::type>(addr+i*nf+fn,val,instr_.instr());
+          auto val = Rvvelt<type_sew_t<8>::type>(vd + fn * emul, i, true);
+          WriteMem<type_sew_t<64>::type>(addr + i * nf + fn, val,
+                                         instr_.instr());
         }
       }
     }

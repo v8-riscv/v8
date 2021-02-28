@@ -740,29 +740,6 @@ class Simulator : public SimulatorBase {
 #define RVV_VI_LOOP_END \
   set_rvv_vstart(0);    \
   }
-#define VI_CHECK_LOAD(elt_width)                \
-  VI_CHECK_STORE(elt_width)                     \
-#define VI_CHECK_STORE(elt_width) reg_t veew; \
-  if (elt_width == E8) veew = int8_t;           \
-  reg_t emul = 1;                               \
-#define VI_MASK_VARS const int midx = i / 64; \
-  const int mpos = i % 64;
-#define VI_LOOP_ELEMENT_SKIP(BODY)                                   \
-  VI_MASK_VARS                                                       \
-  if (instr_.RvvVM() == 0) {                                         \
-    BODY bool skip =                                                 \
-        ((Rvvelt<uint64_t>(0, midx) >> mpos) & 0x1) == 0 if (skip) { \
-      continue;                                                      \
-    }                                                                \
-  }
-#define VI_ELEMENT_SKIP(inx)       \
-  if (inx > rvv_vl()) {            \
-    continue;                      \
-  } else if (inx < rvv_vstart()) { \
-    continue;                      \
-  } else {                         \
-    VI_LOOP_ELEMENT_SKIP();        \
-  }
 
   inline void rvv_trace_vd() {
     if (::v8::internal::FLAG_trace_sim) {
@@ -771,6 +748,7 @@ class Simulator : public SimulatorBase {
              (uint64_t)(get_vregister((int)rvv_vd_reg()) >> 64),
              (uint64_t)get_vregister((int)rvv_vd_reg()));
     }
+  }
 #define VI_CHECK_LOAD(elt_width)                \
   VI_CHECK_STORE(elt_width)                     
 #define VI_CHECK_STORE(elt_width)  \
@@ -781,12 +759,13 @@ class Simulator : public SimulatorBase {
 #define VI_LOOP_ELEMENT_SKIP(BODY)                                   \
   VI_MASK_VARS                                                       \
   if (instr_.RvvVM() == 0) {                                         \
-    BODY bool skip =((Rvvelt<uint64_t>(0, midx) >> mpos) & 0x1) == 0; \
+     bool skip =((Rvvelt<uint64_t>(0, midx) >> mpos) & 0x1) == 0; \
 	  if (skip) { \
       continue;                                                      \
     }                                                                \
   }
-
+#define VI_ELEMENT_SKIP(BODY) \
+  VI_LOOP_ELEMENT_SKIP();
   inline void rvv_trace_vs1() {
     if (::v8::internal::FLAG_trace_sim) {
       PrintF("\t%s:0x%016" PRIx64 "%016" PRIx64 "\n",
@@ -1063,7 +1042,6 @@ class Simulator : public SimulatorBase {
   void DecodeRvvVL();
   void DecodeRvvVS();
   int switch_sew();
-  void DecodeRvvVL();
   // Used for breakpoints and traps.
   void SoftwareInterrupt();
 

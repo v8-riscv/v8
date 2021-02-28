@@ -105,14 +105,29 @@ using F5 = void*(void* p0, void* p1, int p2, int p3, int p4);
     GenAndRunTestForLoadStore<value_type>(value, fn);       \
   }
 
-#define UTEST_LOAD_STORE_V(ldname, stname, value_type, value) \
-  TEST(RISCV_UTEST_##stname##ldname) {                      \
-    CcTest::InitializeVM();                                 \
-    auto fn = [](MacroAssembler& assm) {                    \
-      __ stname(v0, a0, 0,E8,NoMask);                                 \
-      __ ldname(v0, a0, 0,E8,NoMask);                                 \
-    };                                                      \
-    GenAndRunTestForLoadStore<value_type>(value, fn);       \
+#define UTEST_LOAD_STORE_V(ldname, stname, type, low, high)                \
+  TEST(RISCV_UTEST_##stname##ldname) {                                     \
+    CcTest::InitializeVM();                                                \
+    int32_t yy[4] = {0, 0, 0, 0};                                          \
+    std::cout << "pre" << (int64_t)yy << std::endl;                        \
+    ;                                                                      \
+    GenAndRunTest([&yy](MacroAssembler& assm) {                            \
+      __ vsetvlmax(t0, E8, m1);                                            \
+      __ ldname(v1, t0, 0, type, NoMask);                                  \
+      __ RV_li(t0, 2);                                                     \
+      __ vsetvlmax(t0, E8, m1);                                            \
+      __ RV_li(t0, (int64_t)yy);                                           \
+      __ stname(v1, t0, 0, type, NoMask);                                  \
+    });                                                                    \
+    for (int i = 0; i < 4; i++) std::cout << yy[i] << std::endl;           \
+    __int128_t t =                                                         \
+        Simulator::current(CcTest::i_isolate())->get_vregister(v1.code()); \
+    std::cout << (int64_t)t << "**" << (int64_t)(t >> 64) << std::endl;    \
+    int64_t tt =                                                           \
+        Simulator::current(CcTest::i_isolate())->get_vregister(t0.code()); \
+    std::cout << tt << "rv_li" << std::endl;                               \
+    CHECK_EQ((int64_t)t, low);                                             \
+    CHECK_EQ((int64_t)(t >> 64), high);                                    \
   }
 // Since f.Call() is implemented as vararg calls and RISCV calling convention
 // passes all vararg arguments and returns (including floats) in GPRs, we have
@@ -320,7 +335,7 @@ using F5 = void*(void* p0, void* p1, int p2, int p3, int p4);
 
 // -- test load-store --
 UTEST_LOAD_STORE(ld, sd, int64_t, 0xFBB10A9C12345678)
-UTEST_LOAD_STORE_V(vl, vs, int32_t, 0x456AF894)
+UTEST_LOAD_STORE_V(vl, vs, E8, 12,34)
 // due to sign-extension of lw
 // instruction, value-to-stored must have
 // its 32th least significant bit be 0
@@ -597,7 +612,6 @@ TEST(RISCV0) {
     CHECK_EQ(i, res);
   }
 }
-
 TEST(RISCV1) {
   CcTest::InitializeVM();
 
@@ -1924,6 +1938,7 @@ TEST(RVV_assembler) {
     __ vmerge_vi(v1, 5, v3);
     __ vsetvli(t0, zero_reg, E8, m1);
     __ vadd_vv(v1, v2, v3);
+    __ vsetvli(t0, zero_reg, E8, m1);
     __ vl(v1,t0,0,E8,Mask);
   });
 }
