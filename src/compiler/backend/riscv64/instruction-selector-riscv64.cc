@@ -878,6 +878,22 @@ void InstructionSelector::VisitInt32Mul(Node* node) {
   VisitRRR(this, kRiscvMul32, node);
 }
 
+void InstructionSelector::VisitI32x4ExtAddPairwiseI16x8S(Node* node) {
+  UNIMPLEMENTED();
+}
+
+void InstructionSelector::VisitI32x4ExtAddPairwiseI16x8U(Node* node) {
+  UNIMPLEMENTED();
+}
+
+void InstructionSelector::VisitI16x8ExtAddPairwiseI8x16S(Node* node) {
+  UNIMPLEMENTED();
+}
+
+void InstructionSelector::VisitI16x8ExtAddPairwiseI8x16U(Node* node) {
+  UNIMPLEMENTED();
+}
+
 void InstructionSelector::VisitInt32MulHigh(Node* node) {
   VisitRRR(this, kRiscvMulHigh32, node);
 }
