@@ -308,7 +308,6 @@ namespace compiler {
   V(RiscvI8x16AddSatS)                      \
   V(RiscvI8x16Sub)                          \
   V(RiscvI8x16SubSatS)                      \
-  V(RiscvI8x16Mul)                          \
   V(RiscvI8x16MaxS)                         \
   V(RiscvI8x16MinS)                         \
   V(RiscvI8x16Eq)                           \

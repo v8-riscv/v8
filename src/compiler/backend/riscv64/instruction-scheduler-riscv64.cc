@@ -245,7 +245,6 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvI8x16MaxU:
     case kRiscvI8x16MinS:
     case kRiscvI8x16MinU:
-    case kRiscvI8x16Mul:
     case kRiscvI8x16Ne:
     case kRiscvI8x16Neg:
     case kRiscvI8x16ReplaceLane:
