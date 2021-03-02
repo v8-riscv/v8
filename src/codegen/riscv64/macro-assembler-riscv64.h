@@ -12,6 +12,7 @@
 #include "src/codegen/assembler.h"
 #include "src/codegen/riscv64/assembler-riscv64.h"
 #include "src/common/globals.h"
+#include "src/objects/tagged-index.h"
 
 namespace v8 {
 namespace internal {
