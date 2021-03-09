@@ -2402,7 +2402,6 @@ void Simulator::DecodeRVRFPType() {
       }
       break;
     }
-    // TODO(RISCV): Implement handling of NaN (quiet and signalling).
     case RO_FLE_S: {  // RO_FEQ_S RO_FLT_S RO_FLE_S
       switch (instr_.Funct3Value()) {
         case 0b010: {  // RO_FEQ_S
