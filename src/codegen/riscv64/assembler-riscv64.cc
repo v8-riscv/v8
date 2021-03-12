@@ -2565,19 +2565,12 @@ void Assembler::AdjustBaseAndOffset(MemOperand* src, Register scratch,
   // for a load/store when the offset doesn't fit into int12.
 
   // Must not overwrite the register 'base' while loading 'offset'.
-
   DCHECK(src->rm() != scratch);
-  if(access_type == OffsetAccessType::SINGLE_ACCESS) {
-    RV_li(scratch, (src->offset() + 0x800) >>12 <<12);
-    add(scratch, scratch, src->rm());
-    src->offset_ = src->offset() <<20 >>20;
-    src->rm_ = scratch;
-  } else {
-    RV_li(scratch, src->offset());
-    add(scratch, scratch, src->rm());
-    src->offset_ = 0;
-    src->rm_ = scratch;
-  }
+
+  RV_li(scratch, src->offset());
+  add(scratch, scratch, src->rm());
+  src->offset_ = 0;
+  src->rm_ = scratch;
 }
 
 int Assembler::RelocateInternalReference(RelocInfo::Mode rmode, Address pc,
