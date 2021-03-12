@@ -15,15 +15,7 @@
 
   'prototypes': [FAIL],
 
-  # Outdated proposals, will work after rebasing.
-  'proposals/reference-types/global/value-get-set': [FAIL],
-  'proposals/reference-types/global/constructor': [FAIL],
-  'proposals/bulk-memory-operations/global/value-get-set': [FAIL],
-  'proposals/bulk-memory-operations/global/constructor': [FAIL],
-
   # These are slow, and not useful to run for the proposals:
-  'proposals/reference-types/limits': [SKIP],
-  'proposals/bulk-memory-operations/limits': [SKIP],
   'proposals/js-types/limits': [SKIP],
   'proposals/simd/limits': [SKIP],
   'proposals/memory64/limits': [SKIP],
