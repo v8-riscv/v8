@@ -1249,7 +1249,7 @@ HeapObjectData::HeapObjectData(JSHeapBroker* broker, ObjectData** storage,
   CHECK_IMPLIES(kind == kSerializedHeapObject,
                 broker->mode() == JSHeapBroker::kSerializing);
   CHECK_IMPLIES(broker->mode() == JSHeapBroker::kSerialized,
-                    kind == kBackgroundSerializedHeapObject);
+                kind == kBackgroundSerializedHeapObject);
 }
 
 InstanceType HeapObjectData::GetMapInstanceType() const {
@@ -2140,12 +2140,12 @@ HEAP_BROKER_BACKGROUND_SERIALIZED_OBJECT_LIST(DEFINE_IS)
 HEAP_BROKER_NEVER_SERIALIZED_OBJECT_LIST(DEFINE_IS)
 #undef DEFINE_IS
 
-#define DEFINE_AS(Name)                                       \
-  Name##Data* ObjectData::As##Name() {                        \
-    CHECK(Is##Name());                                        \
-    CHECK(kind_ == kSerializedHeapObject ||                   \
-          kind_ == kBackgroundSerializedHeapObject);          \
-    return static_cast<Name##Data*>(this);                    \
+#define DEFINE_AS(Name)                              \
+  Name##Data* ObjectData::As##Name() {               \
+    CHECK(Is##Name());                               \
+    CHECK(kind_ == kSerializedHeapObject ||          \
+          kind_ == kBackgroundSerializedHeapObject); \
+    return static_cast<Name##Data*>(this);           \
   }
 HEAP_BROKER_SERIALIZED_OBJECT_LIST(DEFINE_AS)
 HEAP_BROKER_POSSIBLY_BACKGROUND_SERIALIZED_OBJECT_LIST(DEFINE_AS)

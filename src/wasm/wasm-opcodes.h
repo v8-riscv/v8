@@ -514,15 +514,15 @@ bool V8_EXPORT_PRIVATE IsJSCompatibleSignature(const FunctionSig* sig,
   V(PrefetchT, 0xfdc5, v_i)                 \
   V(PrefetchNT, 0xfdc6, v_i)
 
-#define FOREACH_SIMD_POST_MVP_OPCODE(V)     \
-  V(F32x4Qfma, 0xfdb4, s_sss)               \
-  V(F32x4Qfms, 0xfdd4, s_sss)               \
-  V(F64x2Qfma, 0xfdfe, s_sss)               \
-  V(F64x2Qfms, 0xfdff, s_sss)               \
-  V(I16x8AddHoriz, 0xfdaf, s_ss)            \
-  V(I32x4AddHoriz, 0xfdb0, s_ss)            \
-  V(F32x4AddHoriz, 0xfdb2, s_ss)            \
-  V(F32x4RecipApprox, 0xfdb3, s_s)          \
+#define FOREACH_SIMD_POST_MVP_OPCODE(V) \
+  V(F32x4Qfma, 0xfdb4, s_sss)           \
+  V(F32x4Qfms, 0xfdd4, s_sss)           \
+  V(F64x2Qfma, 0xfdfe, s_sss)           \
+  V(F64x2Qfms, 0xfdff, s_sss)           \
+  V(I16x8AddHoriz, 0xfdaf, s_ss)        \
+  V(I32x4AddHoriz, 0xfdb0, s_ss)        \
+  V(F32x4AddHoriz, 0xfdb2, s_ss)        \
+  V(F32x4RecipApprox, 0xfdb3, s_s)      \
   V(F32x4RecipSqrtApprox, 0xfdbc, s_s)
 
 #define FOREACH_SIMD_1_OPERAND_1_PARAM_OPCODE(V) \
