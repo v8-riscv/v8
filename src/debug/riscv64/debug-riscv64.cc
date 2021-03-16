@@ -37,7 +37,7 @@ void DebugCodegen::GenerateFrameDropperTrampoline(MacroAssembler* masm) {
 
   // Pop return address and frame.
   __ LeaveFrame(StackFrame::INTERNAL);
-  
+
   __ li(a2, Operand(kDontAdaptArgumentsSentinel));
 
   __ InvokeFunction(a1, a2, a0, JUMP_FUNCTION);

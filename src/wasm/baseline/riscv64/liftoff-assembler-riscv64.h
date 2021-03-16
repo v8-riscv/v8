@@ -398,7 +398,6 @@ void LiftoffAssembler::LoadFromInstance(Register dst, Register instance,
   }
 }
 
-
 void LiftoffAssembler::LoadTaggedPointerFromInstance(Register dst,
                                                      Register instance,
                                                      int offset) {

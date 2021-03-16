@@ -6,8 +6,8 @@
 #define V8_BASELINE_RISCV64_BASELINE_ASSEMBLER_RISCV64_INL_H_
 
 #include "src/baseline/baseline-assembler.h"
-#include "src/codegen/interface-descriptors.h"
 #include "src/codegen/assembler-inl.h"
+#include "src/codegen/interface-descriptors.h"
 namespace v8 {
 namespace internal {
 namespace baseline {
@@ -150,7 +150,7 @@ void BaselineAssembler::Cmp(Register value, Smi smi) {
   Register temp = temps.AcquireScratch();
   __ li(temp, Operand(smi));
   __ SmiUntag(temp);
-  __ Sub64(kTestReg, value, temp); 
+  __ Sub64(kTestReg, value, temp);
 }
 void BaselineAssembler::ComparePointer(Register value, MemOperand operand) {
   ScratchRegisterScope temps(this);
@@ -222,14 +222,15 @@ namespace detail {
 
 template <typename Arg>
 inline Register ToRegister(BaselineAssembler* basm,
-                    BaselineAssembler::ScratchRegisterScope* scope, Arg arg) {
+                           BaselineAssembler::ScratchRegisterScope* scope,
+                           Arg arg) {
   Register reg = scope->AcquireScratch();
   basm->Move(reg, arg);
   return reg;
 }
 inline Register ToRegister(BaselineAssembler* basm,
-                    BaselineAssembler::ScratchRegisterScope* scope,
-                    Register reg) {
+                           BaselineAssembler::ScratchRegisterScope* scope,
+                           Register reg) {
   return reg;
 }
 
@@ -297,7 +298,9 @@ inline void PushSingle(MacroAssembler* masm, interpreter::Register source) {
 
 template <typename Arg>
 struct PushAllHelper<Arg> {
-  static void Push(BaselineAssembler* basm, Arg arg) { PushSingle(basm->masm(), arg); }
+  static void Push(BaselineAssembler* basm, Arg arg) {
+    PushSingle(basm->masm(), arg);
+  }
   static void PushReverse(BaselineAssembler* basm, Arg arg) {
     // Push the padding register to round up the amount of values pushed.
     return Push(basm, arg);
@@ -419,12 +422,12 @@ void BaselineAssembler::LoadTaggedPointerField(Register output, Register source,
 }
 void BaselineAssembler::LoadTaggedSignedField(Register output, Register source,
                                               int offset) {
-  // FIXME(riscv64): riscv64 don't implement pointer compressed                                              
+  // FIXME(riscv64): riscv64 don't implement pointer compressed
   __ Ld(output, FieldMemOperand(source, offset));
 }
 void BaselineAssembler::LoadTaggedAnyField(Register output, Register source,
                                            int offset) {
-  // FIXME(riscv64): riscv64 don't implement pointer compressed 
+  // FIXME(riscv64): riscv64 don't implement pointer compressed
   __ Ld(output, FieldMemOperand(source, offset));
 }
 void BaselineAssembler::LoadByteField(Register output, Register source,
@@ -436,13 +439,13 @@ void BaselineAssembler::StoreTaggedSignedField(Register target, int offset,
   ScratchRegisterScope temps(this);
   Register tmp = temps.AcquireScratch();
   __ li(tmp, Operand(value));
-  // FIXME(riscv64): riscv64 don't implement pointer compressed 
+  // FIXME(riscv64): riscv64 don't implement pointer compressed
   __ Sd(tmp, FieldMemOperand(target, offset));
 }
 void BaselineAssembler::StoreTaggedFieldWithWriteBarrier(Register target,
                                                          int offset,
                                                          Register value) {
-  // FIXME(riscv64): riscv64 don't implement pointer compressed 
+  // FIXME(riscv64): riscv64 don't implement pointer compressed
   __ Sd(value, FieldMemOperand(target, offset));
   ScratchRegisterScope temps(this);
   Register tmp = temps.AcquireScratch();
@@ -452,7 +455,7 @@ void BaselineAssembler::StoreTaggedFieldWithWriteBarrier(Register target,
 void BaselineAssembler::StoreTaggedFieldNoWriteBarrier(Register target,
                                                        int offset,
                                                        Register value) {
-  // FIXME(riscv64): riscv64 don't implement pointer compressed 
+  // FIXME(riscv64): riscv64 don't implement pointer compressed
   __ Sd(value, FieldMemOperand(target, offset));
 }
 
@@ -465,11 +468,11 @@ void BaselineAssembler::AddToInterruptBudget(int32_t weight) {
 
   Register interrupt_budget = scratch_scope.AcquireScratch();
   __ Ld(interrupt_budget,
-         FieldMemOperand(feedback_cell, FeedbackCell::kInterruptBudgetOffset));
+        FieldMemOperand(feedback_cell, FeedbackCell::kInterruptBudgetOffset));
   // Remember to set flags as part of the add!
   __ Add64(interrupt_budget, interrupt_budget, weight);
   __ Sd(interrupt_budget,
-         FieldMemOperand(feedback_cell, FeedbackCell::kInterruptBudgetOffset));
+        FieldMemOperand(feedback_cell, FeedbackCell::kInterruptBudgetOffset));
 }
 
 void BaselineAssembler::AddToInterruptBudget(Register weight) {
@@ -481,11 +484,11 @@ void BaselineAssembler::AddToInterruptBudget(Register weight) {
 
   Register interrupt_budget = scratch_scope.AcquireScratch();
   __ Ld(interrupt_budget,
-         FieldMemOperand(feedback_cell, FeedbackCell::kInterruptBudgetOffset));
+        FieldMemOperand(feedback_cell, FeedbackCell::kInterruptBudgetOffset));
   // Remember to set flags as part of the add!
   __ Add64(interrupt_budget, interrupt_budget, weight);
   __ Sd(interrupt_budget,
-         FieldMemOperand(feedback_cell, FeedbackCell::kInterruptBudgetOffset));
+        FieldMemOperand(feedback_cell, FeedbackCell::kInterruptBudgetOffset));
 }
 
 void BaselineAssembler::AddSmi(Register lhs, Smi rhs) {
@@ -515,7 +518,7 @@ void BaselineAssembler::Switch(Register reg, int case_value_base,
   int32_t Hi20 = (((int32_t)imm64 + 0x800) >> 12);
   int32_t Lo12 = (int32_t)imm64 << 20 >> 20;
   __ auipc(temp, Hi20);  // Read PC + Hi20 into t6
-  __ lui(temp, Lo12);     // jump PC + Hi20 + Lo12
+  __ lui(temp, Lo12);    // jump PC + Hi20 + Lo12
 
   int entry_size_log2 = 2;
   Register temp2 = scope.AcquireScratch();
@@ -574,8 +577,8 @@ void BaselineAssembler::EmitReturn(MacroAssembler* masm) {
   // If actual is bigger than formal, then we should use it to free up the stack
   // arguments.
   Label corrected_args_count;
-  __ masm()->Branch(&corrected_args_count, ge,
-                    params_size, Operand(actual_params_size));
+  __ masm()->Branch(&corrected_args_count, ge, params_size,
+                    Operand(actual_params_size));
   __ masm()->Move(params_size, actual_params_size);
   __ Bind(&corrected_args_count);
 

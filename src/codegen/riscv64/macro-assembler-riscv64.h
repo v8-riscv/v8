@@ -188,9 +188,7 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
     li(rd, Operand(j), mode);
   }
 
-  inline void Move(Register output, MemOperand operand) {
-      Ld(output, operand);
-  }
+  inline void Move(Register output, MemOperand operand) { Ld(output, operand); }
 
   void li(Register dst, Handle<HeapObject> value, LiFlags mode = OPTIMIZE_SIZE);
   void li(Register dst, ExternalReference value, LiFlags mode = OPTIMIZE_SIZE);

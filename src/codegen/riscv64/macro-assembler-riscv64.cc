@@ -3899,7 +3899,7 @@ void TurboAssembler::EnterFrame(StackFrame::Type type) {
   BlockTrampolinePoolScope block_trampoline_pool(this);
   Push(ra, fp);
   Move(fp, sp);
-  if(type != StackFrame::MANUAL) {
+  if (type != StackFrame::MANUAL) {
     li(scratch, Operand(StackFrame::TypeToMarker(type)));
     Push(scratch);
   }
