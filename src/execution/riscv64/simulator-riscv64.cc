@@ -262,7 +262,7 @@ void RiscvDebugger::Debug() {
       // Use a reasonably large buffer.
       v8::internal::EmbeddedVector<char, 256> buffer;
       const char* name = sim_->builtins_.Lookup((Address)sim_->get_pc());
-      if(name != nullptr) {
+      if (name != nullptr) {
         std::cout << name << std::endl;
       }
       dasm.InstructionDecode(buffer, reinterpret_cast<byte*>(sim_->get_pc()));
@@ -2834,15 +2834,16 @@ void Simulator::DecodeRVIType() {
             int64_t arg5 = get_register(a5);
             int64_t arg6 = get_register(a6);
             int64_t arg7 = get_register(a7);
-            int64_t* stack_pointer = reinterpret_cast<int64_t*>(get_register(sp));
+            int64_t* stack_pointer =
+                reinterpret_cast<int64_t*>(get_register(sp));
             int64_t arg8 = stack_pointer[0];
             int64_t arg9 = stack_pointer[1];
             PrintF(
                 "Call to Builtin at %s "
                 "a0 %08" PRIx64 " ,a1 %08" PRIx64 " ,a2 %08" PRIx64
-                " ,a3 %08" PRIx64 " ,a4 %08" PRIx64 " ,a5 %08" PRIx64 " ,a6 %08" PRIx64
-                " ,a7 %08" PRIx64 " ,0(sp) %08" PRIx64 " ,8(sp) %08" PRIx64 " ,sp %08" PRIx64
-                ",fp %08" PRIx64 " \n",
+                " ,a3 %08" PRIx64 " ,a4 %08" PRIx64 " ,a5 %08" PRIx64
+                " ,a6 %08" PRIx64 " ,a7 %08" PRIx64 " ,0(sp) %08" PRIx64
+                " ,8(sp) %08" PRIx64 " ,sp %08" PRIx64 ",fp %08" PRIx64 " \n",
                 name, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8,
                 arg9, get_register(sp), get_register(fp));
           }
