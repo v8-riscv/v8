@@ -36,7 +36,7 @@ class BaselineAssembler::ScratchRegisterScope {
   UseScratchRegisterScope wrapped_scope_;
 };
 
-enum class Condition : uint8_t {
+enum class Condition : uint32_t {
   kEqual = eq,
   kNotEqual = ne,
 
