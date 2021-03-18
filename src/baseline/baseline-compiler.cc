@@ -219,6 +219,7 @@ void MoveArgumentsForDescriptor(BaselineAssembler* masm,
 
 }  // namespace detail
 
+
 BaselineCompiler::BaselineCompiler(
     Isolate* isolate, Handle<SharedFunctionInfo> shared_function_info,
     Handle<BytecodeArray> bytecode)

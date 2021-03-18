@@ -2648,10 +2648,10 @@ void Assembler::AdjustBaseAndOffset(MemOperand* src, Register scratch,
   // Must not overwrite the register 'base' while loading 'offset'.
 
   DCHECK(src->rm() != scratch);
-  if (access_type == OffsetAccessType::SINGLE_ACCESS) {
-    RV_li(scratch, (static_cast<int64_t>(src->offset()) + 0x800) >> 12 << 12);
+  if(access_type == OffsetAccessType::SINGLE_ACCESS) {
+    RV_li(scratch, (static_cast<int64_t>(src->offset()) + 0x800) >>12 <<12);
     add(scratch, scratch, src->rm());
-    src->offset_ = src->offset() << 20 >> 20;
+    src->offset_ = src->offset() <<20 >>20;
     src->rm_ = scratch;
   } else {
     RV_li(scratch, src->offset());
