@@ -398,7 +398,6 @@ void LiftoffAssembler::LoadFromInstance(Register dst, Register instance,
   }
 }
 
-
 void LiftoffAssembler::LoadTaggedPointerFromInstance(Register dst,
                                                      Register instance,
                                                      int offset) {
@@ -2283,7 +2282,6 @@ void LiftoffAssembler::emit_i16x8_extadd_pairwise_i8x16_u(LiftoffRegister dst,
   bailout(kSimd, "i16x8.extadd_pairwise_i8x16_u");
 }
 
-
 void LiftoffAssembler::emit_i32x4_abs(LiftoffRegister dst,
                                       LiftoffRegister src) {
   bailout(kSimd, "emit_i32x4_abs");
@@ -2520,8 +2518,8 @@ void LiftoffAssembler::CallIndirect(const ValueKindSig* sig,
                                     compiler::CallDescriptor* call_descriptor,
                                     Register target) {
   if (target == no_reg) {
-    pop(kScratchReg);
-    Call(kScratchReg);
+    pop(t6);
+    Call(t6);
   } else {
     Call(target);
   }
@@ -2529,8 +2527,8 @@ void LiftoffAssembler::CallIndirect(const ValueKindSig* sig,
 
 void LiftoffAssembler::TailCallIndirect(Register target) {
   if (target == no_reg) {
-    Pop(kScratchReg);
-    Jump(kScratchReg);
+    Pop(t6);
+    Jump(t6);
   } else {
     Jump(target);
   }
