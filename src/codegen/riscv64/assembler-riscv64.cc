@@ -2646,7 +2646,6 @@ void Assembler::AdjustBaseAndOffset(MemOperand* src, Register scratch,
   // for a load/store when the offset doesn't fit into int12.
 
   // Must not overwrite the register 'base' while loading 'offset'.
-
   DCHECK(src->rm() != scratch);
 
   constexpr int32_t kMinOffsetForSimpleAdjustment =

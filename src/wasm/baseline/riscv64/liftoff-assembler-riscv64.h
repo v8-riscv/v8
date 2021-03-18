@@ -398,6 +398,7 @@ void LiftoffAssembler::LoadFromInstance(Register dst, Register instance,
   }
 }
 
+
 void LiftoffAssembler::LoadTaggedPointerFromInstance(Register dst,
                                                      Register instance,
                                                      int offset) {
@@ -2281,6 +2282,7 @@ void LiftoffAssembler::emit_i16x8_extadd_pairwise_i8x16_u(LiftoffRegister dst,
                                                           LiftoffRegister src) {
   bailout(kSimd, "i16x8.extadd_pairwise_i8x16_u");
 }
+
 
 void LiftoffAssembler::emit_i32x4_abs(LiftoffRegister dst,
                                       LiftoffRegister src) {
