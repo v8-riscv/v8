@@ -2518,8 +2518,8 @@ void LiftoffAssembler::CallIndirect(const ValueKindSig* sig,
                                     compiler::CallDescriptor* call_descriptor,
                                     Register target) {
   if (target == no_reg) {
-    pop(kScratchReg);
-    Call(kScratchReg);
+    pop(t6);
+    Call(t6);
   } else {
     Call(target);
   }
@@ -2527,8 +2527,8 @@ void LiftoffAssembler::CallIndirect(const ValueKindSig* sig,
 
 void LiftoffAssembler::TailCallIndirect(Register target) {
   if (target == no_reg) {
-    Pop(kScratchReg);
-    Jump(kScratchReg);
+    Pop(t6);
+    Jump(t6);
   } else {
     Jump(target);
   }
