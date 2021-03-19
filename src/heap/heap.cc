@@ -6486,6 +6486,8 @@ Map Heap::GcSafeMapOfCodeSpaceObject(HeapObject object) {
 Code Heap::GcSafeCastToCode(HeapObject object, Address inner_pointer) {
   Code code = Code::unchecked_cast(object);
   DCHECK(!code.is_null());
+  bool t = GcSafeCodeContains(code, inner_pointer);
+  USE(t);
   DCHECK(GcSafeCodeContains(code, inner_pointer));
   return code;
 }
