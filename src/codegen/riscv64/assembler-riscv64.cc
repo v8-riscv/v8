@@ -742,7 +742,7 @@ int Assembler::BrachlongOffset(Instr auipc, Instr instr_I) {
 int Assembler::PatchBranchlongOffset(Address pc, Instr instr_auipc,
                                      Instr instr_jalr, int32_t offset) {
   DCHECK(IsAuipc(instr_auipc));
-  DCHECK(IsJalr(instr_jalr));                             
+  DCHECK(IsJalr(instr_jalr));
   int32_t Hi20 = (((int32_t)offset + 0x800) >> 12);
   int32_t Lo12 = (int32_t)offset << 20 >> 20;
   CHECK(is_int32(offset));
@@ -2946,7 +2946,7 @@ Address Assembler::target_address_at(Address pc, Address constant_pool) {
       int32_t Lo12 = JalrOffset(*reinterpret_cast<Instr*>(pc + 4));
       return pc + Hi20 + Lo12;
     }
-    
+
   } else {
     return target_address_at(pc);
   }

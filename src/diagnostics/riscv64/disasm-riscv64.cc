@@ -225,7 +225,8 @@ void Decoder::PrintTarget(Instruction* instr) {
                                                instr->InstructionBits());
       const char* target =
           converter_.NameOfAddress(reinterpret_cast<byte*>(instr - 4) + imm);
-      out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, " -> %s", target);
+      out_buffer_pos_ +=
+          SNPrintF(out_buffer_ + out_buffer_pos_, " -> %s", target);
       return;
     }
   }
