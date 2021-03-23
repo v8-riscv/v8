@@ -3142,8 +3142,7 @@ void TurboAssembler::Ret(Condition cond, Register rs, const Operand& rt) {
   }
 }
 
-void TurboAssembler::GenPCRelativeJump(Register rd, int64_t imm32)
- {
+void TurboAssembler::GenPCRelativeJump(Register rd, int64_t imm32) {
   DCHECK(is_int32(imm32));
   int32_t Hi20 = (((int32_t)imm32 + 0x800) >> 12);
   int32_t Lo12 = (int32_t)imm32 << 20 >> 20;
@@ -3156,7 +3155,7 @@ void TurboAssembler::GenPCRelativeJumpAndLink(Register rd, int64_t imm32) {
   int32_t Hi20 = (((int32_t)imm32 + 0x800) >> 12);
   int32_t Lo12 = (int32_t)imm32 << 20 >> 20;
   auipc(rd, Hi20);  // Read PC + Hi20 into scratch.
-  jalr(rd, Lo12);     // jump PC + Hi20 + Lo12
+  jalr(rd, Lo12);   // jump PC + Hi20 + Lo12
 }
 
 void TurboAssembler::BranchLong(Label* L) {
