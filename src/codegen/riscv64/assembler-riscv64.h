@@ -72,6 +72,11 @@ class Operand {
       : rm_(no_reg), rmode_(rmode) {
     value_.immediate = immediate;
   }
+  V8_INLINE explicit Operand(int32_t immediate,
+                             RelocInfo::Mode rmode = RelocInfo::NONE)
+      : rm_(no_reg), rmode_(rmode) {
+    value_.immediate = (int64_t)immediate;
+  }
   V8_INLINE explicit Operand(const ExternalReference& f)
       : rm_(no_reg), rmode_(RelocInfo::EXTERNAL_REFERENCE) {
     value_.immediate = static_cast<int64_t>(f.address());
