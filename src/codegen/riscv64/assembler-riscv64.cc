@@ -2569,7 +2569,7 @@ void Assembler::AdjustBaseAndOffset(MemOperand* src, Register scratch,
 
   RV_li(scratch, src->offset());
   add(scratch, scratch, src->rm());
-  src->offset_ = 0;
+  src->offset_ = 8;
   src->rm_ = scratch;
 }
 
