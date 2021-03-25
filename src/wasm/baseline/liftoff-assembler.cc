@@ -203,7 +203,9 @@ class StackTransferRecipe {
       if (kind == kF64) register_move(dst)->kind = kF64;
       return;
     }
+    std::cout << "dst " << dst << " src " << src << std::endl;
     move_dst_regs_.set(dst);
+    std::cout << "move_dst_regs_ " << move_dst_regs_ << std::endl;
     ++*src_reg_use_count(src);
     *register_move(dst) = {src, kind};
   }
@@ -825,6 +827,7 @@ void PrepareStackTransfers(const ValueKindSig* sig,
         int reg_code = loc.AsRegister();
         LiftoffRegister reg =
             LiftoffRegister::from_external_code(rc, kind, reg_code);
+        std::cout << "reg " << reg << " " << reg_code << " " << rc << std::endl;
         param_regs->set(reg);
         if (is_gp_pair) {
           stack_transfers->LoadI64HalfIntoRegister(reg, slot, stack_offset,
@@ -995,9 +998,12 @@ void LiftoffAssembler::Move(LiftoffRegister dst, LiftoffRegister src,
     Move(dst.low_fp(), src.low_fp(), kind);
   } else if (dst.is_gp()) {
     Move(dst.gp(), src.gp(), kind);
-  } else {
+  } else if (dst.is_fp()){
     Move(dst.fp(), src.fp(), kind);
+  } else {
+    Move(dst.vp(), src.vp(), kind);
   }
+
 }
 
 void LiftoffAssembler::ParallelRegisterMove(

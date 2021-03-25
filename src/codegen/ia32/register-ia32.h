@@ -79,6 +79,7 @@ constexpr Register no_reg = Register::no_reg();
 constexpr bool kPadArguments = false;
 constexpr bool kSimpleFPAliasing = true;
 constexpr bool kSimdMaskRegisters = false;
+constexpr bool kHasVReg = false;
 
 enum DoubleCode {
 #define REGISTER_CODE(R) kDoubleCode_##R,

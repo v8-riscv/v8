@@ -960,6 +960,11 @@ double Simulator::get_fpu_register_double(int fpureg) const {
   return *bit_cast<double*>(&FPUregisters_[fpureg]);
 }
 
+__int128_t Simulator::get_vregister(int vreg) const {
+  DCHECK((vreg >= 0) && (vreg < kNumVRegisters));
+  return Vregister_[vreg];
+}
+
 // Runtime FP routines take up to two double arguments and zero
 // or one integer arguments. All are constructed here,
 // from fa0, fa1, and a0.
@@ -3376,6 +3381,143 @@ void Simulator::DecodeCBType() {
   }
 }
 
+void Simulator::DecodeRvvIVV() {
+  DCHECK_EQ(instr_.InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVV);
+  switch (instr_.InstructionBits() & kVTypeMask) {
+    case RO_V_VADD_VV: {
+      RVV_VI_VV_LOOP({ vd = vs1 + vs2; });
+      break;
+    }
+    default:
+      UNIMPLEMENTED_RISCV();
+      break;
+  }
+  set_rvv_vstart(0);
+}
+
+void Simulator::DecodeRvvIVI() {
+  DCHECK_EQ(instr_.InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVI);
+  switch (instr_.InstructionBits() & kVTypeMask) {
+    case RO_V_VADD_VI: {
+      RVV_VI_VI_LOOP({ vd = simm5 + vs2; })
+      break;
+    }
+    case RO_V_VMV_VI:
+      if (instr_.RvvVM()) {
+        UNIMPLEMENTED_RISCV();
+      } else {
+        RVV_VI_VVXI_MERGE_LOOP({
+          bool use_first = (Rvvelt<uint64_t>(0, (i / 64)) >> (i % 64)) & 0x1;
+          vd = use_first ? simm5 : vs2;
+          USE(vs1);
+          USE(rs1);
+        });
+      }
+      break;
+    default:
+      UNIMPLEMENTED_RISCV();
+      break;
+  }
+}
+
+void Simulator::DecodeRvvIVX() {
+  DCHECK_EQ(instr_.InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVX);
+  switch (instr_.InstructionBits() & kVTypeMask) {
+    case RO_V_VADD_VX: {
+      RVV_VI_VX_LOOP({ vd = rs1 + vs2; })
+      break;
+    }
+    case RO_V_VMV_VX:
+      if (instr_.RvvVM()) {
+        UNIMPLEMENTED_RISCV();
+      } else {
+        RVV_VI_VVXI_MERGE_LOOP({
+          bool use_first = (Rvvelt<uint64_t>(0, (i / 64)) >> (i % 64)) & 0x1;
+          vd = use_first ? rs1 : vs2;
+          USE(vs1);
+          USE(simm5);
+        });
+      }
+      break;
+    case RO_V_VSLIDEDOWN_VX:
+      UNIMPLEMENTED_RISCV();
+      break;
+    default:
+      UNIMPLEMENTED_RISCV();
+      break;
+  }
+}
+
+void Simulator::DecodeVType() {
+  switch (instr_.InstructionBits() & (kFunct3Mask | kBaseOpcodeMask)) {
+    case OP_IVV:
+      DecodeRvvIVV();
+      return;
+      break;
+    case OP_FVV:
+      UNIMPLEMENTED_RISCV();
+      return;
+      break;
+    case OP_MVV:
+      UNIMPLEMENTED_RISCV();
+      return;
+      break;
+    case OP_IVI:
+      DecodeRvvIVI();
+      return;
+      break;
+    case OP_IVX:
+      DecodeRvvIVX();
+      return;
+      break;
+    case OP_FVF:
+      UNIMPLEMENTED_RISCV();
+      return;
+      break;
+    case OP_MVX:
+      UNIMPLEMENTED_RISCV();
+      return;
+      break;
+  }
+  switch (instr_.InstructionBits() &
+          (kBaseOpcodeMask | kFunct3Mask | 0x80000000)) {
+    case RO_V_VSETVLI: {
+      uint64_t avl;
+      set_rvv_vtype(rvv_zimm());
+      if (rs1_reg() != zero_reg) {
+        avl = rs1();
+      } else if (rd_reg() != zero_reg) {
+        avl = ~0;
+      } else {
+        avl = rvv_vl();
+      }
+      avl = avl <= rvv_vlmax() ? avl : rvv_vlmax();
+      set_rvv_vl(avl);
+      set_rd(rvv_vl());
+      rvv_trace_status();
+      break;
+    }
+    case RO_V_VSETVL: {
+      uint64_t avl;
+      set_rvv_vtype(rs2());
+      if (rs1_reg() != zero_reg) {
+        avl = rs1();
+      } else if (rd_reg() != zero_reg) {
+        avl = ~0;
+      } else {
+        avl = rvv_vl();
+      }
+      avl = avl <= rvv_vlmax() ? avl : rvv_vlmax();
+      set_rvv_vl(avl);
+      set_rd(rvv_vl());
+      rvv_trace_status();
+      break;
+    }
+    default:
+      FATAL("Error: Unsupport on FILE:%s:%d.", __FILE__, __LINE__);
+      break;
+  }
+}
 // Executes the current instruction.
 void Simulator::InstructionDecode(Instruction* instr) {
   if (v8::internal::FLAG_check_icache) {
@@ -3397,6 +3539,11 @@ void Simulator::InstructionDecode(Instruction* instr) {
   }
 
   instr_ = instr;
+  if (::v8::internal::FLAG_trace_sim) {
+    PrintF("  0x%012" PRIxPTR "   %-44s   %s\n",
+           reinterpret_cast<intptr_t>(instr), buffer.begin(),
+           trace_buf_.begin());
+  }
   switch (instr_.InstructionType()) {
     case Instruction::kRType:
       DecodeRVRType();
@@ -3445,6 +3592,9 @@ void Simulator::InstructionDecode(Instruction* instr) {
       break;
     case Instruction::kCSType:
       DecodeCSType();
+      break;
+    case Instruction::kVType:
+      DecodeVType();
       break;
     default:
       if (::v8::internal::FLAG_trace_sim) {

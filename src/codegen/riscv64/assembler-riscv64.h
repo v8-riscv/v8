@@ -326,7 +326,6 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
   // Bits available for offset field in compressed branch
   static constexpr int kCBranchOffsetBits = 9;
-
   // Max offset for b instructions with 12-bit offset field (multiple of 2)
   static constexpr int kMaxBranchOffset = (1 << (13 - 1)) - 1;
 
@@ -641,6 +640,189 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_andi(Register rs1, uint8_t uimm6);
 
   // Privileged
+
+  // RVV
+  static int32_t GenZimm(VSew vsew, Vlmul vlmul, TailAgnosticType tail = tu,
+                         MaskAgnosticType mask = mu) {
+    return (mask << 7) | (tail << 6) | ((vsew & 0x7) << 3) | (vlmul& 0x7);
+  }
+
+  void vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
+               TailAgnosticType tail = tu, MaskAgnosticType mask = mu);
+
+  inline void vsetvlmax(Register rd, VSew vsew, Vlmul vlmul,
+                        TailAgnosticType tail = tu,
+                        MaskAgnosticType mask = mu) {
+    vsetvli(rd, zero_reg, vsew, vlmul, tu, mu);
+  }
+
+  inline void vsetvl(VSew vsew, Vlmul vlmul, TailAgnosticType tail = tu,
+                        MaskAgnosticType mask = mu) {
+    vsetvli(zero_reg, zero_reg, vsew, vlmul, tu, mu);
+  }
+
+  void vsetvl(Register rd, Register rs1, Register rs2);
+
+  void vl(VRegister vd, Register rs1, uint8_t lumop, VSew vsew, MaskType mask);
+  void vls(VRegister vd, Register rs1, Register rs2, VSew vsew, MaskType mask);
+  void vlx(VRegister vd, Register rs1, VRegister vs3, VSew vsew, MaskType mask);
+
+  void vs(VRegister vd, Register rs1, uint8_t sumop, VSew vsew, MaskType mask);
+  void vss(VRegister vd, Register rs1, Register rs2, VSew vsew, MaskType mask);
+  void vsx(VRegister vd, Register rs1, VRegister vs3, VSew vsew, MaskType Type);
+
+  void vsu(VRegister vd, Register rs1, VRegister vs3, VSew vsew, MaskType Type);
+  void vlseg2(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
+              MaskType mask);
+  void vlseg3(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
+              MaskType mask);
+  void vlseg4(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
+              MaskType mask);
+  void vlseg5(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
+              MaskType mask);
+  void vlseg6(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
+              MaskType mask);
+  void vlseg7(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
+              MaskType mask);
+  void vlseg8(VRegister vd, Register rs1, uint8_t lumop, VSew vsew,
+              MaskType mask);
+
+  void vsseg2(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
+              MaskType mask);
+  void vsseg3(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
+              MaskType mask);
+  void vsseg4(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
+              MaskType mask);
+  void vsseg5(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
+              MaskType mask);
+  void vsseg6(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
+              MaskType mask);
+  void vsseg7(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
+              MaskType mask);
+  void vsseg8(VRegister vd, Register rs1, uint8_t sumop, VSew vsew,
+              MaskType mask);
+
+  void vlsseg2(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+  void vlsseg3(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+  void vlsseg4(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+  void vlsseg5(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+  void vlsseg6(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+  void vlsseg7(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+  void vlsseg8(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+
+  void vssseg2(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+  void vssseg3(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+  void vssseg4(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+  void vssseg5(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+  void vssseg6(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+  void vssseg7(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+  void vssseg8(VRegister vd, Register rs1, Register rs2, VSew vsew,
+               MaskType mask);
+
+  void vlxseg2(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+  void vlxseg3(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+  void vlxseg4(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+  void vlxseg5(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+  void vlxseg6(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+  void vlxseg7(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+  void vlxseg8(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+
+  void vsxseg2(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+  void vsxseg3(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+  void vsxseg4(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+  void vsxseg5(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+  void vsxseg6(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+  void vsxseg7(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+  void vsxseg8(VRegister vd, Register rs1, VRegister vs2, VSew vsew,
+               MaskType mask);
+
+  // RVV Vector Arithmetic Instruction
+
+  void vmv_vv(VRegister vd, VRegister vs1) {
+    GenInstrV(VMV_FUNCT6, OP_IVV, vd, vs1, v0, NoMask);
+  }
+
+  void vmv_vx(VRegister vd, Register rs1) {
+    GenInstrV(VMV_FUNCT6, OP_IVX, vd, rs1, v0, NoMask);
+  }
+
+  void vmv_vi(VRegister vd, uint8_t simm5) {
+    GenInstrV(VMV_FUNCT6, vd, simm5, v0, NoMask);
+  }
+
+  void vmv_xs(Register rd, VRegister vs2) {
+    GenInstrV(VWXUNARY0_FUNCT6, OP_MVV, rd, v0, vs2, NoMask);
+  }
+
+  void vmv_sx(VRegister vd, Register rs1) {
+    GenInstrV(VRXUNARY0_FUNCT6, OP_MVX, vd, rs1, v0, NoMask);
+  }
+
+  void vmerge_vv(VRegister vd, VRegister vs1, VRegister vs2) {
+    GenInstrV(VMV_FUNCT6, OP_IVV, vd, vs1, vs2, Mask);
+  }
+
+  void vmerge_vx(VRegister vd, Register rs1, VRegister vs2) {
+    GenInstrV(VMV_FUNCT6, OP_IVX, vd, rs1, vs2, Mask);
+  }
+
+  void vmerge_vi(VRegister vd, uint8_t imm5, VRegister vs2) {
+    GenInstrV(VMV_FUNCT6, vd, imm5, vs2, Mask);
+  }
+
+#define DEFINE_OPIVV(name, funct6)                           \
+  void name##_vv(VRegister vd, VRegister vs1, VRegister vs2, \
+                 MaskType mask = NoMask) {                   \
+    GenInstrV(funct6, OP_IVV, vd, vs1, vs2, mask);           \
+  }
+
+#define DEFINE_OPIVX(name, funct6)                          \
+  void name##_vx(VRegister vd, Register rs1, VRegister vs2, \
+                 MaskType mask = NoMask) {                  \
+    GenInstrV(funct6, OP_IVX, vd, rs1, vs2, mask);          \
+  }
+
+#define DEFINE_OPIVI(name, funct6)                          \
+  void name##_vi(VRegister vd, uint8_t imm5, VRegister vs2, \
+                 MaskType mask = NoMask) {                  \
+    GenInstrV(funct6, vd, imm5, vs2, mask);                 \
+  }
+
+  DEFINE_OPIVV(vadd, VADD_FUNCT6)
+  DEFINE_OPIVX(vadd, VADD_FUNCT6)
+  DEFINE_OPIVI(vadd, VADD_FUNCT6)
+
+  DEFINE_OPIVX(vslidedown, VSLIDEDOWN_FUNCT6)
+  DEFINE_OPIVI(vslidedown, VSLIDEDOWN_FUNCT6)
+  DEFINE_OPIVX(vslideup, VSLIDEUP_FUNCT6)
+  DEFINE_OPIVI(vslideup, VSLIDEUP_FUNCT6)
+
   void uret();
   void sret();
   void mret();
@@ -909,9 +1091,38 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     constpool_.RecordEntry(data, rmode);
   }
 
+  class VectorUnit {
+   public:
+    VectorUnit(Assembler* assm) : assm_(assm) {}
+
+    void set(Register rd, VSew sew, Vlmul lmul) {
+      if (sew != sew_ || lmul != lmul_) {
+        sew_ = sew;
+        lmul_ = lmul;
+        assm_->vsetvlmax(rd, sew_, lmul_);
+      }
+    }
+
+    void set(VSew sew, Vlmul lmul) {
+      if (sew != sew_ || lmul != lmul_) {
+        sew_ = sew;
+        lmul_ = lmul;
+        assm_->vsetvl(sew_, lmul_);
+      }
+    }
+
+   private:
+    VSew sew_ = E8;
+    Vlmul lmul_ = m1;
+    Assembler* assm_;
+  };
+
+  VectorUnit VU;
+
  protected:
-  // Readable constants for base and offset adjustment helper, these indicate if
-  // aside from offset, another value like offset + 4 should fit into int16.
+  // Readable constants for base and offset adjustment helper, these
+  // indicate if aside from offset, another value like offset + 4 should fit
+  // into int16.
   enum class OffsetAccessType : bool {
     SINGLE_ACCESS = false,
     TWO_ACCESSES = true
@@ -1113,6 +1324,42 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void GenInstrCB(uint8_t funct3, Opcode opcode, Register rs1, uint8_t uimm8);
   void GenInstrCBA(uint8_t funct3, uint8_t funct2, Opcode opcode, Register rs1,
                    uint8_t uimm6);
+
+  // ----------------------------RVV------------------------------------------
+  // vsetvl
+  void GenInstrV(Register rd, Register rs1, Register rs2);
+  // vsetvli
+  void GenInstrV(Register rd, Register rs1, uint32_t zimm);
+  // OPIVV OPFVV OPMVV
+  void GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd, VRegister vs1,
+                 VRegister vs2, MaskType mask);
+  // OPMVV OPFVV
+  void GenInstrV(uint8_t funct6, Opcode opcode, Register rd, VRegister vs1,
+                 VRegister vs2, MaskType mask);
+
+  // OPIVX OPFVF OPMVX
+  void GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd, Register rs1,
+                 VRegister vs2, MaskType mask);
+
+  // OPMVX
+  void GenInstrV(uint8_t funct6, Register rd, Register rs1, VRegister vs2,
+                 MaskType mask);
+  // OPIVI
+  void GenInstrV(uint8_t funct6, VRegister vd, uint8_t simm5, VRegister vs2,
+                 MaskType mask);
+
+  // VL VS
+  void GenInstrV(Opcode opcode, uint8_t width, VRegister vd, Register rs1,
+                 uint8_t umop, MaskType mask, uint8_t IsMop, bool IsMew,
+                 uint8_t Nf);
+
+  void GenInstrV(Opcode opcode, uint8_t width, VRegister vd, Register rs1,
+                 Register rs2, MaskType mask, uint8_t IsMop, bool IsMew,
+                 uint8_t Nf);
+  // VL VS AMO
+  void GenInstrV(Opcode opcode, uint8_t width, VRegister vd, Register rs1,
+                 VRegister vs2, MaskType mask, uint8_t IsMop, bool IsMew,
+                 uint8_t Nf);
 
   // ----- Instruction class templates match those in LLVM's RISCVInstrInfo.td
   void GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,

@@ -299,6 +299,42 @@ class Simulator : public SimulatorBase {
     kNumFPURegisters
   };
 
+  enum VRegister {
+    v0,
+    v1,
+    v2,
+    v3,
+    v4,
+    v5,
+    v6,
+    v7,
+    v8,
+    v9,
+    v10,
+    v11,
+    v12,
+    v13,
+    v14,
+    v15,
+    v16,
+    v17,
+    v18,
+    v19,
+    v20,
+    v21,
+    v22,
+    v23,
+    v24,
+    v25,
+    v26,
+    v27,
+    v28,
+    v29,
+    v30,
+    v31,
+    kNumVRegisters
+  };
+
   explicit Simulator(Isolate* isolate);
   ~Simulator();
 
@@ -337,6 +373,57 @@ class Simulator : public SimulatorBase {
 
   void set_fflags(uint32_t flags) { set_csr_bits(csr_fflags, flags); }
   void clear_fflags(int32_t flags) { clear_csr_bits(csr_fflags, flags); }
+
+  // RVV CSR
+  __int128_t get_vregister(int vreg) const;
+  inline uint64_t rvv_vlen() const { return kRvvVLEN; }
+  inline uint64_t rvv_vtype() const { return vtype_; }
+  inline uint64_t rvv_vl() const { return vl_; }
+  inline uint64_t rvv_vstart() const { return vstart_; }
+  inline uint64_t rvv_vxsat() const { return vxsat_; }
+  inline uint64_t rvv_vxrm() const { return vxrm_; }
+  inline uint64_t rvv_vcsr() const { return vcsr_; }
+  inline uint64_t rvv_vlenb() const { return vlenb_; }
+  inline uint32_t rvv_zimm() const { return instr_.Rvvzimm(); }
+  inline uint32_t rvv_vlmul() const { return (rvv_vtype() & 0x7); }
+  inline uint32_t rvv_vsew() const { return ((rvv_vtype() >> 3) & 0x7); }
+
+  inline const char* rvv_sew_s() const {
+    uint32_t vsew = rvv_vsew();
+    switch (vsew) {
+#define CAST_VSEW(name) \
+  case name:            \
+    return #name;
+      RVV_SEW(CAST_VSEW)
+      default:
+        return "unknown";
+#undef CAST_VSEW
+    }
+  }
+  inline const char* rvv_lmul_s() const {
+    uint32_t vlmul = rvv_vlmul();
+    switch (vlmul) {
+#define CAST_VLMUL(name) \
+  case name:             \
+    return #name;
+      RVV_LMUL(CAST_VLMUL)
+      default:
+        return "unknown";
+#undef CAST_VSEW
+    }
+  }
+
+  inline uint32_t rvv_sew() const {
+    DCHECK_EQ(rvv_vsew() & (~0x7), 0x0);
+    return (0x1 << rvv_vsew()) * 8;
+  }
+  inline uint64_t rvv_vlmax() const {
+    if ((rvv_vlmul() & 0b100) != 0) {
+      return (rvv_vlen() / rvv_sew()) >> (rvv_vlmul() & 0b11);
+    } else {
+      return (rvv_vlen() / rvv_sew()) << rvv_vlmul();
+    }
+  }
 
   inline uint32_t get_dynamic_rounding_mode();
   inline bool test_fflags_bits(uint32_t mask);
@@ -546,6 +633,311 @@ class Simulator : public SimulatorBase {
     }
   }
 
+  // RVV
+  // The following code about RVV was based from:
+  //   https://github.com/riscv/riscv-isa-sim
+  // Copyright (c) 2010-2017, The Regents of the University of California
+  // (Regents).  All Rights Reserved.
+
+  // Redistribution and use in source and binary forms, with or without
+  // modification, are permitted provided that the following conditions are met:
+  // 1. Redistributions of source code must retain the above copyright
+  //    notice, this list of conditions and the following disclaimer.
+  // 2. Redistributions in binary form must reproduce the above copyright
+  //    notice, this list of conditions and the following disclaimer in the
+  //    documentation and/or other materials provided with the distribution.
+  // 3. Neither the name of the Regents nor the
+  //    names of its contributors may be used to endorse or promote products
+  //    derived from this software without specific prior written permission.
+
+  // IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT,
+  // SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS,
+  // ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF
+  // REGENTS HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+  // REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED
+  // TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+  // PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED
+  // HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE
+  // MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+  template <uint64_t N>
+  struct type_usew_t;
+  template <>
+  struct type_usew_t<8> {
+    using type = uint8_t;
+  };
+
+  template <>
+  struct type_usew_t<16> {
+    using type = uint16_t;
+  };
+
+  template <>
+  struct type_usew_t<32> {
+    using type = uint32_t;
+  };
+
+  template <>
+  struct type_usew_t<64> {
+    using type = uint64_t;
+  };
+
+  template <uint64_t N>
+  struct type_sew_t;
+
+  template <>
+  struct type_sew_t<8> {
+    using type = int8_t;
+  };
+
+  template <>
+  struct type_sew_t<16> {
+    using type = int16_t;
+  };
+
+  template <>
+  struct type_sew_t<32> {
+    using type = int32_t;
+  };
+
+  template <>
+  struct type_sew_t<64> {
+    using type = int64_t;
+  };
+
+  template <>
+  struct type_sew_t<128> {
+    using type = __int128_t;
+  };
+
+#define VV_PARAMS(x)                                                       \
+  type_sew_t<x>::type& vd =                                                \
+      Rvvelt<type_sew_t<x>::type>(rvv_vd_reg(), i, true);                  \
+  type_sew_t<x>::type vs1 = Rvvelt<type_sew_t<x>::type>(rvv_vs1_reg(), i); \
+  type_sew_t<x>::type vs2 = Rvvelt<type_sew_t<x>::type>(rvv_vs2_reg(), i);
+
+#define VX_PARAMS(x)                                                        \
+  type_sew_t<x>::type& vd =                                                 \
+      Rvvelt<type_sew_t<x>::type>(rvv_vd_reg(), i, true);                   \
+  type_sew_t<x>::type rs1 = (type_sew_t<x>::type)(get_register(rs1_reg())); \
+  type_sew_t<x>::type vs2 = Rvvelt<type_sew_t<x>::type>(rvv_vs2_reg(), i);
+
+#define VI_PARAMS(x)                                                    \
+  type_sew_t<x>::type& vd =                                             \
+      Rvvelt<type_sew_t<x>::type>(rvv_vd_reg(), i, true);               \
+  type_sew_t<x>::type simm5 = (type_sew_t<x>::type)(instr_.RvvSimm5()); \
+  type_sew_t<x>::type vs2 = Rvvelt<type_sew_t<x>::type>(rvv_vs2_reg(), i);
+
+#define VXI_PARAMS(x)                                                       \
+  type_sew_t<x>::type& vd =                                                 \
+      Rvvelt<type_sew_t<x>::type>(rvv_vd_reg(), i, true);                   \
+  type_sew_t<x>::type vs1 = Rvvelt<type_sew_t<x>::type>(rvv_vs1_reg(), i);  \
+  type_sew_t<x>::type vs2 = Rvvelt<type_sew_t<x>::type>(rvv_vs2_reg(), i);  \
+  type_sew_t<x>::type rs1 = (type_sew_t<x>::type)(get_register(rs1_reg())); \
+  type_sew_t<x>::type simm5 = (type_sew_t<x>::type)(instr_.RvvSimm5());
+
+#define RVV_VI_GENERAL_LOOP_BASE \
+  for (uint64_t i = rvv_vstart(); i < rvv_vl(); i++) {
+
+#define RVV_VI_LOOP_END \
+  set_rvv_vstart(0);    \
+  }
+
+  inline void rvv_trace_vd() {
+    if (::v8::internal::FLAG_trace_sim) {
+      PrintF("\t%s:0x%016" PRIx64 "%016" PRIx64 "\n",
+             v8::internal::VRegisters::Name((int)rvv_vd_reg()),
+             (uint64_t)(get_vregister((int)rvv_vd_reg()) >> 64),
+             (uint64_t)get_vregister((int)rvv_vd_reg()));
+    }
+  }
+
+  inline void rvv_trace_vs1() {
+    if (::v8::internal::FLAG_trace_sim) {
+      PrintF("\t%s:0x%016" PRIx64 "%016" PRIx64 "\n",
+             v8::internal::VRegisters::Name((int)rvv_vs1_reg()),
+             (uint64_t)(get_vregister((int)rvv_vs1_reg()) >> 64),
+             (uint64_t)get_vregister((int)rvv_vs1_reg()));
+    }
+  }
+
+  inline void rvv_trace_vs2() {
+    if (::v8::internal::FLAG_trace_sim) {
+      PrintF("\t%s:0x%016" PRIx64 "%016" PRIx64 "\n",
+             v8::internal::VRegisters::Name((int)rvv_vs2_reg()),
+             (uint64_t)(get_vregister((int)rvv_vs2_reg()) >> 64),
+             (uint64_t)get_vregister((int)rvv_vs2_reg()));
+    }
+  }
+  inline void rvv_trace_v0() {
+    if (::v8::internal::FLAG_trace_sim) {
+      PrintF("\t%s:0x%016" PRIx64 "%016" PRIx64 "\n",
+             v8::internal::VRegisters::Name(v0),
+             (uint64_t)(get_vregister(v0) >> 64), (uint64_t)get_vregister(v0));
+    }
+  }
+
+  inline void rvv_trace_rs1() {
+    if (::v8::internal::FLAG_trace_sim) {
+      PrintF("\t%s:0x%016" PRIx64 "\n",
+             v8::internal::Registers::Name((int)rs1_reg()),
+             (uint64_t)(get_register(rs1_reg())));
+    }
+  }
+  inline void rvv_trace_status() {
+    if (::v8::internal::FLAG_trace_sim) {
+      PrintF("\tsew:%s lmul:%s vstart:%lu vl:%lu\n", rvv_sew_s(), rvv_lmul_s(),
+             rvv_vstart(), rvv_vl());
+    }
+  }
+
+#define RVV_VI_LOOP_MASK_SKIP(BODY) \
+  if (instr_.RvvVM() == 0) {        \
+    UNIMPLEMENTED();                \
+  }
+
+#define RVV_VI_VV_LOOP(BODY)       \
+  RVV_VI_GENERAL_LOOP_BASE         \
+  RVV_VI_LOOP_MASK_SKIP()          \
+  if (rvv_vsew() == E8) {          \
+    VV_PARAMS(8);                  \
+    BODY                           \
+  } else if (rvv_vsew() == E16) {  \
+    VV_PARAMS(16);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E32) {  \
+    VV_PARAMS(32);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E64) {  \
+    VV_PARAMS(64);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E128) { \
+    VV_PARAMS(128);                \
+    BODY                           \
+  } else {                         \
+    UNREACHABLE();                 \
+  }                                \
+  RVV_VI_LOOP_END                  \
+  rvv_trace_vd();                  \
+  rvv_trace_vs1();                 \
+  rvv_trace_vs2();                 \
+  rvv_trace_status();
+
+#define RVV_VI_VX_LOOP(BODY)       \
+  RVV_VI_GENERAL_LOOP_BASE         \
+  RVV_VI_LOOP_MASK_SKIP()          \
+  if (rvv_vsew() == E8) {          \
+    VX_PARAMS(8);                  \
+    BODY                           \
+  } else if (rvv_vsew() == E16) {  \
+    VX_PARAMS(16);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E32) {  \
+    VX_PARAMS(32);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E64) {  \
+    VX_PARAMS(64);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E128) { \
+    VX_PARAMS(128);                \
+    BODY                           \
+  } else {                         \
+    UNREACHABLE();                 \
+  }                                \
+  RVV_VI_LOOP_END                  \
+  rvv_trace_vd();                  \
+  rvv_trace_rs1();                 \
+  rvv_trace_vs2();                 \
+  rvv_trace_status();
+
+#define RVV_VI_VI_LOOP(BODY)       \
+  RVV_VI_GENERAL_LOOP_BASE         \
+  RVV_VI_LOOP_MASK_SKIP()          \
+  if (rvv_vsew() == E8) {          \
+    VI_PARAMS(8);                  \
+    BODY                           \
+  } else if (rvv_vsew() == E16) {  \
+    VI_PARAMS(16);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E32) {  \
+    VI_PARAMS(32);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E64) {  \
+    VI_PARAMS(64);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E128) { \
+    VI_PARAMS(128);                \
+    BODY                           \
+  } else {                         \
+    UNREACHABLE();                 \
+  }                                \
+  RVV_VI_LOOP_END                  \
+  rvv_trace_vd();                  \
+  rvv_trace_vs2();                 \
+  rvv_trace_status();
+
+#define RVV_VI_VVXI_MERGE_LOOP(BODY) \
+  RVV_VI_GENERAL_LOOP_BASE           \
+  if (rvv_vsew() == E8) {            \
+    VXI_PARAMS(8);                   \
+    BODY;                            \
+  } else if (rvv_vsew() == E16) {    \
+    VXI_PARAMS(16);                  \
+    BODY;                            \
+  } else if (rvv_vsew() == E32) {    \
+    VXI_PARAMS(32);                  \
+    BODY;                            \
+  } else if (rvv_vsew() == E64) {    \
+    VXI_PARAMS(64);                  \
+    BODY;                            \
+  } else if (rvv_vsew() == E128) {   \
+    VXI_PARAMS(128);                 \
+    BODY                             \
+  }                                  \
+  RVV_VI_LOOP_END                    \
+  rvv_trace_vd();                    \
+  rvv_trace_rs1();                   \
+  rvv_trace_vs2();                   \
+  rvv_trace_v0();                    \
+  rvv_trace_status();
+
+  template <class T>
+  T& Rvvelt(reg_t vReg, uint64_t n, bool is_write = false) {
+    CHECK(rvv_sew() != 0);
+    CHECK((rvv_vlen() >> 3) / sizeof(T) > 0);
+    reg_t elts_per_reg = (rvv_vlen() >> 3) / (sizeof(T));
+    vReg += n / elts_per_reg;
+    n = n % elts_per_reg;
+    T* regStart = (T*)((char*)Vregister_ + vReg * (rvv_vlen() >> 3));
+    return regStart[n];
+  }
+
+  inline int32_t rvv_vs1_reg() { return instr_.Vs1Value(); }
+  inline reg_t rvv_vs1() { UNIMPLEMENTED(); }
+  inline int32_t rvv_vs2_reg() { return instr_.Vs2Value(); }
+  inline reg_t rvv_vs2() { UNIMPLEMENTED(); }
+  inline int32_t rvv_vd_reg() { return instr_.VdValue(); }
+  inline reg_t rvv_vd() { UNIMPLEMENTED(); }
+  inline void set_vrd() { UNIMPLEMENTED(); }
+
+  inline void set_rvv_vtype(uint64_t value, bool trace = true) {
+    vtype_ = value;
+  }
+  inline void set_rvv_vl(uint64_t value, bool trace = true) {
+    vl_ = value;
+  }
+  inline void set_rvv_vstart(uint64_t value, bool trace = true) {
+    vstart_ = value;
+  }
+  inline void set_rvv_vxsat(uint64_t value, bool trace = true) {
+    vxsat_ = value;
+  }
+  inline void set_rvv_vxrm(uint64_t value, bool trace = true) { vxrm_ = value; }
+  inline void set_rvv_vcsr(uint64_t value, bool trace = true) { vcsr_ = value; }
+  inline void set_rvv_vlenb(uint64_t value, bool trace = true) {
+    vlenb_ = value;
+  }
+
   template <typename T, typename Func>
   inline T CanonicalizeFPUOp3(Func fn) {
     DCHECK(std::is_floating_point<T>::value);
@@ -629,6 +1021,10 @@ class Simulator : public SimulatorBase {
   void DecodeCSType();
   void DecodeCJType();
   void DecodeCBType();
+  void DecodeVType();
+  void DecodeRvvIVV();
+  void DecodeRvvIVI();
+  void DecodeRvvIVX();
 
   // Used for breakpoints and traps.
   void SoftwareInterrupt();
@@ -695,6 +1091,10 @@ class Simulator : public SimulatorBase {
   // Floating-point control and status register.
   uint32_t FCSR_;
 
+  // RVV registers
+  __int128_t Vregister_[kNumVRegisters];
+  static_assert(sizeof(__int128_t) == kRvvVLEN / 8, "unmatch vlen");
+  uint64_t vstart_, vxsat_, vxrm_, vcsr_, vtype_, vl_, vlenb_;
   // Simulator support.
   // Allocate 1MB for stack.
   size_t stack_size_;

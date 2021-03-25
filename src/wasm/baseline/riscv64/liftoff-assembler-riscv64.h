@@ -648,6 +648,12 @@ void LiftoffAssembler::Move(DoubleRegister dst, DoubleRegister src,
   TurboAssembler::Move(dst, src);
 }
 
+void LiftoffAssembler::Move(Simd128Register dst, Simd128Register src,
+                            ValueKind kind) {
+  DCHECK_NE(dst, src);
+  TurboAssembler::vmv_vv(dst, src);
+}
+
 void LiftoffAssembler::Spill(int offset, LiftoffRegister reg, ValueKind kind) {
   RecordUsedSpillOffset(offset);
   MemOperand dst = liftoff::GetStackSlot(offset);
@@ -1373,7 +1379,8 @@ void LiftoffAssembler::emit_i32x4_splat(LiftoffRegister dst,
 
 void LiftoffAssembler::emit_i64x2_splat(LiftoffRegister dst,
                                         LiftoffRegister src) {
-  bailout(kSimd, "emit_i64x2_splat");
+  VU.set(t0, E64, m1);
+  vmv_vx(dst.vp(), src.gp());
 }
 
 void LiftoffAssembler::emit_i64x2_eq(LiftoffRegister dst, LiftoffRegister lhs,
@@ -1679,7 +1686,8 @@ void LiftoffAssembler::emit_i8x16_shri_u(LiftoffRegister dst,
 
 void LiftoffAssembler::emit_i8x16_add(LiftoffRegister dst, LiftoffRegister lhs,
                                       LiftoffRegister rhs) {
-  bailout(kSimd, "emit_i8x16_add");
+  VU.set(t0, E8, m1);
+  vadd_vv(dst.vp(), lhs.vp(), rhs.vp());
 }
 
 void LiftoffAssembler::emit_i8x16_add_sat_s(LiftoffRegister dst,
@@ -2316,7 +2324,9 @@ void LiftoffAssembler::emit_i16x8_extract_lane_u(LiftoffRegister dst,
 void LiftoffAssembler::emit_i32x4_extract_lane(LiftoffRegister dst,
                                                LiftoffRegister lhs,
                                                uint8_t imm_lane_idx) {
-  bailout(kSimd, "emit_i32x4_extract_lane");
+  VU.set(t0, E64, m1);
+  vslidedown_vi(v31, imm_lane_idx, lhs.vp());
+  vmv_xs(dst.gp(), v31);
 }
 
 void LiftoffAssembler::emit_i64x2_extract_lane(LiftoffRegister dst,
@@ -2362,7 +2372,10 @@ void LiftoffAssembler::emit_i64x2_replace_lane(LiftoffRegister dst,
                                                LiftoffRegister src1,
                                                LiftoffRegister src2,
                                                uint8_t imm_lane_idx) {
-  bailout(kSimd, "emit_i64x2_replace_lane");
+  VU.set(t0, E64, m1);
+  li(t0, 0x1 << imm_lane_idx);
+  vmv_sx(v0, t0);
+  vmerge_vx(dst.vp(), src2.gp(), src1.vp());
 }
 
 void LiftoffAssembler::emit_f32x4_replace_lane(LiftoffRegister dst,
