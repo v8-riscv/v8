@@ -134,7 +134,7 @@
    'proposals/tail-call/f32': [SKIP],
 
    # These tests need larger stack size on simulator.
-   'skip-stack-guard-page': '--sim-stack-size=8192',
+   'skip-stack-guard-page': [SKIP],
    'proposals/tail-call/skip-stack-guard-page': '--sim-stack-size=8192',
 
    # SIMD is not fully implemented yet.

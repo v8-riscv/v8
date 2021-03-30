@@ -777,6 +777,7 @@
   # Slow in release mode on RISC-V.
   'compiler/regress-stacktrace-methods': [PASS, SLOW],
   'array-splice': [PASS, SLOW],
+  'stack-traces-overflow': [SKIP],
 
   # Long running test.
   'string-indexof-2': [PASS, SLOW],
