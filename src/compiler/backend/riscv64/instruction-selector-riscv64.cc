@@ -1878,8 +1878,11 @@ void VisitWord64Compare(InstructionSelector* selector, Node* node,
 void EmitWordCompareZero(InstructionSelector* selector, Node* value,
                          FlagsContinuation* cont) {
   RiscvOperandGenerator g(selector);
+  /*
   selector->EmitWithContinuation(kRiscvCmp, g.UseRegister(value),
                                  g.TempImmediate(0), cont);
+                                 */
+  selector->EmitWithContinuation(kRiscvCmpZero, g.UseRegister(value), cont);
 }
 
 void VisitAtomicLoad(InstructionSelector* selector, Node* node,
