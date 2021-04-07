@@ -404,6 +404,12 @@ void LiftoffAssembler::LoadTaggedPointerFromInstance(Register dst,
   LoadFromInstance(dst, instance, offset, kTaggedSize);
 }
 
+void LiftoffAssembler::LoadFullPointer(Register dst, Register src_addr,
+                                       int32_t offset_imm) {
+  MemOperand src_op = liftoff::GetMemOp(this, src_addr, no_reg, offset_imm);
+  Ld(dst, src_op);
+}
+
 void LiftoffAssembler::SpillInstance(Register instance) {
   Sd(instance, liftoff::GetInstanceOperand());
 }
