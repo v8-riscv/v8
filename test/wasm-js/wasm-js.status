@@ -25,8 +25,8 @@
   'proposals/reference-types/limits': [SKIP],
   'proposals/bulk-memory-operations/limits': [SKIP],
   'proposals/js-types/limits': [SKIP],
-  # TODO(wasm): Update memory limit.
-  'limits': [FAIL],
+  'proposals/simd/limits': [SKIP],
+  'proposals/memory64/limits': [SKIP],
 }], # ALWAYS
 
 ['arch == s390 or arch == s390x or system == aix', {
