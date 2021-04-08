@@ -1866,6 +1866,27 @@ void TurboAssembler::RoundHelper(FPURegister dst, FPURegister src,
       fmv_s(dst, src);
     }
   }
+  {
+    Label not_NaN;
+    UseScratchRegisterScope temps2(this);
+    Register scratch = temps2.Acquire();
+    //  According to
+    //  wasm-spec:https://webassembly.github.io/spec/core/exec/numerics.html#op-ffloor
+    //  feq_d will set scratch to 0 if src is a NaN. If src is not a NaN, we
+    //  branch to the label and do nothing, but if it is, fmin_d will set dst to
+    //  the canonical NaN.
+    //  And js-spec only request  result is NaN.
+    if (std::is_same<F, double>::value) {
+      feq_d(scratch, src, src);
+      bnez(scratch, &not_NaN);
+      fmin_d(dst, src, src);
+    } else {
+      feq_s(scratch, src, src);
+      bnez(scratch, &not_NaN);
+      fmin_s(dst, src, src);
+    }
+    bind(&not_NaN);
+  }
 
   // If real exponent (i.e., t6 - kFloatExponentBias) is greater than
   // kFloat32MantissaBits, it means the floating-point value has no fractional
@@ -4529,12 +4550,10 @@ void TurboAssembler::ResetSpeculationPoisonRegister() {
 void TurboAssembler::CallForDeoptimization(Builtins::Name target, int,
                                            Label* exit, DeoptimizeKind kind,
                                            Label* ret, Label*) {
-  UseScratchRegisterScope temps(this);
   BlockTrampolinePoolScope block_trampoline_pool(this);
-  Register scratch = temps.Acquire();
-  Ld(scratch,
+  Ld(t6,
      MemOperand(kRootRegister, IsolateData::builtin_entry_slot_offset(target)));
-  Call(scratch);
+  Call(t6);
   DCHECK_EQ(SizeOfCodeGeneratedSince(exit),
             (kind == DeoptimizeKind::kLazy)
                 ? Deoptimizer::kLazyDeoptExitSize
