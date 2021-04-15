@@ -144,9 +144,6 @@
    # SIMD is not fully implemented yet.
    'proposals/simd/*': [SKIP],
 
-   # See issue #403
-   'proposals/js-types/exports': [SKIP],
-   'proposals/js-types/imports': [SKIP],
 
    # riscv64 don't implemented some wasm atomic func
    'left-to-right': [SKIP],
