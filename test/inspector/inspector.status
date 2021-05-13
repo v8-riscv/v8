@@ -131,7 +131,7 @@
   'debugger/wasm-step-after-trap': [SKIP],
 
   # https://github.com/riscv/v8/issues/490
-  'cpu-profiler/console-profile-wasm': [SKIP],
+  'cpu-profiler/*': [SKIP],
 }],  # 'arch == riscv64'
 
 ['arch == riscv64 and variant == stress_incremental_marking', {

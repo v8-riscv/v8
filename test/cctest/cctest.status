@@ -408,6 +408,8 @@
   'test-api/InterceptorCallICFastApi_TrivialSignatureWithProfiler': [SKIP],
   'test-api/LoadICFastApi_DirectCall_GCMoveStubWithProfiler': [SKIP],
   'test-api/SimpleCallbackWithProfiler': [SKIP],
+  'test-api/FastReturnValuesWithProfiler': [SKIP],
+  'test-profile-generator/RecordStackTraceAtStartProfiling': [SKIP],
   'test-cpu-profiler/*': [SKIP],
 
 }],  # 'arch == riscv64'
