@@ -1505,6 +1505,7 @@ TEST(RVC_JUMP) {
 
 TEST(RVC_CB) {
   // Test RV64C extension CI type instructions.
+  FLAG_riscv_c_extension = true;
   CcTest::InitializeVM();
 
   // Test c.srai
@@ -1530,6 +1531,7 @@ TEST(RVC_CB) {
 }
 
 TEST(RVC_CB_BRANCH) {
+  FLAG_riscv_c_extension = true;
   // Test floating point compare and
   // branch instructions.
   CcTest::InitializeVM();
