@@ -556,19 +556,31 @@ void Assembler::target_at_put(int pos, int target_pos, bool is_internal) {
       DCHECK(IsJalr(instr_I) || IsAddi(instr_I));
 
       int64_t offset = target_pos - pos;
-      DCHECK(is_int32(offset));
+      if (is_int21(offset) && IsJalr(instr_I)) {
+        DCHECK(is_int21(offset) && ((offset & 1) == 0));
+        Instr instr = JAL | (zero_reg.code() << kRdShift) |
+                      ((int32_t)offset & 0xff000) |          // bits 19-12
+                      (((int32_t)offset & 0x800) << 9) |     // bit  11
+                      (((int32_t)offset & 0x7fe) << 20) |    // bits 10-1
+                      (((int32_t)offset & 0x100000) << 11);  // bit  20
+        DCHECK(IsJal(instr));
+        DCHECK(JumpOffset(instr) == offset);
+        instr_at_put(pos, instr);
+      } else {
+        DCHECK(is_int32(offset));
 
-      int32_t Hi20 = (((int32_t)offset + 0x800) >> 12);
-      int32_t Lo12 = (int32_t)offset << 20 >> 20;
+        int32_t Hi20 = (((int32_t)offset + 0x800) >> 12);
+        int32_t Lo12 = (int32_t)offset << 20 >> 20;
 
-      instr_auipc =
-          (instr_auipc & ~kImm31_12Mask) | ((Hi20 & kImm19_0Mask) << 12);
-      instr_at_put(pos, instr_auipc);
+        instr_auipc =
+            (instr_auipc & ~kImm31_12Mask) | ((Hi20 & kImm19_0Mask) << 12);
+        instr_at_put(pos, instr_auipc);
 
-      const int kImm31_20Mask = ((1 << 12) - 1) << 20;
-      const int kImm11_0Mask = ((1 << 12) - 1);
-      instr_I = (instr_I & ~kImm31_20Mask) | ((Lo12 & kImm11_0Mask) << 20);
-      instr_at_put(pos + 4, instr_I);
+        const int kImm31_20Mask = ((1 << 12) - 1) << 20;
+        const int kImm11_0Mask = ((1 << 12) - 1);
+        instr_I = (instr_I & ~kImm31_20Mask) | ((Lo12 & kImm11_0Mask) << 20);
+        instr_at_put(pos + 4, instr_I);
+      }
     } break;
     case RO_C_J: {
       ShortInstr short_instr = SetCJalOffset(pos, target_pos, instr);
