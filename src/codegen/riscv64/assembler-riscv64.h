@@ -654,6 +654,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_srli(Register rs1, uint8_t uimm6);
   void c_srai(Register rs1, uint8_t uimm6);
   void c_andi(Register rs1, uint8_t uimm6);
+  void NOP();
+  void EBREAK();
 
   // Privileged
   void uret();
