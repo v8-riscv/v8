@@ -261,6 +261,7 @@ constexpr int ArgumentPaddingSlots(int argument_count) {
 
 constexpr bool kSimpleFPAliasing = true;
 constexpr bool kSimdMaskRegisters = false;
+constexpr bool kHasVReg = false;
 
 enum DoubleRegisterCode {
 #define REGISTER_CODE(R) kDoubleCode_##R,

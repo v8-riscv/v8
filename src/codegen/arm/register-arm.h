@@ -127,6 +127,7 @@ constexpr int ArgumentPaddingSlots(int argument_count) {
 
 constexpr bool kSimpleFPAliasing = false;
 constexpr bool kSimdMaskRegisters = false;
+constexpr bool kHasVReg = false;
 
 enum SwVfpRegisterCode {
 #define REGISTER_CODE(R) kSwVfpCode_##R,

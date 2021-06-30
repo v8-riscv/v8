@@ -1077,9 +1077,12 @@ void LiftoffAssembler::Move(LiftoffRegister dst, LiftoffRegister src,
     Move(dst.low_fp(), src.low_fp(), kind);
   } else if (dst.is_gp()) {
     Move(dst.gp(), src.gp(), kind);
-  } else {
+  } else if (dst.is_fp()){
     Move(dst.fp(), src.fp(), kind);
+  } else {
+    Move(dst.vp(), src.vp(), kind);
   }
+
 }
 
 void LiftoffAssembler::ParallelRegisterMove(

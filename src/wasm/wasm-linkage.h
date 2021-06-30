@@ -32,7 +32,8 @@ constexpr Register kGpReturnRegisters[] = {eax, edx};
 constexpr DoubleRegister kFpParamRegisters[] = {xmm1, xmm2, xmm3,
                                                 xmm4, xmm5, xmm6};
 constexpr DoubleRegister kFpReturnRegisters[] = {xmm1, xmm2};
-
+constexpr Simd128Register kVpParamRegisters[] = {};
+constexpr Simd128Register kVpReturnRegisters[] = {};
 #elif V8_TARGET_ARCH_X64
 // ===========================================================================
 // == x64 ====================================================================
@@ -42,7 +43,8 @@ constexpr Register kGpReturnRegisters[] = {rax, rdx};
 constexpr DoubleRegister kFpParamRegisters[] = {xmm1, xmm2, xmm3,
                                                 xmm4, xmm5, xmm6};
 constexpr DoubleRegister kFpReturnRegisters[] = {xmm1, xmm2};
-
+constexpr Simd128Register kVpParamRegisters[] = {};
+constexpr Simd128Register kVpReturnRegisters[] = {};
 #elif V8_TARGET_ARCH_ARM
 // ===========================================================================
 // == arm ====================================================================
@@ -52,7 +54,8 @@ constexpr Register kGpReturnRegisters[] = {r0, r1};
 // ARM d-registers must be in even/odd D-register pairs for correct allocation.
 constexpr DoubleRegister kFpParamRegisters[] = {d0, d1, d2, d3, d4, d5, d6, d7};
 constexpr DoubleRegister kFpReturnRegisters[] = {d0, d1};
-
+constexpr Simd128Register kVpParamRegisters[] = {};
+constexpr Simd128Register kVpReturnRegisters[] = {};
 #elif V8_TARGET_ARCH_ARM64
 // ===========================================================================
 // == arm64 ====================================================================
@@ -61,7 +64,8 @@ constexpr Register kGpParamRegisters[] = {x7, x0, x2, x3, x4, x5, x6};
 constexpr Register kGpReturnRegisters[] = {x0, x1};
 constexpr DoubleRegister kFpParamRegisters[] = {d0, d1, d2, d3, d4, d5, d6, d7};
 constexpr DoubleRegister kFpReturnRegisters[] = {d0, d1};
-
+constexpr Simd128Register kVpParamRegisters[] = {};
+constexpr Simd128Register kVpReturnRegisters[] = {};
 #elif V8_TARGET_ARCH_MIPS
 // ===========================================================================
 // == mips ===================================================================
@@ -70,7 +74,8 @@ constexpr Register kGpParamRegisters[] = {a0, a2, a3};
 constexpr Register kGpReturnRegisters[] = {v0, v1};
 constexpr DoubleRegister kFpParamRegisters[] = {f2, f4, f6, f8, f10, f12, f14};
 constexpr DoubleRegister kFpReturnRegisters[] = {f2, f4};
-
+constexpr Simd128Register kVpParamRegisters[] = {};
+constexpr Simd128Register kVpReturnRegisters[] = {};
 #elif V8_TARGET_ARCH_MIPS64
 // ===========================================================================
 // == mips64 =================================================================
@@ -79,7 +84,8 @@ constexpr Register kGpParamRegisters[] = {a0, a2, a3, a4, a5, a6, a7};
 constexpr Register kGpReturnRegisters[] = {v0, v1};
 constexpr DoubleRegister kFpParamRegisters[] = {f2, f4, f6, f8, f10, f12, f14};
 constexpr DoubleRegister kFpReturnRegisters[] = {f2, f4};
-
+constexpr Simd128Register kVpParamRegisters[] = {};
+constexpr Simd128Register kVpReturnRegisters[] = {};
 #elif V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_PPC64
 // ===========================================================================
 // == ppc & ppc64 ============================================================
@@ -88,7 +94,8 @@ constexpr Register kGpParamRegisters[] = {r10, r3, r5, r6, r7, r8, r9};
 constexpr Register kGpReturnRegisters[] = {r3, r4};
 constexpr DoubleRegister kFpParamRegisters[] = {d1, d2, d3, d4, d5, d6, d7, d8};
 constexpr DoubleRegister kFpReturnRegisters[] = {d1, d2};
-
+constexpr Simd128Register kVpParamRegisters[] = {};
+constexpr Simd128Register kVpReturnRegisters[] = {};
 #elif V8_TARGET_ARCH_S390X
 // ===========================================================================
 // == s390x ==================================================================
@@ -97,7 +104,8 @@ constexpr Register kGpParamRegisters[] = {r6, r2, r4, r5};
 constexpr Register kGpReturnRegisters[] = {r2, r3};
 constexpr DoubleRegister kFpParamRegisters[] = {d0, d2, d4, d6};
 constexpr DoubleRegister kFpReturnRegisters[] = {d0, d2, d4, d6};
-
+constexpr Simd128Register kVpParamRegisters[] = {};
+constexpr Simd128Register kVpReturnRegisters[] = {};
 #elif V8_TARGET_ARCH_S390
 // ===========================================================================
 // == s390 ===================================================================
@@ -106,7 +114,8 @@ constexpr Register kGpParamRegisters[] = {r6, r2, r4, r5};
 constexpr Register kGpReturnRegisters[] = {r2, r3};
 constexpr DoubleRegister kFpParamRegisters[] = {d0, d2};
 constexpr DoubleRegister kFpReturnRegisters[] = {d0, d2};
-
+constexpr Simd128Register kVpParamRegisters[] = {};
+constexpr Simd128Register kVpReturnRegisters[] = {};
 #elif V8_TARGET_ARCH_RISCV64
 // ===========================================================================
 // == riscv64 =================================================================
@@ -119,6 +128,8 @@ constexpr DoubleRegister kFpParamRegisters[] = {fa0, fa1, fa2, fa3,
                                                 fa4, fa5, fa6};
 constexpr DoubleRegister kFpReturnRegisters[] = {fa0, fa1};
 
+constexpr Simd128Register kVpParamRegisters[] = {v1, v2};
+constexpr Simd128Register kVpReturnRegisters[] = {v1, v2};
 #else
 // ===========================================================================
 // == unknown ================================================================
@@ -128,6 +139,8 @@ constexpr Register kGpParamRegisters[] = {};
 constexpr Register kGpReturnRegisters[] = {};
 constexpr DoubleRegister kFpParamRegisters[] = {};
 constexpr DoubleRegister kFpReturnRegisters[] = {};
+constexpr Simd128Register kVpParamRegisters[] = {};
+constexpr Simd128Register kVpReturnRegisters[] = {};
 
 #endif
 
@@ -142,9 +155,30 @@ class LinkageAllocator {
                              const DoubleRegister (&fp)[kNumFpRegs])
       : LinkageAllocator(gp, kNumGpRegs, fp, kNumFpRegs) {}
 
+  template <size_t kNumGpRegs, size_t kNumFpRegs, size_t kNumVpRegs>
+  constexpr LinkageAllocator(const Register (&gp)[kNumGpRegs],
+                             const DoubleRegister (&fp)[kNumFpRegs],
+                             const Simd128Register (&vp)[kNumVpRegs])
+      : LinkageAllocator(gp, kNumGpRegs, fp, kNumFpRegs, vp, kNumVpRegs) {}
+
   constexpr LinkageAllocator(const Register* gp, int gpc,
                              const DoubleRegister* fp, int fpc)
-      : gp_count_(gpc), gp_regs_(gp), fp_count_(fpc), fp_regs_(fp) {}
+      : gp_count_(gpc),
+        gp_regs_(gp),
+        fp_count_(fpc),
+        fp_regs_(fp),
+        vp_regs_(NULL),
+        vp_count_(0) {}
+
+  constexpr LinkageAllocator(const Register* gp, int gpc,
+                             const DoubleRegister* fp, int fpc,
+                             const Simd128Register* vp, int vpc)
+      : gp_count_(gpc),
+        gp_regs_(gp),
+        fp_count_(fpc),
+        fp_regs_(fp),
+        vp_regs_(vp),
+        vp_count_(vpc) {}
 
   bool CanAllocateGP() const { return gp_offset_ < gp_count_; }
   bool CanAllocateFP(MachineRepresentation rep) const {
@@ -172,6 +206,8 @@ class LinkageAllocator {
     return fp_offset_ < fp_count_;
 #endif
   }
+
+  bool CanAllocateVP() { return vp_offset_ < vp_count_; }
 
   int NextGpReg() {
     DCHECK_LT(gp_offset_, gp_count_);
@@ -210,6 +246,11 @@ class LinkageAllocator {
 #endif
   }
 
+  int NextVpReg() {
+    DCHECK_LT(vp_offset_, vp_count_);
+    return vp_regs_[vp_offset_++].code();
+  }
+
   // Stackslots are counted upwards starting from 0 (or the offset set by
   // {SetStackOffset}. If {type} needs more than one stack slot, the lowest
   // used stack slot is returned.
@@ -246,6 +287,9 @@ class LinkageAllocator {
   int fp_offset_ = 0;
 #endif
   const DoubleRegister* const fp_regs_;
+  const Simd128Register* const vp_regs_;
+  const int vp_count_;
+  int vp_offset_ = 0;
 
   AlignedSlotAllocator slot_allocator_;
 };

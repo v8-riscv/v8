@@ -211,6 +211,7 @@ constexpr int ArgumentPaddingSlots(int argument_count) {
 
 constexpr bool kSimpleFPAliasing = true;
 constexpr bool kSimdMaskRegisters = false;
+constexpr bool kHasVReg = false;
 
 enum MSARegisterCode {
 #define REGISTER_CODE(R) kMsaCode_##R,

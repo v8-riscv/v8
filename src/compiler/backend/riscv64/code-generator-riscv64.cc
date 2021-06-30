@@ -1906,6 +1906,16 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       break;
     }
     default:
+            switch (arch_opcode) {
+      #define Print(name)      \
+  case k##name:          \
+    printf("k%s", #name); \
+    break;
+              TARGET_ARCH_OPCODE_LIST(Print);
+      #undef Print
+              default:
+                break;
+            }
       UNIMPLEMENTED();
   }
   return kSuccess;

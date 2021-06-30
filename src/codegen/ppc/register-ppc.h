@@ -220,6 +220,7 @@ constexpr int ArgumentPaddingSlots(int argument_count) {
 }
 
 constexpr bool kSimpleFPAliasing = true;
+constexpr bool kHasVReg = false;
 constexpr bool kSimdMaskRegisters = false;
 
 enum DoubleRegisterCode {
