@@ -1371,6 +1371,9 @@ DEFINE_BOOL(riscv_constant_pool, true,
 
 DEFINE_BOOL(riscv_c_extension, false,
             "enable compressed extension isa variant (RISCV only)")
+
+DEFINE_BOOL(riscv_zce_extension, false,
+            "enable zce extension isa variant (RISCV only)")
 #endif
 
 // Controlling source positions for Torque/CSA code.

@@ -106,8 +106,29 @@ int FPURegisters::Number(const char* name) {
 }
 
 InstructionBase::Type InstructionBase::InstructionType() const {
-  if (IsIllegalInstruction()) {
+  if (IsIllegalInstruction()){
     return kUnsupported;
+  }
+  // RV64Zce Instruction
+  if (FLAG_riscv_zce_extension && IsShortInstruction()) {
+    switch (InstructionBits() & kZMTypeMask) {
+      case RO_C_NEG:
+      case RO_C_ZEXT_B:
+      case RO_C_SEXT_B:
+      case RO_C_ZEXT_H:
+      case RO_C_SEXT_H:
+      case RO_C_ZEXT_W:
+      case RO_C_NOT:
+        return kZMType;
+      default:
+        break;
+    }
+    switch (InstructionBits() & kZDTypeMask) {
+      case RO_C_MUL:
+        return kZDType;
+      default:
+        break;
+    }
   }
   // RV64C Instruction
   if (FLAG_riscv_c_extension && IsShortInstruction()) {

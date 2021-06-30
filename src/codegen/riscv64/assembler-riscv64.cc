@@ -1134,6 +1134,24 @@ void Assembler::GenInstrCBA(uint8_t funct3, uint8_t funct2, Opcode opcode,
   emit(instr);
 }
 
+void Assembler::GenInstrZM(uint8_t funct6, Opcode opcode, 
+                           Register rd, uint8_t funct5) {
+  DCHECK(is_uint6(funct6) && rd.is_valid() && is_uint5(funct5));
+  ShortInstr instr = opcode | (funct6 << kRvcFunct6Shift) |
+                     ((rd.code() & 0x7) << kRvcRs1sShift) |
+                     (funct5 << kRvcRs2Shift);
+  emit(instr);
+}
+
+void Assembler::GenInstrZD(uint8_t funct6, Opcode opcode, 
+                           Register rd, uint8_t funct2, Register rs2) {
+  DCHECK(is_uint6(funct6) && rd.is_valid() && is_uint2(funct2) && rs2.is_valid());
+  ShortInstr instr = opcode | (funct6 << kRvcFunct6Shift) |
+                     ((rd.code() & 0x7) << kRvcRs1sShift) |
+                     (funct2 << kRvcFunct2Shift) | ((rs2.code() & 0x7) << kRvcRs2Shift);
+  emit(instr);
+}
+
 // ----- Instruction class templates match those in the compiler
 
 void Assembler::GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,
@@ -1629,7 +1647,14 @@ void Assembler::sraw(Register rd, Register rs1, Register rs2) {
 // RV32M Standard Extension
 
 void Assembler::mul(Register rd, Register rs1, Register rs2) {
-  GenInstrALU_rr(0b0000001, 0b000, rd, rs1, rs2);
+  if(FLAG_riscv_c_extension && FLAG_riscv_zce_extension && 
+     rd.code() == rs1.code() && (rd.code() & 0b11000) == 0b01000 &&
+     (rs2.code() & 0b11000) == 0b01000){
+    c_mul(rd, rs2);
+  }
+  else{
+    GenInstrALU_rr(0b0000001, 0b000, rd, rs1, rs2);
+  }
 }
 
 void Assembler::mulh(Register rd, Register rs1, Register rs2) {
@@ -2087,7 +2112,7 @@ void Assembler::c_addi16sp(int16_t imm10) {
   GenInstrCIU(0b011, C1, sp, uimm6);
 }
 
-void Assembler::c_addi4spn(Register rd, int16_t uimm10) {
+void Assembler::c_addi4spn(Register rd, uint16_t uimm10) {
   DCHECK(is_uint10(uimm10) && (uimm10 != 0));
   uint8_t uimm8 = ((uimm10 & 0x4) >> 1) | ((uimm10 & 0x8) >> 3) |
                   ((uimm10 & 0x30) << 2) | ((uimm10 & 0x3c0) >> 4);
@@ -2295,6 +2320,49 @@ void Assembler::c_srai(Register rs1, uint8_t uimm6) {
 void Assembler::c_andi(Register rs1, uint8_t uimm6) {
   DCHECK(((rs1.code() & 0b11000) == 0b01000) && is_uint6(uimm6));
   GenInstrCBA(0b100, 0b10, C1, rs1, uimm6);
+}
+
+// RV64Zce Standard Extension
+
+void Assembler::c_neg(Register rd){
+  DCHECK(((rd.code() & 0b11000) == 0b01000));
+  GenInstrZM(0b100000, C0, rd, 0b00110);
+}
+
+void Assembler::c_sext_b(Register rd){
+  DCHECK(((rd.code() & 0b11000) == 0b01000));
+  GenInstrZM(0b100000, C0, rd, 0b00001);
+}
+
+void Assembler::c_zext_b(Register rd){
+  DCHECK(((rd.code() & 0b11000) == 0b01000));
+  GenInstrZM(0b100000, C0, rd, 0b00000);
+}
+
+void Assembler::c_sext_h(Register rd){
+  DCHECK(((rd.code() & 0b11000) == 0b01000));
+  GenInstrZM(0b100000, C0, rd, 0b00011);
+}
+
+void Assembler::c_zext_h(Register rd){
+  DCHECK(((rd.code() & 0b11000) == 0b01000));
+  GenInstrZM(0b100000, C0, rd, 0b00010);
+}
+
+void Assembler::c_zext_w(Register rd){
+  DCHECK(((rd.code() & 0b11000) == 0b01000));
+  GenInstrZM(0b100000, C0, rd, 0b00100);
+}
+
+void Assembler::c_not(Register rd){
+  DCHECK(((rd.code() & 0b11000) == 0b01000));
+  GenInstrZM(0b100000, C0, rd, 0b00111);
+}
+
+void Assembler::c_mul(Register rd, Register rs2){
+  DCHECK(((rd.code() & 0b11000) == 0b01000) &&
+         ((rs2.code() & 0b11000) == 0b01000));
+  GenInstrZD(0b100111, C1, rd, 0b10, rs2);
 }
 
 // Privileged

@@ -123,6 +123,10 @@ class Decoder {
   void DecodeCJType(Instruction* instr);
   void DecodeCBType(Instruction* instr);
 
+
+  void DecodeZMType(Instruction* instr);
+  void DecodeZDType(Instruction* instr);
+
   // Printing of instruction name.
   void PrintInstructionName(Instruction* instr);
 
@@ -136,6 +140,8 @@ class Decoder {
   int FormatOption(Instruction* instr, const char* option);
   void Format(Instruction* instr, const char* format);
   void Unknown(Instruction* instr);
+
+  int FormatRvzceRegister(Instruction* instr, const char* option);
 
   const disasm::NameConverter& converter_;
   v8::base::Vector<char> out_buffer_;
@@ -493,6 +499,27 @@ int Decoder::FormatFPURegisterOrRoundMode(Instruction* instr,
   UNREACHABLE();
 }
 
+int Decoder::FormatRvzceRegister(Instruction* instr, const char* format) {
+  DCHECK(STRING_STARTS_WITH(format, "Zcer"));
+  if (format[4] == 's') {  // 'Zcers[2]: rs register.
+    if (format[5] == '2') {
+      int reg = instr->RvzceRs2Value();
+      if (format[3] == 'r') {
+        PrintRegister(reg);
+      }
+      return 6;
+    }
+    UNREACHABLE();
+  } else if (format[4] == 'd') {  // 'Zcerd: rd register.
+    int reg = instr->RvzceRdValue();
+    if (format[3] == 'r') {
+      PrintRegister(reg);
+    }
+    return 5;
+  }
+  UNREACHABLE();
+}
+
 // Handle all C extension register based formatting in this function to reduce
 // the complexity of FormatOption.
 int Decoder::FormatRvcRegister(Instruction* instr, const char* format) {
@@ -636,6 +663,14 @@ int Decoder::FormatRvcImm(Instruction* instr, const char* format) {
 // characters that were consumed from the formatting string.
 int Decoder::FormatOption(Instruction* instr, const char* format) {
   switch (format[0]) {
+    case 'Z': {// `Zce extension
+      if(format[1] == 'c' && format[2] == 'e'){
+        if(format[3] == 'r'){
+          return FormatRvzceRegister(instr, format);
+        }
+      }
+      UNREACHABLE();
+    }
     case 'C': {  // `C extension
       if (format[1] == 'r' || format[1] == 'f') {
         return FormatRvcRegister(instr, format);
@@ -1791,6 +1826,44 @@ void Decoder::DecodeCBType(Instruction* instr) {
   }
 }
 
+void Decoder::DecodeZMType(Instruction* instr) {
+  switch (instr->InstructionBits() & kZMTypeMask) {
+    case RO_C_NEG:
+      Format(instr, "neg       'Zcerd, 'Zcerd");
+      break;
+    case RO_C_NOT:
+      Format(instr, "not       'Zcerd, 'Zcerd");
+      break;
+    case RO_C_ZEXT_B:
+      Format(instr, "zext.b       'Zcerd, 'Zcerd");
+      break;
+    case RO_C_SEXT_B:
+      Format(instr, "sext.b       'Zcerd, 'Zcerd");
+      break;
+    case RO_C_ZEXT_H:
+      Format(instr, "zext.h       'Zcerd, 'Zcerd");
+      break;
+    case RO_C_SEXT_H:
+      Format(instr, "sext.h       'Zcerd, 'Zcerd");
+      break;
+    case RO_C_ZEXT_W:
+      Format(instr, "zext.w       'Zcerd, 'Zcerd");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+
+void Decoder::DecodeZDType(Instruction* instr) {
+  switch (instr->InstructionBits() & kZDTypeMask) {
+    case RO_C_MUL:
+      Format(instr, "mul       'Zcerd, 'Zcerd, 'Zcers2");
+      break;
+    default:
+      UNSUPPORTED_RISCV();
+  }
+}
+
 // Disassemble the instruction at *instr_ptr into the output buffer.
 // All instructions are one word long, except for the simulator
 // pseudo-instruction stop(msg). For that one special case, we return
@@ -1848,6 +1921,12 @@ int Decoder::InstructionDecode(byte* instr_ptr) {
       break;
     case Instruction::kCBType:
       DecodeCBType(instr);
+      break;
+    case Instruction::kZMType:
+      DecodeZMType(instr);
+      break;
+    case Instruction::kZDType:
+      DecodeZDType(instr);
       break;
     default:
       Format(instr, "UNSUPPORTED");

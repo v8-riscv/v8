@@ -228,8 +228,10 @@ TEST(RV64I) {
 }
 
 TEST(RV32M) {
+  i::FLAG_riscv_c_extension = true;
+  i::FLAG_riscv_zce_extension = true;
   SET_UP();
-
+  COMPARE(mul(a0, a0, a1), "00009d4d       mul       a0, a0, a1");
   COMPARE(mul(a0, s3, t4), "03d98533       mul       a0, s3, t4");
   COMPARE(mulh(a0, s3, t4), "03d99533       mulh      a0, s3, t4");
   COMPARE(mulhsu(a0, s3, t4), "03d9a533       mulhsu    a0, s3, t4");
@@ -404,12 +406,16 @@ TEST(RV64D) {
 }
 
 TEST(PSEUDO) {
+  i::FLAG_riscv_c_extension = true;
+  i::FLAG_riscv_zce_extension = true;
   SET_UP();
   // pseodu instructions according to rISCV assembly programmer's handbook
   COMPARE(nop(), "00000013       nop");
   COMPARE(RV_li(t6, -12), "ff400f93       li        t6, -12");
   COMPARE(mv(t0, a4), "00070293       mv        t0, a4");
+  COMPARE(not_(a5, a5), "0000839c       not       a5, a5");
   COMPARE(not_(t0, a5), "fff7c293       not       t0, a5");
+  COMPARE(neg(a5, a5), "00008398       neg       a5, a5");
   COMPARE(neg(ra, a6), "410000b3       neg       ra, a6");
   COMPARE(negw(t2, fp), "408003bb       negw      t2, fp");
   COMPARE(sext_w(t0, s1), "0004829b       sext.w    t0, s1");
@@ -512,6 +518,23 @@ TEST(RV64C) {
   COMPARE(c_andi(a1, 24), "000089e1       andi       a1, a1, 24");
   COMPARE(c_srai(a1, 24), "000085e1       srai       a1, a1, 24");
 
+  VERIFY_RUN();
+}
+
+TEST(RV64Zce) {
+  i::FLAG_riscv_c_extension = true;
+  i::FLAG_riscv_zce_extension = true;
+  SET_UP();
+  COMPARE(c_neg(a5), "00008398       neg       a5, a5");
+  COMPARE(c_not(a5), "0000839c       not       a5, a5");
+  COMPARE(c_zext_b(a5), "00008380       zext.b       a5, a5");
+  COMPARE(c_zext_b(a0), "00008100       zext.b       a0, a0");
+  COMPARE(c_sext_b(a5), "00008384       sext.b       a5, a5");
+  COMPARE(c_sext_b(a0), "00008104       sext.b       a0, a0");
+  COMPARE(c_zext_h(a5), "00008388       zext.h       a5, a5");
+  COMPARE(c_sext_h(a5), "0000838c       sext.h       a5, a5");
+  COMPARE(c_zext_w(a5), "00008390       zext.w       a5, a5");
+  COMPARE(c_mul(a0,a1), "00009d4d       mul       a0, a0, a1");
   VERIFY_RUN();
 }
 
