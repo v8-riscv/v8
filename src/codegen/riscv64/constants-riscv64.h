@@ -878,7 +878,8 @@ enum FClassFlag {
   V(E128)          \
   V(E256)          \
   V(E512)          \
-  V(E1024)
+  V(E1024)         
+
 
 enum VSew {
 #define DEFINE_FLAG(name) name,
@@ -894,7 +895,7 @@ enum VSew {
   V(RESERVERD)      \
   V(mf8)            \
   V(mf4)            \
-  V(mf2)
+  V(mf2)            
 
 enum Vlmul {
 #define DEFINE_FLAG(name) name,
@@ -1426,7 +1427,47 @@ class InstructionGetters : public T {
     return imm9 << 23 >> 23;
   }
 
+  inline int vl_vs_width() {
+    int width = 0;
+    if ((this->InstructionBits() & kBaseOpcodeMask) != LOAD_FP &&
+        (this->InstructionBits() & kBaseOpcodeMask) != STORE_FP)
+      return -1;
+    switch (this->InstructionBits() & (kRvvWidthMask | kRvvMewMask)) {
+      case 0x0:
+        width = 8;
+        break;
+      case 0x00005000:
+        width = 16;
+        break;
+      case 0x00006000:
+        width = 32;
+        break;
+      case 0x00007000:
+        width = 64;
+        break;
+      case 0x10000000:
+        width = 128;
+        break;
+      case 0x10005000:
+        width = 256;
+        break;
+      case 0x10006000:
+        width = 512;
+        break;
+      case 0x10007000:
+        width = 1024;
+        break;
+      default:
+        width = -1;
+        break;
+    }
+    return width;
+  }
+
   inline uint32_t Rvvzimm() const {
+    DCHECK_EQ(
+        this->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask | 0x80000000),
+        RO_V_VSETVLI);
     uint32_t Bits = this->InstructionBits();
     uint32_t zimm = Bits & kRvvZimmMask;
     return zimm >> kRvvZimmShift;

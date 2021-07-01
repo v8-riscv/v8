@@ -1980,6 +1980,29 @@ TEST(li_estimate) {
   }
 }
 
+#define UTEST_LOAD_STORE_RVV(ldname, stname, SEW, arg...)                 \
+  TEST(RISCV_UTEST_##stname##ldname##SEW) {                               \
+    CcTest::InitializeVM();                                               \
+    Isolate* isolate = CcTest::i_isolate();                               \
+    HandleScope scope(isolate);                                           \
+    int8_t src[16] = {arg};                                               \
+    int8_t dst[16];                                                       \
+    auto fn = [](MacroAssembler& assm) {                                  \
+      __ VU.set(t0, SEW, Vlmul::m1);                                      \
+      __ vl(v2, a0, 0, VSew::E8);                                         \
+      __ vs(v2, a1, 0, VSew::E8);                                         \
+    };                                                                    \
+    GenAndRunTest<int32_t, int64_t>((int64_t)src, (int64_t)dst, fn);      \
+    CHECK(!memcmp(src, dst, sizeof(src)));                                \
+    auto simulator = isolate->CurrentPerIsolateThreadData()->simulator(); \
+    __int128_t val = simulator->get_vregister(Simulator::VRegister::v2);  \
+    CHECK(!memcmp(&val, src, sizeof(src)));                               \
+    CHECK(!memcmp(&val, dst, sizeof(src)));                               \
+  }
+
+UTEST_LOAD_STORE_RVV(vl, vs, E8, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+                     15, 16)
+
 #undef __
 
 }  // namespace internal

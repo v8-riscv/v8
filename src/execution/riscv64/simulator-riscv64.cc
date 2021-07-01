@@ -119,10 +119,10 @@ class RiscvDebugger {
   bool GetValue(const char* desc, int64_t* value);
 };
 
-inline void UNSUPPORTED() {
-  printf("Sim: Unsupported instruction.\n");
+#define UNSUPPORTED()                                                     \
+  printf("Sim: Unsupported instruction. Func:%s Line:%d\n", __FUNCTION__, \
+         __LINE__);                                                       \
   base::OS::Abort();
-}
 
 int64_t RiscvDebugger::GetRegisterValue(int regnum) {
   if (regnum == kNumSimuRegisters) {
@@ -1306,6 +1306,8 @@ void Simulator::WriteMem(int64_t addr, T value, Instruction* instr) {
 #endif
   T* ptr = reinterpret_cast<T*>(addr);
   TraceMemWr(addr, value);
+  // PrintF("Unaligned read at 0x%08" PRIx64 " , pc=0x%08" PRId64 "\n", (int64_t)ptr,
+  //        (int64_t)value);
   *ptr = value;
 }
 
@@ -2830,6 +2832,120 @@ void Simulator::DecodeRVR4Type() {
   }
 }
 
+
+
+
+bool Simulator::DecodeRvvVL() {
+  uint32_t instr_temp =
+      instr_.InstructionBits() & (kRvvMopMask | kRvvNfMask | kBaseOpcodeMask);
+  if (RO_V_VL == instr_temp) {
+    if (!(instr_.InstructionBits() & (kRvvRs2Mask))) {
+      switch(instr_.vl_vs_width()) {
+        case 8: {
+          RVV_VI_LD(0, (i * nf + fn), int8, false);
+          break;
+        }
+        case 16: {
+          UNIMPLEMENTED_RISCV();
+          break;
+        }
+        default:
+          UNIMPLEMENTED_RISCV();
+          break;
+      }
+      return true;
+    } else {
+      UNIMPLEMENTED_RISCV();
+      return true;
+    }
+  } else if (RO_V_VLS == instr_temp) {
+    UNIMPLEMENTED_RISCV();
+    return true;
+  } else if (RO_V_VLX == instr_temp) {
+    UNIMPLEMENTED_RISCV();
+    return true;
+  } else if (RO_V_VLSEG2 == instr_temp || RO_V_VLSEG3 == instr_temp ||
+             RO_V_VLSEG4 == instr_temp || RO_V_VLSEG5 == instr_temp ||
+             RO_V_VLSEG6 == instr_temp || RO_V_VLSEG7 == instr_temp ||
+             RO_V_VLSEG8 == instr_temp) {
+    if (!(instr_.InstructionBits() & (kRvvRs2Mask))) {
+      UNIMPLEMENTED_RISCV();
+      return true;
+    } else {
+      UNIMPLEMENTED_RISCV();
+      return true;
+    }
+  } else if (RO_V_VLSSEG2 == instr_temp || RO_V_VLSSEG3 == instr_temp ||
+             RO_V_VLSSEG4 == instr_temp || RO_V_VLSSEG5 == instr_temp ||
+             RO_V_VLSSEG6 == instr_temp || RO_V_VLSSEG7 == instr_temp ||
+             RO_V_VLSSEG8 == instr_temp) {
+    UNIMPLEMENTED_RISCV();
+    return true;
+  } else if (RO_V_VLXSEG2 == instr_temp || RO_V_VLXSEG3 == instr_temp ||
+             RO_V_VLXSEG4 == instr_temp || RO_V_VLXSEG5 == instr_temp ||
+             RO_V_VLXSEG6 == instr_temp || RO_V_VLXSEG7 == instr_temp ||
+             RO_V_VLXSEG8 == instr_temp) {
+    UNIMPLEMENTED_RISCV();
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool Simulator::DecodeRvvVS() {
+  uint32_t instr_temp =
+      instr_.InstructionBits() & (kRvvMopMask | kRvvNfMask | kBaseOpcodeMask);
+  if (RO_V_VS == instr_temp) {
+    if (!(instr_.InstructionBits() & (kRvvRs2Mask))) {
+      switch (instr_.vl_vs_width()) {
+        case 8: {
+          RVV_VI_ST(0, (i * nf + fn), uint8, false);
+          break;
+        }
+        case 16: {
+          UNIMPLEMENTED_RISCV();
+          break;
+        }
+        default:
+          UNIMPLEMENTED_RISCV();
+          break;
+      }
+    } else {
+      UNIMPLEMENTED_RISCV();
+    }
+    return true;
+  } else if (RO_V_VSS == instr_temp) {
+    UNIMPLEMENTED_RISCV();
+    return true;
+  } else if (RO_V_VSX == instr_temp) {
+    UNIMPLEMENTED_RISCV();
+    return true;
+  } else if (RO_V_VSU == instr_temp) {
+    UNIMPLEMENTED_RISCV();
+    return true;
+  } else if (RO_V_VSSEG2 == instr_temp || RO_V_VSSEG3 == instr_temp ||
+             RO_V_VSSEG4 == instr_temp || RO_V_VSSEG5 == instr_temp ||
+             RO_V_VSSEG6 == instr_temp || RO_V_VSSEG7 == instr_temp ||
+             RO_V_VSSEG8 == instr_temp) {
+               UNIMPLEMENTED_RISCV();
+    return true;
+  } else if (RO_V_VSSSEG2 == instr_temp || RO_V_VSSSEG3 == instr_temp ||
+             RO_V_VSSSEG4 == instr_temp || RO_V_VSSSEG5 == instr_temp ||
+             RO_V_VSSSEG6 == instr_temp || RO_V_VSSSEG7 == instr_temp ||
+             RO_V_VSSSEG8 == instr_temp) {
+               UNIMPLEMENTED_RISCV();
+    return true;
+  } else if (RO_V_VSXSEG2 == instr_temp || RO_V_VSXSEG3 == instr_temp ||
+             RO_V_VSXSEG4 == instr_temp || RO_V_VSXSEG5 == instr_temp ||
+             RO_V_VSXSEG6 == instr_temp || RO_V_VSXSEG7 == instr_temp ||
+             RO_V_VSXSEG8 == instr_temp) {
+               UNIMPLEMENTED_RISCV();
+    return true;
+  } else {
+    return false;
+  }
+}
+
 Builtin Simulator::LookUp(Address pc) {
   for (Builtin builtin = Builtins::kFirst; builtin <= Builtins::kLast;
        ++builtin) {
@@ -3065,8 +3181,12 @@ void Simulator::DecodeRVIType() {
       TraceMemRd(addr, val, get_fpu_register(frd_reg()));
       break;
     }
-    default:
-      UNSUPPORTED();
+    default: {
+      if (!DecodeRvvVL()) {
+        UNSUPPORTED();
+      }
+      break;
+    }
   }
 }
 
@@ -3099,7 +3219,10 @@ void Simulator::DecodeRVSType() {
       break;
     }
     default:
-      UNSUPPORTED();
+      if (!DecodeRvvVS()) {
+        UNSUPPORTED();
+      }
+      break;
   }
 }
 
@@ -3412,7 +3535,25 @@ void Simulator::DecodeRvvIVV() {
       RVV_VI_VV_LOOP({ vd = vs1 + vs2; });
       break;
     }
+    case RO_V_VMV_VV: {
+      RVV_VI_VVXI_MERGE_LOOP({
+        vd = vs1;
+        USE(vs2);
+        USE(rs1);
+        USE(simm5);
+      });
+      break;
+    }
     default:
+      // v8::base::EmbeddedVector<char, 256> buffer;
+      // SNPrintF(trace_buf_, " ");
+      // disasm::NameConverter converter;
+      // disasm::Disassembler dasm(converter);
+      // // Use a reasonably large buffer.
+      // dasm.InstructionDecode(buffer, reinterpret_cast<byte*>(&instr_));
+
+      // PrintF("EXECUTING  0x%08" PRIxPTR "   %-44s\n",
+      //        reinterpret_cast<intptr_t>(&instr_), buffer.begin());
       UNIMPLEMENTED_RISCV();
       break;
   }
@@ -3558,16 +3699,11 @@ void Simulator::InstructionDecode(Instruction* instr) {
     // Use a reasonably large buffer.
     dasm.InstructionDecode(buffer, reinterpret_cast<byte*>(instr));
 
-    // PrintF("EXECUTING  0x%08" PRIxPTR "   %-44s\n",
-    //        reinterpret_cast<intptr_t>(instr), buffer.begin());
+    PrintF("EXECUTING  0x%08" PRIxPTR "   %-44s\n",
+           reinterpret_cast<intptr_t>(instr), buffer.begin());
   }
 
   instr_ = instr;
-  if (::v8::internal::FLAG_trace_sim) {
-    PrintF("  0x%012" PRIxPTR "   %-44s   %s\n",
-           reinterpret_cast<intptr_t>(instr), buffer.begin(),
-           trace_buf_.begin());
-  }
   switch (instr_.InstructionType()) {
     case Instruction::kRType:
       DecodeRVRType();

@@ -1905,17 +1905,45 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ DecompressAnyTagged(result, operand);
       break;
     }
+    case kRiscvRvvSt: {
+      __ Add64(kScratchReg, i.MemoryOperand().rm(), i.MemoryOperand().offset());
+      (__ VU).set(t0, VSew::E8, Vlmul::m1);
+      __ vs(i.InputSimd128Register(2), kScratchReg, 0, VSew::E8);
+      break;
+    }
+    case kRiscvRvvLd: {
+      __ Add64(kScratchReg, i.MemoryOperand().rm(), i.MemoryOperand().offset());
+      (__ VU).set(t0, VSew::E8, Vlmul::m1);
+      __ vl(i.OutputSimd128Register(), kScratchReg, 0, VSew::E8);
+      break;
+    }
+    case kRiscvS128Const: {
+      Simd128Register dst = i.OutputSimd128Register();
+      uint64_t imm1 = make_uint64(i.InputUint32(1), i.InputUint32(0));
+      uint64_t imm2 = make_uint64(i.InputUint32(3), i.InputUint32(2));
+      (__ VU).set(t0, VSew::E64, Vlmul::m1);
+      __ li(kScratchReg, imm1);
+      __ vmerge_vx(dst, kScratchReg, dst);
+      __ li(kScratchReg, imm2);
+      __ vmerge_vx(dst, kScratchReg, dst);
+      break;
+    }
+    case kRiscvI32x4Add: {
+      __ vadd_vv(i.OutputSimd128Register(), i.InputSimd128Register(0),
+                 i.InputSimd128Register(1));
+      break;
+    }
     default:
-            switch (arch_opcode) {
-      #define Print(name)      \
-  case k##name:          \
+      switch (arch_opcode) {
+#define Print(name)       \
+  case k##name:           \
     printf("k%s", #name); \
     break;
-              TARGET_ARCH_OPCODE_LIST(Print);
-      #undef Print
-              default:
-                break;
-            }
+        TARGET_ARCH_OPCODE_LIST(Print);
+#undef Print
+        default:
+          break;
+      }
       UNIMPLEMENTED();
   }
   return kSuccess;

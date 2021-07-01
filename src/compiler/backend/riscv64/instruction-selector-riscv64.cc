@@ -475,7 +475,7 @@ void InstructionSelector::VisitLoad(Node* node) {
       opcode = kRiscvLd;
       break;
     case MachineRepresentation::kSimd128:
-      opcode = kRiscvMsaLd;
+      opcode = kRiscvRvvLd;
       break;
     case MachineRepresentation::kCompressedPointer:
     case MachineRepresentation::kCompressed:
@@ -560,7 +560,7 @@ void InstructionSelector::VisitStore(Node* node) {
         opcode = kRiscvSd;
         break;
       case MachineRepresentation::kSimd128:
-        opcode = kRiscvMsaSt;
+        opcode = kRiscvRvvSt;
         break;
       case MachineRepresentation::kCompressedPointer:  // Fall through.
       case MachineRepresentation::kCompressed:
@@ -1639,7 +1639,7 @@ void InstructionSelector::VisitUnalignedLoad(Node* node) {
       opcode = kRiscvUld;
       break;
     case MachineRepresentation::kSimd128:
-      opcode = kRiscvMsaLd;
+      opcode = kRiscvRvvLd;
       break;
     case MachineRepresentation::kBit:                // Fall through.
     case MachineRepresentation::kCompressedPointer:  // Fall through.
@@ -1693,7 +1693,7 @@ void InstructionSelector::VisitUnalignedStore(Node* node) {
       opcode = kRiscvUsd;
       break;
     case MachineRepresentation::kSimd128:
-      opcode = kRiscvMsaSt;
+      opcode = kRiscvRvvSt;
       break;
     case MachineRepresentation::kBit:                // Fall through.
     case MachineRepresentation::kCompressedPointer:  // Fall through.

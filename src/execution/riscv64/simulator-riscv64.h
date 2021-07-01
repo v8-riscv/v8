@@ -745,10 +745,9 @@ class Simulator : public SimulatorBase {
 
   inline void rvv_trace_vd() {
     if (::v8::internal::FLAG_trace_sim) {
-      PrintF("\t%s:0x%016" PRIx64 "%016" PRIx64 "\n",
-             v8::internal::VRegisters::Name((int)rvv_vd_reg()),
-             (uint64_t)(get_vregister((int)rvv_vd_reg()) >> 64),
-             (uint64_t)get_vregister((int)rvv_vd_reg()));
+      __int128_t value = Vregister_[rvv_vd_reg()];
+      SNPrintF(trace_buf_, "0x%016" PRIx64 "%016" PRIx64,
+               *((int64_t*)(&value) + 1), *(int64_t*)(&value));
     }
   }
 
@@ -784,10 +783,11 @@ class Simulator : public SimulatorBase {
              (uint64_t)(get_register(rs1_reg())));
     }
   }
+
   inline void rvv_trace_status() {
     if (::v8::internal::FLAG_trace_sim) {
-      PrintF("\tsew:%s lmul:%s vstart:%lu vl:%lu\n", rvv_sew_s(), rvv_lmul_s(),
-             rvv_vstart(), rvv_vl());
+      SNPrintF(trace_buf_.SubVector(44, 100), "  sew:%s lmul:%s vstart:%lu vl:%lu", rvv_sew_s(),
+               rvv_lmul_s(), rvv_vstart(), rvv_vl());
     }
   }
 
@@ -818,10 +818,7 @@ class Simulator : public SimulatorBase {
     UNREACHABLE();                 \
   }                                \
   RVV_VI_LOOP_END                  \
-  rvv_trace_vd();                  \
-  rvv_trace_vs1();                 \
-  rvv_trace_vs2();                 \
-  rvv_trace_status();
+  rvv_trace_vd();                                   
 
 #define RVV_VI_VX_LOOP(BODY)       \
   RVV_VI_GENERAL_LOOP_BASE         \
@@ -845,10 +842,7 @@ class Simulator : public SimulatorBase {
     UNREACHABLE();                 \
   }                                \
   RVV_VI_LOOP_END                  \
-  rvv_trace_vd();                  \
-  rvv_trace_rs1();                 \
-  rvv_trace_vs2();                 \
-  rvv_trace_status();
+  rvv_trace_vd();                                  
 
 #define RVV_VI_VI_LOOP(BODY)       \
   RVV_VI_GENERAL_LOOP_BASE         \
@@ -872,9 +866,7 @@ class Simulator : public SimulatorBase {
     UNREACHABLE();                 \
   }                                \
   RVV_VI_LOOP_END                  \
-  rvv_trace_vd();                  \
-  rvv_trace_vs2();                 \
-  rvv_trace_status();
+  rvv_trace_vd();                  
 
 #define RVV_VI_VVXI_MERGE_LOOP(BODY) \
   RVV_VI_GENERAL_LOOP_BASE           \
@@ -895,11 +887,92 @@ class Simulator : public SimulatorBase {
     BODY                             \
   }                                  \
   RVV_VI_LOOP_END                    \
-  rvv_trace_vd();                    \
-  rvv_trace_rs1();                   \
-  rvv_trace_vs2();                   \
-  rvv_trace_v0();                    \
-  rvv_trace_status();
+  rvv_trace_vd();                                       
+
+#define VI_MASK_VARS       \
+  const int midx = i / 64; \
+  const int mpos = i % 64;
+
+#define VI_STRIP(inx) \
+  reg_t vreg_inx = inx;
+
+#define VI_ELEMENT_SKIP(inx)       \
+  if (inx >= vl) {                 \
+    continue;                      \
+  } else if (inx < rvv_vstart()) { \
+    continue;                      \
+  } else {                         \
+    RVV_VI_LOOP_MASK_SKIP();       \
+  }
+
+#define require_vm                                     \
+  do {                                                 \
+    if (instr_.RvvVM() == 0) CHECK(rvv_vd_reg() != 0); \
+  } while (0);
+
+#define VI_CHECK_STORE(elt_width, is_mask_ldst) \
+  reg_t veew = is_mask_ldst ? 1 : sizeof(elt_width##_t) * 8;
+  // float vemul = is_mask_ldst ? 1 : ((float)veew / rvv_vsew() * P.VU.vflmul);
+  // reg_t emul = vemul < 1 ? 1 : vemul;
+  // require(vemul >= 0.125 && vemul <= 8);
+  // require_align(rvv_rd(), vemul);
+  // require((nf * emul) <= (NVPR / 4) && (rvv_rd() + nf * emul) <= NVPR);
+
+#define VI_CHECK_LOAD(elt_width, is_mask_ldst) \
+  VI_CHECK_STORE(elt_width, is_mask_ldst);     \
+  require_vm;
+
+/*vd + fn * emul*/
+#define RVV_VI_LD(stride, offset, elt_width, is_mask_ldst)                     \
+  const reg_t nf = rvv_nf() + 1;                                               \
+  const reg_t vl = is_mask_ldst ? ((rvv_vl() + 7) / 8) : rvv_vl();             \
+  const int64_t baseAddr = rs1();                                              \
+  for (reg_t i = 0; i < vl; ++i) {                                             \
+    VI_ELEMENT_SKIP(i);                                                        \
+    VI_STRIP(i);                                                               \
+    set_rvv_vstart(i);                                                         \
+    for (reg_t fn = 0; fn < nf; ++fn) {                                        \
+      auto val = ReadMem<elt_width##_t>(                                       \
+          baseAddr + (stride) + (offset) * sizeof(elt_width##_t),              \
+          instr_.instr());                                                     \
+      type_sew_t<sizeof(elt_width##_t)* 8>::type& vd =                         \
+          Rvvelt<type_sew_t<sizeof(elt_width##_t) * 8>::type>(rvv_vd_reg(),    \
+                                                              vreg_inx, true); \
+      vd = val;                                                                \
+    }                                                                          \
+  }                                                                            \
+  set_rvv_vstart(0);                                                           \
+  if (::v8::internal::FLAG_trace_sim) {                                        \
+    __int128_t value = Vregister_[rvv_vd_reg()];                               \
+    SNPrintF(trace_buf_,                                    \
+             "0x%016" PRIx64 "%016" PRIx64 " <-- 0x%016" PRIx64,               \
+             *((int64_t*)(&value) + 1), *(int64_t*)(&value),                   \
+             (uint64_t)(get_register(rs1_reg())));                             \
+  }
+
+#define RVV_VI_ST(stride, offset, elt_width, is_mask_ldst)                     \
+  const reg_t nf = rvv_nf() + 1;                                               \
+  const reg_t vl = is_mask_ldst ? ((rvv_vl() + 7) / 8) : rvv_vl();             \
+  const int64_t baseAddr = rs1();                                              \
+  std::cout << "base: " << baseAddr << std::endl;                              \
+  for (reg_t i = 0; i < vl; ++i) {                                             \
+    VI_STRIP(i)                                                                \
+    VI_ELEMENT_SKIP(i);                                                        \
+    set_rvv_vstart(i);                                                         \
+    for (reg_t fn = 0; fn < nf; ++fn) {                                        \
+      elt_width##_t vs1 = Rvvelt<type_sew_t<sizeof(elt_width##_t) * 8>::type>( \
+          rvv_vs3_reg(), vreg_inx);                                            \
+      WriteMem(baseAddr + (stride) + (offset) * sizeof(elt_width##_t), vs1,    \
+               instr_.instr());                                                \
+    }                                                                          \
+  }                                                                            \
+  set_rvv_vstart(0);                                                           \
+  if (::v8::internal::FLAG_trace_sim) {                                        \
+    __int128_t value = Vregister_[rvv_vd_reg()];                               \
+    SNPrintF(trace_buf_, "0x%016" PRIx64 "%016" PRIx64 " --> 0x%016" PRIx64,   \
+             *((int64_t*)(&value) + 1), *(int64_t*)(&value),                   \
+             (uint64_t)(get_register(rs1_reg())));                             \
+  }
 
   template <class T>
   T& Rvvelt(reg_t vReg, uint64_t n, bool is_write = false) {
@@ -917,7 +990,12 @@ class Simulator : public SimulatorBase {
   inline int32_t rvv_vs2_reg() { return instr_.Vs2Value(); }
   inline reg_t rvv_vs2() { UNIMPLEMENTED(); }
   inline int32_t rvv_vd_reg() { return instr_.VdValue(); }
+  inline int32_t rvv_vs3_reg() { return instr_.VdValue(); }
   inline reg_t rvv_vd() { UNIMPLEMENTED(); }
+  inline int32_t rvv_nf() {
+    return (instr_.InstructionBits() & kRvvNfMask) >> kRvvNfShift;
+  }
+
   inline void set_vrd() { UNIMPLEMENTED(); }
 
   inline void set_rvv_vtype(uint64_t value, bool trace = true) {
@@ -1026,6 +1104,8 @@ class Simulator : public SimulatorBase {
   void DecodeRvvIVV();
   void DecodeRvvIVI();
   void DecodeRvvIVX();
+  bool DecodeRvvVL();
+  bool DecodeRvvVS();
 
   // Used for breakpoints and traps.
   void SoftwareInterrupt();
@@ -1103,7 +1183,7 @@ class Simulator : public SimulatorBase {
   bool pc_modified_;
   int64_t icount_;
   int break_count_;
-  base::EmbeddedVector<char, 128> trace_buf_;
+  base::EmbeddedVector<char, 256> trace_buf_;
 
   // Debugger input.
   char* last_debugger_input_;

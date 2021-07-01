@@ -373,8 +373,8 @@ namespace compiler {
   V(RiscvS128Load32x2U)                     \
   V(RiscvS128LoadLane)                      \
   V(RiscvS128StoreLane)                     \
-  V(RiscvMsaLd)                             \
-  V(RiscvMsaSt)                             \
+  V(RiscvRvvLd)                             \
+  V(RiscvRvvSt)                             \
   V(RiscvI32x4SConvertI16x8Low)             \
   V(RiscvI32x4SConvertI16x8High)            \
   V(RiscvI32x4UConvertI16x8Low)             \

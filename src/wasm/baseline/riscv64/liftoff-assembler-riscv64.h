@@ -500,6 +500,12 @@ void LiftoffAssembler::Load(LiftoffRegister dst, Register src_addr,
     case LoadType::kF64Load:
       TurboAssembler::ULoadDouble(dst.fp(), src_op);
       break;
+    case  LoadType::kS128Load:
+      if (src_op.offset() != 0) {
+        Add64(src_op.rm(), src_op.rm(), src_op.offset());
+      }
+      vl(dst.vp(), src_op.rm(), 0, VSew::E8);
+      break;
     default:
       UNREACHABLE();
   }
@@ -554,6 +560,12 @@ void LiftoffAssembler::Store(Register dst_addr, Register offset_reg,
       break;
     case StoreType::kF64Store:
       TurboAssembler::UStoreDouble(src.fp(), dst_op);
+      break;
+    case StoreType::kS128Store:
+      if(dst_op.offset() != 0) {
+        Add64(dst_op.rm() , dst_op.rm(), dst_op.offset());
+      }
+      vs(src.vp(), dst_op.rm(), 0, VSew::E8);
       break;
     default:
       UNREACHABLE();
@@ -921,7 +933,9 @@ void LiftoffAssembler::Spill(int offset, LiftoffRegister reg, ValueKind kind) {
       TurboAssembler::StoreDouble(reg.fp(), dst);
       break;
     case kS128:
-      bailout(kSimd, "Spill S128");
+      VU.set(VSew::E8, Vlmul::m1);
+      Add64(kScratchReg, dst.rm(), dst.offset());
+      vs(reg.vp(), dst.rm(), 0, VSew::E8);
       break;
     default:
       UNREACHABLE();
@@ -1643,7 +1657,7 @@ void LiftoffAssembler::emit_i32x4_splat(LiftoffRegister dst,
 
 void LiftoffAssembler::emit_i64x2_splat(LiftoffRegister dst,
                                         LiftoffRegister src) {
-  VU.set(t0, E64, m1);
+  VU.set(kScratchReg, E64, m1);
   vmv_vx(dst.vp(), src.gp());
 }
 
@@ -1891,7 +1905,8 @@ void LiftoffAssembler::emit_f64x2_le(LiftoffRegister dst, LiftoffRegister lhs,
 
 void LiftoffAssembler::emit_s128_const(LiftoffRegister dst,
                                        const uint8_t imms[16]) {
-  bailout(kSimd, "emit_s128_const");
+  li(kScratchReg, (int64_t)imms);
+  vl(dst.vp(), kScratchReg, 0, VSew::E8);
 }
 
 void LiftoffAssembler::emit_s128_not(LiftoffRegister dst, LiftoffRegister src) {
@@ -1980,7 +1995,7 @@ void LiftoffAssembler::emit_i8x16_shri_u(LiftoffRegister dst,
 
 void LiftoffAssembler::emit_i8x16_add(LiftoffRegister dst, LiftoffRegister lhs,
                                       LiftoffRegister rhs) {
-  VU.set(t0, E8, m1);
+  VU.set(kScratchReg, E8, m1);
   vadd_vv(dst.vp(), lhs.vp(), rhs.vp());
 }
 
@@ -2196,7 +2211,8 @@ void LiftoffAssembler::emit_i32x4_shri_u(LiftoffRegister dst,
 
 void LiftoffAssembler::emit_i32x4_add(LiftoffRegister dst, LiftoffRegister lhs,
                                       LiftoffRegister rhs) {
-  bailout(kSimd, "emit_i32x4_add");
+  VU.set(E32, m1);
+  vadd_vv(dst.vp(), lhs.vp(), rhs.vp());
 }
 
 void LiftoffAssembler::emit_i32x4_sub(LiftoffRegister dst, LiftoffRegister lhs,
@@ -2618,7 +2634,7 @@ void LiftoffAssembler::emit_i16x8_extract_lane_u(LiftoffRegister dst,
 void LiftoffAssembler::emit_i32x4_extract_lane(LiftoffRegister dst,
                                                LiftoffRegister lhs,
                                                uint8_t imm_lane_idx) {
-  VU.set(t0, E64, m1);
+  VU.set(kScratchReg, E64, m1);
   vslidedown_vi(v31, imm_lane_idx, lhs.vp());
   vmv_xs(dst.gp(), v31);
 }
@@ -2666,7 +2682,7 @@ void LiftoffAssembler::emit_i64x2_replace_lane(LiftoffRegister dst,
                                                LiftoffRegister src1,
                                                LiftoffRegister src2,
                                                uint8_t imm_lane_idx) {
-  VU.set(t0, E64, m1);
+  VU.set(kScratchReg, E64, m1);
   li(t0, 0x1 << imm_lane_idx);
   vmv_sx(v0, t0);
   vmerge_vx(dst.vp(), src2.gp(), src1.vp());
