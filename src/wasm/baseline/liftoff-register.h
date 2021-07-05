@@ -131,6 +131,7 @@ static constexpr int kBitsPerFpRegCode =
 // GpRegPair requires 1 extra bit, S128RegPair also needs an extra bit.
 static constexpr int kBitsPerRegPair =
     (kNeedS128RegPair ? 2 : 1) + 2 * kBitsPerGpRegCode;
+
 static_assert(2 * kBitsPerGpRegCode >= kBitsPerFpRegCode,
               "encoding for gp pair and fp pair collides");
 
@@ -463,6 +464,7 @@ class LiftoffRegList {
     for (LiftoffRegister reg : {LiftoffRegister(regs)...}) list.set(reg);
     return list;
   }
+
  private:
   storage_t regs_ = 0;
 

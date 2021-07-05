@@ -267,7 +267,6 @@ class VRegister : public RegisterBase<VRegister, kVRAfterLast> {
   explicit constexpr VRegister(int code) : RegisterBase(code) {}
 };
 
-
 // Coprocessor register.
 class FPURegister : public RegisterBase<FPURegister, kDoubleAfterLast> {
  public:
@@ -286,6 +285,9 @@ class FPURegister : public RegisterBase<FPURegister, kDoubleAfterLast> {
     return FPURegister::from_code(code() + 1);
   }
 
+  // FIXME(riscv64): In Rvv, Vector regs is different from Float Regs. But in
+  // this cl, in order to facilitate modification, it is assumed that the vector
+  // register and floating point register are public.
   VRegister toV() const { return VRegister::from_code(code()); }
 
  private:

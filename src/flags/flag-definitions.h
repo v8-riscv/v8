@@ -1343,7 +1343,7 @@ DEFINE_BOOL(partial_constant_pool, true,
 DEFINE_STRING(sim_arm64_optional_features, "none",
               "enable optional features on the simulator for testing: none or "
               "all")
-              
+
 #if defined(V8_TARGET_ARCH_RISCV64)
 DEFINE_BOOL(riscv_trap_to_simulator_debugger, false,
             "enable simulator trap to debugger")

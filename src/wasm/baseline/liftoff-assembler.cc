@@ -1080,7 +1080,6 @@ void LiftoffAssembler::Move(LiftoffRegister dst, LiftoffRegister src,
   } else {
     Move(dst.fp(), src.fp(), kind);
   }
-
 }
 
 void LiftoffAssembler::ParallelRegisterMove(

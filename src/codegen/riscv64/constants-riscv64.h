@@ -249,7 +249,8 @@ constexpr int kRvvVLEN = 128;
 constexpr int kRvvSLEN = kRvvVLEN;
 const int kRvvFunct6Shift = 26;
 const int kRvvFunct6Bits = 6;
-const uint32_t kRvvFunct6Mask = (((1 << kRvvFunct6Bits) - 1) << kRvvFunct6Shift);
+const uint32_t kRvvFunct6Mask =
+    (((1 << kRvvFunct6Bits) - 1) << kRvvFunct6Shift);
 
 const int kRvvVmBits = 1;
 const int kRvvVmShift = 25;
@@ -707,6 +708,50 @@ enum Opcode : uint32_t {
   RO_V_VADD_VV = OP_IVV | (VADD_FUNCT6 << kRvvFunct6Shift),
   RO_V_VADD_VX = OP_IVX | (VADD_FUNCT6 << kRvvFunct6Shift),
 
+  VSUB_FUNCT6 = 0b000010,
+  RO_V_VSUB_VX = OP_IVX | (VSUB_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VSUB_VV = OP_IVV | (VSUB_FUNCT6 << kRvvFunct6Shift),
+
+  VRSUB_FUNCT6 = 0b000011,
+  RO_V_VRSUB_VX = OP_IVX | (VRSUB_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VRSUB_VI = OP_IVI | (VRSUB_FUNCT6 << kRvvFunct6Shift),
+
+  VMINU_FUNCT6 = 0b000100,
+  RO_V_VMINU_VX = OP_IVX | (VMINU_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VMINU_VV = OP_IVV | (VMINU_FUNCT6 << kRvvFunct6Shift),
+
+  VMIN_FUNCT6 = 0b000101,
+  RO_V_VMIN_VX = OP_IVX | (VMIN_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VMIN_VV = OP_IVV | (VMIN_FUNCT6 << kRvvFunct6Shift),
+
+  VMAXU_FUNCT6 = 0b000110,
+  RO_V_VMAXU_VX = OP_IVX | (VMAXU_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VMAXU_VV = OP_IVV | (VMAXU_FUNCT6 << kRvvFunct6Shift),
+
+  VMAX_FUNCT6 = 0b000111,
+  RO_V_VMAX_VX = OP_IVX | (VMAX_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VMAX_VV = OP_IVV | (VMAX_FUNCT6 << kRvvFunct6Shift),
+
+  VAND_FUNCT6 = 0b001001,
+  RO_V_VAND_VI = OP_IVI | (VAND_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VAND_VV = OP_IVV | (VAND_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VAND_VX = OP_IVX | (VAND_FUNCT6 << kRvvFunct6Shift),
+
+  VOR_FUNCT6 = 0b001010,
+  RO_V_VOR_VI = OP_IVI | (VOR_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VOR_VV = OP_IVV | (VOR_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VOR_VX = OP_IVX | (VOR_FUNCT6 << kRvvFunct6Shift),
+
+  VXOR_FUNCT6 = 0b001011,
+  RO_V_VXOR_VI = OP_IVI | (VXOR_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VXOR_VV = OP_IVV | (VXOR_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VXOR_VX = OP_IVX | (VXOR_FUNCT6 << kRvvFunct6Shift),
+
+  VRGATHER_FUNCT6 = 0b001100,
+  RO_V_VRGATHER_VI = OP_IVI | (VRGATHER_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VRGATHER_VV = OP_IVV | (VRGATHER_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VRGATHER_VX = OP_IVX | (VRGATHER_FUNCT6 << kRvvFunct6Shift),
+
   VMV_FUNCT6 = 0b010111,
   RO_V_VMV_VI = OP_IVI | (VMV_FUNCT6 << kRvvFunct6Shift),
   RO_V_VMV_VV = OP_IVV | (VMV_FUNCT6 << kRvvFunct6Shift),
@@ -883,8 +928,7 @@ enum FClassFlag {
   V(E128)          \
   V(E256)          \
   V(E512)          \
-  V(E1024)         
-
+  V(E1024)
 
 enum VSew {
 #define DEFINE_FLAG(name) name,
@@ -900,7 +944,7 @@ enum VSew {
   V(RESERVERD)      \
   V(mf8)            \
   V(mf4)            \
-  V(mf2)            
+  V(mf2)
 
 enum Vlmul {
 #define DEFINE_FLAG(name) name,

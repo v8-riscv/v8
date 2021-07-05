@@ -1306,7 +1306,8 @@ void Simulator::WriteMem(int64_t addr, T value, Instruction* instr) {
 #endif
   T* ptr = reinterpret_cast<T*>(addr);
   TraceMemWr(addr, value);
-  // PrintF("Unaligned read at 0x%08" PRIx64 " , pc=0x%08" PRId64 "\n", (int64_t)ptr,
+  // PrintF("Unaligned read at 0x%08" PRIx64 " , pc=0x%08" PRId64 "\n",
+  // (int64_t)ptr,
   //        (int64_t)value);
   *ptr = value;
 }
@@ -2840,7 +2841,7 @@ bool Simulator::DecodeRvvVL() {
       instr_.InstructionBits() & (kRvvMopMask | kRvvNfMask | kBaseOpcodeMask);
   if (RO_V_VL == instr_temp) {
     if (!(instr_.InstructionBits() & (kRvvRs2Mask))) {
-      switch(instr_.vl_vs_width()) {
+      switch (instr_.vl_vs_width()) {
         case 8: {
           RVV_VI_LD(0, (i * nf + fn), int8, false);
           break;
@@ -2927,19 +2928,19 @@ bool Simulator::DecodeRvvVS() {
              RO_V_VSSEG4 == instr_temp || RO_V_VSSEG5 == instr_temp ||
              RO_V_VSSEG6 == instr_temp || RO_V_VSSEG7 == instr_temp ||
              RO_V_VSSEG8 == instr_temp) {
-               UNIMPLEMENTED_RISCV();
+    UNIMPLEMENTED_RISCV();
     return true;
   } else if (RO_V_VSSSEG2 == instr_temp || RO_V_VSSSEG3 == instr_temp ||
              RO_V_VSSSEG4 == instr_temp || RO_V_VSSSEG5 == instr_temp ||
              RO_V_VSSSEG6 == instr_temp || RO_V_VSSSEG7 == instr_temp ||
              RO_V_VSSSEG8 == instr_temp) {
-               UNIMPLEMENTED_RISCV();
+    UNIMPLEMENTED_RISCV();
     return true;
   } else if (RO_V_VSXSEG2 == instr_temp || RO_V_VSXSEG3 == instr_temp ||
              RO_V_VSXSEG4 == instr_temp || RO_V_VSXSEG5 == instr_temp ||
              RO_V_VSXSEG6 == instr_temp || RO_V_VSXSEG7 == instr_temp ||
              RO_V_VSXSEG8 == instr_temp) {
-               UNIMPLEMENTED_RISCV();
+    UNIMPLEMENTED_RISCV();
     return true;
   } else {
     return false;
@@ -3678,7 +3679,7 @@ void Simulator::DecodeVType() {
         set_rd(rvv_vl());
         rvv_trace_status();
       } else {
-         UNIMPLEMENTED();
+        UNIMPLEMENTED();
       }
       break;
     }

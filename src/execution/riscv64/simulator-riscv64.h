@@ -421,7 +421,7 @@ class Simulator : public SimulatorBase {
     if ((rvv_vlmul() & 0b100) != 0) {
       return (rvv_vlen() / rvv_sew()) >> (rvv_vlmul() & 0b11);
     } else {
-      return ((rvv_vlen() << rvv_vlmul()) / rvv_sew()) ;
+      return ((rvv_vlen() << rvv_vlmul()) / rvv_sew());
     }
   }
 
@@ -738,7 +738,6 @@ class Simulator : public SimulatorBase {
 
 #define RVV_VI_GENERAL_LOOP_BASE \
   for (uint64_t i = rvv_vstart(); i < rvv_vl(); i++) {
-
 #define RVV_VI_LOOP_END \
   set_rvv_vstart(0);    \
   }
@@ -747,25 +746,26 @@ class Simulator : public SimulatorBase {
     if (::v8::internal::FLAG_trace_sim) {
       __int128_t value = Vregister_[rvv_vd_reg()];
       SNPrintF(trace_buf_, "0x%016" PRIx64 "%016" PRIx64,
-               *((int64_t*)(&value) + 1), *(int64_t*)(&value));
+               *(reinterpret_cast<int64_t*>(&value) + 1),
+               *reinterpret_cast<int64_t*>(&value));
     }
   }
 
   inline void rvv_trace_vs1() {
     if (::v8::internal::FLAG_trace_sim) {
       PrintF("\t%s:0x%016" PRIx64 "%016" PRIx64 "\n",
-             v8::internal::VRegisters::Name((int)rvv_vs1_reg()),
-             (uint64_t)(get_vregister((int)rvv_vs1_reg()) >> 64),
-             (uint64_t)get_vregister((int)rvv_vs1_reg()));
+             v8::internal::VRegisters::Name(static_cast<int>(rvv_vs1_reg())),
+             (uint64_t)(get_vregister(static_cast<int>(rvv_vs1_reg())) >> 64),
+             (uint64_t)get_vregister(static_cast<int>(rvv_vs1_reg())));
     }
   }
 
   inline void rvv_trace_vs2() {
     if (::v8::internal::FLAG_trace_sim) {
       PrintF("\t%s:0x%016" PRIx64 "%016" PRIx64 "\n",
-             v8::internal::VRegisters::Name((int)rvv_vs2_reg()),
-             (uint64_t)(get_vregister((int)rvv_vs2_reg()) >> 64),
-             (uint64_t)get_vregister((int)rvv_vs2_reg()));
+             v8::internal::VRegisters::Name(static_cast<int>(rvv_vs2_reg())),
+             (uint64_t)(get_vregister(static_cast<int>(rvv_vs2_reg())) >> 64),
+             (uint64_t)get_vregister(static_cast<int>(rvv_vs2_reg())));
     }
   }
   inline void rvv_trace_v0() {
@@ -779,15 +779,16 @@ class Simulator : public SimulatorBase {
   inline void rvv_trace_rs1() {
     if (::v8::internal::FLAG_trace_sim) {
       PrintF("\t%s:0x%016" PRIx64 "\n",
-             v8::internal::Registers::Name((int)rs1_reg()),
+             v8::internal::Registers::Name(static_cast<int>(rs1_reg())),
              (uint64_t)(get_register(rs1_reg())));
     }
   }
 
   inline void rvv_trace_status() {
     if (::v8::internal::FLAG_trace_sim) {
-      SNPrintF(trace_buf_.SubVector(44, 100), "  sew:%s lmul:%s vstart:%lu vl:%lu", rvv_sew_s(),
-               rvv_lmul_s(), rvv_vstart(), rvv_vl());
+      SNPrintF(trace_buf_.SubVector(44, 100),
+               "  sew:%s lmul:%s vstart:%lu vl:%lu", rvv_sew_s(), rvv_lmul_s(),
+               rvv_vstart(), rvv_vl());
     }
   }
 
@@ -818,7 +819,7 @@ class Simulator : public SimulatorBase {
     UNREACHABLE();                 \
   }                                \
   RVV_VI_LOOP_END                  \
-  rvv_trace_vd();                                   
+  rvv_trace_vd();
 
 #define RVV_VI_VX_LOOP(BODY)       \
   RVV_VI_GENERAL_LOOP_BASE         \
@@ -842,7 +843,7 @@ class Simulator : public SimulatorBase {
     UNREACHABLE();                 \
   }                                \
   RVV_VI_LOOP_END                  \
-  rvv_trace_vd();                                  
+  rvv_trace_vd();
 
 #define RVV_VI_VI_LOOP(BODY)       \
   RVV_VI_GENERAL_LOOP_BASE         \
@@ -866,7 +867,7 @@ class Simulator : public SimulatorBase {
     UNREACHABLE();                 \
   }                                \
   RVV_VI_LOOP_END                  \
-  rvv_trace_vd();                  
+  rvv_trace_vd();
 
 #define RVV_VI_VVXI_MERGE_LOOP(BODY) \
   RVV_VI_GENERAL_LOOP_BASE           \
@@ -887,14 +888,13 @@ class Simulator : public SimulatorBase {
     BODY                             \
   }                                  \
   RVV_VI_LOOP_END                    \
-  rvv_trace_vd();                                       
+  rvv_trace_vd();
 
 #define VI_MASK_VARS       \
   const int midx = i / 64; \
   const int mpos = i % 64;
 
-#define VI_STRIP(inx) \
-  reg_t vreg_inx = inx;
+#define VI_STRIP(inx) reg_t vreg_inx = inx;
 
 #define VI_ELEMENT_SKIP(inx)       \
   if (inx >= vl) {                 \
@@ -905,9 +905,9 @@ class Simulator : public SimulatorBase {
     RVV_VI_LOOP_MASK_SKIP();       \
   }
 
-#define require_vm                                     \
-  do {                                                 \
-    if (instr_.RvvVM() == 0) CHECK(rvv_vd_reg() != 0); \
+#define require_vm                                      \
+  do {                                                  \
+    if (instr_.RvvVM() == 0) CHECK_NE(rvv_vd_reg(), 0); \
   } while (0);
 
 #define VI_CHECK_STORE(elt_width, is_mask_ldst) \
@@ -944,9 +944,9 @@ class Simulator : public SimulatorBase {
   set_rvv_vstart(0);                                                           \
   if (::v8::internal::FLAG_trace_sim) {                                        \
     __int128_t value = Vregister_[rvv_vd_reg()];                               \
-    SNPrintF(trace_buf_,                                    \
-             "0x%016" PRIx64 "%016" PRIx64 " <-- 0x%016" PRIx64,               \
-             *((int64_t*)(&value) + 1), *(int64_t*)(&value),                   \
+    SNPrintF(trace_buf_, "0x%016" PRIx64 "%016" PRIx64 " <-- 0x%016" PRIx64,   \
+             *(reinterpret_cast<int64_t*>(&value) + 1),                        \
+             *reinterpret_cast<int64_t*>(&value),                              \
              (uint64_t)(get_register(rs1_reg())));                             \
   }
 
@@ -969,18 +969,20 @@ class Simulator : public SimulatorBase {
   if (::v8::internal::FLAG_trace_sim) {                                        \
     __int128_t value = Vregister_[rvv_vd_reg()];                               \
     SNPrintF(trace_buf_, "0x%016" PRIx64 "%016" PRIx64 " --> 0x%016" PRIx64,   \
-             *((int64_t*)(&value) + 1), *(int64_t*)(&value),                   \
+             *(reinterpret_cast<int64_t*>(&value) + 1),                        \
+             *reinterpret_cast<int64_t*>(&value),                              \
              (uint64_t)(get_register(rs1_reg())));                             \
   }
 
   template <class T>
   T& Rvvelt(reg_t vReg, uint64_t n, bool is_write = false) {
-    CHECK(rvv_sew() != 0);
-    CHECK((rvv_vlen() >> 3) / sizeof(T) > 0);
+    CHECK_NE(rvv_sew(), 0);
+    CHECK_GT((rvv_vlen() >> 3) / sizeof(T), 0);
     reg_t elts_per_reg = (rvv_vlen() >> 3) / (sizeof(T));
     vReg += n / elts_per_reg;
     n = n % elts_per_reg;
-    T* regStart = (T*)((char*)Vregister_ + vReg * (rvv_vlen() >> 3));
+    T* regStart = reinterpret_cast<T*>(reinterpret_cast<char*>(Vregister_) +
+                                       vReg * (rvv_vlen() >> 3));
     return regStart[n];
   }
 
@@ -1000,9 +1002,7 @@ class Simulator : public SimulatorBase {
   inline void set_rvv_vtype(uint64_t value, bool trace = true) {
     vtype_ = value;
   }
-  inline void set_rvv_vl(uint64_t value, bool trace = true) {
-    vl_ = value;
-  }
+  inline void set_rvv_vl(uint64_t value, bool trace = true) { vl_ = value; }
   inline void set_rvv_vstart(uint64_t value, bool trace = true) {
     vstart_ = value;
   }

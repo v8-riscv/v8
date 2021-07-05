@@ -61,9 +61,7 @@ static unsigned CpuFeaturesImpliedByCompiler() {
   return answer;
 }
 
-bool CpuFeatures::SupportsWasmSimd128() { 
-  return IsSupported(RISCV_SIMD); 
-}
+bool CpuFeatures::SupportsWasmSimd128() { return IsSupported(RISCV_SIMD); }
 
 void CpuFeatures::ProbeImpl(bool cross_compile) {
   supported_ |= CpuFeaturesImpliedByCompiler();
@@ -72,7 +70,7 @@ void CpuFeatures::ProbeImpl(bool cross_compile) {
   // Probe for additional features at runtime.
   base::CPU cpu;
   if (cpu.has_fpu()) supported_ |= 1u << FPU;
-    // Set a static value on whether Simd is supported.
+  // Set a static value on whether Simd is supported.
   // This variable is only used for certain archs to query SupportWasmSimd128()
   // at runtime in builtins using an extern ref. Other callers should use
   // CpuFeatures::SupportWasmSimd128().
@@ -1137,7 +1135,6 @@ void Assembler::GenInstrCBA(uint8_t funct3, uint8_t funct2, Opcode opcode,
                      (funct3 << kRvcFunct3Shift) | (funct2 << 10);
   emit(instr);
 }
-
 
 // OPIVV OPFVV OPMVV
 void Assembler::GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd,
@@ -2409,8 +2406,7 @@ void Assembler::vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
 }
 
 void Assembler::vsetivli(Register rd, int8_t uimm, VSew vsew, Vlmul vlmul,
-                         TailAgnosticType tail,
-                         MaskAgnosticType mask) {
+                         TailAgnosticType tail, MaskAgnosticType mask) {
   int32_t zimm = GenZimm(vsew, vlmul, tail, mask);
   Instr instr = OP_V | ((rd.code() & 0x1F) << kRvvRdShift) | (0x7 << 12) |
                 ((uimm & 0x1F) << kRvvUimmShift) |

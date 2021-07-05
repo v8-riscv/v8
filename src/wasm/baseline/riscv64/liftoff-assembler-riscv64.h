@@ -398,7 +398,6 @@ void LiftoffAssembler::LoadFromInstance(Register dst, Register instance,
   }
 }
 
-
 void LiftoffAssembler::LoadTaggedPointerFromInstance(Register dst,
                                                      Register instance,
                                                      int offset) {
@@ -500,7 +499,7 @@ void LiftoffAssembler::Load(LiftoffRegister dst, Register src_addr,
     case LoadType::kF64Load:
       TurboAssembler::ULoadDouble(dst.fp(), src_op);
       break;
-    case  LoadType::kS128Load:
+    case LoadType::kS128Load:
       if (src_op.offset() != 0) {
         Add64(src_op.rm(), src_op.rm(), src_op.offset());
       }
@@ -563,8 +562,8 @@ void LiftoffAssembler::Store(Register dst_addr, Register offset_reg,
       TurboAssembler::UStoreDouble(src.fp(), dst_op);
       break;
     case StoreType::kS128Store:
-      if(dst_op.offset() != 0) {
-        Add64(dst_op.rm() , dst_op.rm(), dst_op.offset());
+      if (dst_op.offset() != 0) {
+        Add64(dst_op.rm(), dst_op.rm(), dst_op.offset());
       }
       vs(src.fp().toV(), dst_op.rm(), 0, VSew::E8);
       break;
@@ -1904,7 +1903,7 @@ void LiftoffAssembler::emit_f64x2_le(LiftoffRegister dst, LiftoffRegister lhs,
 
 void LiftoffAssembler::emit_s128_const(LiftoffRegister dst,
                                        const uint8_t imms[16]) {
-  VU.set(kScratchReg, VSew::E8, Vlmul::m1);                                         
+  VU.set(kScratchReg, VSew::E8, Vlmul::m1);
   li(kScratchReg, (int64_t)imms);
   vl(dst.fp().toV(), kScratchReg, 0, VSew::E8);
 }
