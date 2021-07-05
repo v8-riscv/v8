@@ -504,6 +504,7 @@ void LiftoffAssembler::Load(LiftoffRegister dst, Register src_addr,
       if (src_op.offset() != 0) {
         Add64(src_op.rm(), src_op.rm(), src_op.offset());
       }
+      VU.set(kScratchReg, VSew::E8, Vlmul::m1);
       vl(dst.fp().toV(), src_op.rm(), 0, VSew::E8);
       break;
     default:
@@ -1903,6 +1904,7 @@ void LiftoffAssembler::emit_f64x2_le(LiftoffRegister dst, LiftoffRegister lhs,
 
 void LiftoffAssembler::emit_s128_const(LiftoffRegister dst,
                                        const uint8_t imms[16]) {
+  VU.set(kScratchReg, VSew::E8, Vlmul::m1);                                         
   li(kScratchReg, (int64_t)imms);
   vl(dst.fp().toV(), kScratchReg, 0, VSew::E8);
 }

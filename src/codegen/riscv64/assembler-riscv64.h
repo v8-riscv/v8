@@ -1057,9 +1057,22 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
   class VectorUnit {
    public:
+    inline int32_t sew() const {
+       return 2^(sew_ + 3);
+    }
+    
+    inline int32_t vlmax() const {
+      if ((lmul_ & 0b100) != 0) {
+        return (kRvvVLEN / sew()) >> (lmul_ & 0b11);
+      } else {
+        return ((kRvvVLEN << lmul_) / sew());
+      }
+    }
+
     VectorUnit(Assembler* assm) : assm_(assm) {}
 
     void set(Register rd, VSew sew, Vlmul lmul) {
+      if(sew != sew_ || lmul != lmul_ || vl != vlmax())
         assm_->vsetvlmax(rd, sew_, lmul_);
     }
 
@@ -1074,6 +1087,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
    private:
     VSew sew_ = E8;
     Vlmul lmul_ = m1;
+    int32_t vl = 0;
     Assembler* assm_;
   };
 

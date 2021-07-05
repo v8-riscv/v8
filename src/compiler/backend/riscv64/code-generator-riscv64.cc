@@ -1906,14 +1906,14 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       break;
     }
     case kRiscvRvvSt: {
+      (__ VU).set(kScratchReg, VSew::E8, Vlmul::m1);
       __ Add64(kScratchReg, i.MemoryOperand().rm(), i.MemoryOperand().offset());
-      (__ VU).set(t0, VSew::E8, Vlmul::m1);
       __ vs(i.InputSimd128Register(2), kScratchReg, 0, VSew::E8);
       break;
     }
     case kRiscvRvvLd: {
+      (__ VU).set(kScratchReg, VSew::E8, Vlmul::m1);
       __ Add64(kScratchReg, i.MemoryOperand().rm(), i.MemoryOperand().offset());
-      (__ VU).set(t0, VSew::E8, Vlmul::m1);
       __ vl(i.OutputSimd128Register(), kScratchReg, 0, VSew::E8);
       break;
     }
@@ -1921,7 +1921,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       Simd128Register dst = i.OutputSimd128Register();
       uint64_t imm1 = make_uint64(i.InputUint32(1), i.InputUint32(0));
       uint64_t imm2 = make_uint64(i.InputUint32(3), i.InputUint32(2));
-      (__ VU).set(t0, VSew::E64, Vlmul::m1);
+      (__ VU).set(kScratchReg, VSew::E64, Vlmul::m1);
       __ li(kScratchReg, imm1);
       __ vmerge_vx(dst, kScratchReg, dst);
       __ li(kScratchReg, imm2);

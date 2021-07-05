@@ -3663,19 +3663,23 @@ void Simulator::DecodeVType() {
       break;
     }
     case RO_V_VSETVL: {
-      uint64_t avl;
-      set_rvv_vtype(rs2());
-      if (rs1_reg() != zero_reg) {
-        avl = rs1();
-      } else if (rd_reg() != zero_reg) {
-        avl = ~0;
+      if (!(instr_.InstructionBits() & 0x40000000)) {
+        uint64_t avl;
+        set_rvv_vtype(rs2());
+        if (rs1_reg() != zero_reg) {
+          avl = rs1();
+        } else if (rd_reg() != zero_reg) {
+          avl = ~0;
+        } else {
+          avl = rvv_vl();
+        }
+        avl = avl <= rvv_vlmax() ? avl : rvv_vlmax();
+        set_rvv_vl(avl);
+        set_rd(rvv_vl());
+        rvv_trace_status();
       } else {
-        avl = rvv_vl();
+         UNIMPLEMENTED();
       }
-      avl = avl <= rvv_vlmax() ? avl : rvv_vlmax();
-      set_rvv_vl(avl);
-      set_rd(rvv_vl());
-      rvv_trace_status();
       break;
     }
     default:

@@ -2031,7 +2031,11 @@ void Decoder::DecodeVType(Instruction* instr) {
       Format(instr, "vsetvli       'rd, 'rs1, 'sew, 'lmul");
       break;
     case RO_V_VSETVL:
-      Format(instr, "vsetvl       'rd, 'rs1,  'rs2");
+      if (!(instr->InstructionBits() & 0x40000000)) {
+        Format(instr, "vsetvl       'rd, 'rs1,  'rs2");
+      } else {
+        Format(instr, "vsetivli       'rd");
+      }
       break;
     default:
       UNSUPPORTED_RISCV();

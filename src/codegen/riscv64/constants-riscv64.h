@@ -640,6 +640,7 @@ enum Opcode : uint32_t {
   OP_MVX = OP_V | (0b110 << kFunct3Shift),
 
   RO_V_VSETVLI = OP_V | (0b111 << kFunct3Shift) | 0b0 << 31,
+  RO_V_VSETIVLI = OP_V | (0b111 << kFunct3Shift) | 0b11 << 30,
   RO_V_VSETVL = OP_V | (0b111 << kFunct3Shift) | 0b1 << 31,
 
   // RVV LOAD/STORE

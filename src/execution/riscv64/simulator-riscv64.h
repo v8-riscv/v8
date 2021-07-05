@@ -421,7 +421,7 @@ class Simulator : public SimulatorBase {
     if ((rvv_vlmul() & 0b100) != 0) {
       return (rvv_vlen() / rvv_sew()) >> (rvv_vlmul() & 0b11);
     } else {
-      return (rvv_vlen() / rvv_sew()) << rvv_vlmul();
+      return ((rvv_vlen() << rvv_vlmul()) / rvv_sew()) ;
     }
   }
 
