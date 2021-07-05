@@ -287,6 +287,10 @@ const int kRvvZimmBits = 11;
 const int kRvvZimmShift = 20;
 const uint32_t kRvvZimmMask = (((1 << kRvvZimmBits) - 1) << kRvvZimmShift);
 
+const int kRvvUimmShift = kRvvRs1Shift;
+const int kRvvUimmBits = kRvvRs1Bits;
+const uint32_t kRvvUimmMask = (((1 << kRvvUimmBits) - 1) << kRvvUimmShift);
+
 const int kRvvWidthBits = 3;
 const int kRvvWidthShift = 12;
 const uint32_t kRvvWidthMask = (((1 << kRvvWidthBits) - 1) << kRvvWidthShift);

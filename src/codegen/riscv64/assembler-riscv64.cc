@@ -1138,21 +1138,6 @@ void Assembler::GenInstrCBA(uint8_t funct3, uint8_t funct2, Opcode opcode,
   emit(instr);
 }
 
-// vsetvl
-void Assembler::GenInstrV(Register rd, Register rs1, Register rs2) {
-  Instr instr = OP_V | ((rd.code() & 0x1F) << kRvvRdShift) | (0x7 << 12) |
-                ((rs1.code() & 0x1F) << kRvvRs1Shift) |
-                ((rs2.code() & 0x1F) << kRvvRs2Shift) | 0x1 << 31;
-  emit(instr);
-}
-
-// vsetvli
-void Assembler::GenInstrV(Register rd, Register rs1, uint32_t zimm) {
-  Instr instr = OP_V | ((rd.code() & 0x1F) << kRvvRdShift) | (0x7 << 12) |
-                ((rs1.code() & 0x1F) << kRvvRs1Shift) |
-                (((uint32_t)zimm << kRvvZimmShift) & kRvvZimmMask) | 0x0 << 31;
-  emit(instr);
-}
 
 // OPIVV OPFVV OPMVV
 void Assembler::GenInstrV(uint8_t funct6, Opcode opcode, VRegister vd,
@@ -2413,14 +2398,31 @@ void Assembler::c_andi(Register rs1, uint8_t uimm6) {
   GenInstrCBA(0b100, 0b10, C1, rs1, uimm6);
 }
 
-// Privileged
-
 // RVV
-
 void Assembler::vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
                         TailAgnosticType tail, MaskAgnosticType mask) {
   int32_t zimm = GenZimm(vsew, vlmul, tail, mask);
-  GenInstrV(rd, rs1, zimm);
+  Instr instr = OP_V | ((rd.code() & 0x1F) << kRvvRdShift) | (0x7 << 12) |
+                ((rs1.code() & 0x1F) << kRvvRs1Shift) |
+                (((uint32_t)zimm << kRvvZimmShift) & kRvvZimmMask) | 0x0 << 31;
+  emit(instr);
+}
+
+void Assembler::vsetivli(Register rd, int8_t uimm, VSew vsew, Vlmul vlmul,
+                         TailAgnosticType tail,
+                         MaskAgnosticType mask) {
+  int32_t zimm = GenZimm(vsew, vlmul, tail, mask);
+  Instr instr = OP_V | ((rd.code() & 0x1F) << kRvvRdShift) | (0x7 << 12) |
+                ((uimm & 0x1F) << kRvvUimmShift) |
+                (((uint32_t)zimm << kRvvZimmShift) & kRvvZimmMask) | 0x3 << 30;
+  emit(instr);
+}
+
+void Assembler::vsetvl(Register rd, Register rs1, Register rs2) {
+  Instr instr = OP_V | ((rd.code() & 0x1F) << kRvvRdShift) | (0x7 << 12) |
+                ((rs1.code() & 0x1F) << kRvvRs1Shift) |
+                ((rs2.code() & 0x1F) << kRvvRs2Shift) | 0x40 << 25;
+  emit(instr);
 }
 
 uint8_t vsew_switch(VSew vsew) {
@@ -2758,10 +2760,6 @@ void Assembler::vsxseg8(VRegister vd, Register rs1, VRegister rs2, VSew vsew,
   bool IsMew = vsew >= E128 ? true : false;
   uint8_t width = vsew_switch(vsew);
   GenInstrV(STORE_FP, width, vd, rs1, rs2, mask, 0b11, IsMew, 0b111);
-}
-
-void Assembler::vsetvl(Register rd, Register rs1, Register rs2) {
-  GenInstrV(rd, rs1, rs2);
 }
 
 // Privileged

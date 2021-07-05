@@ -954,7 +954,6 @@ class Simulator : public SimulatorBase {
   const reg_t nf = rvv_nf() + 1;                                               \
   const reg_t vl = is_mask_ldst ? ((rvv_vl() + 7) / 8) : rvv_vl();             \
   const int64_t baseAddr = rs1();                                              \
-  std::cout << "base: " << baseAddr << std::endl;                              \
   for (reg_t i = 0; i < vl; ++i) {                                             \
     VI_STRIP(i)                                                                \
     VI_ELEMENT_SKIP(i);                                                        \
