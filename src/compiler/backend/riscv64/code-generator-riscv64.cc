@@ -1929,6 +1929,13 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       break;
     }
     case kRiscvI32x4Add: {
+      (__ VU).set(kScratchReg, VSew::E32, Vlmul::m1);
+      __ vadd_vv(i.OutputSimd128Register(), i.InputSimd128Register(0),
+                 i.InputSimd128Register(1));
+      break;
+    }
+    case kRiscvI8x16Add: {
+      (__ VU).set(kScratchReg, VSew::E8, Vlmul::m1);
       __ vadd_vv(i.OutputSimd128Register(), i.InputSimd128Register(0),
                  i.InputSimd128Register(1));
       break;
