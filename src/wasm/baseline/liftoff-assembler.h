@@ -538,7 +538,7 @@ class LiftoffAssembler : public TurboAssembler {
       DoubleRegister low_fp = SpillAdjacentFpRegisters(pinned).fp();
       return LiftoffRegister::ForFpPair(low_fp);
     }
-    DCHECK(rc == kGpReg || rc == kFpReg || (kHasVReg ? rc == kVpReg : 0));
+    DCHECK(rc == kGpReg || rc == kFpReg);
     LiftoffRegList candidates = GetCacheRegList(rc).MaskOut(pinned);
     return GetUnusedRegister(candidates);
   }
@@ -761,9 +761,6 @@ class LiftoffAssembler : public TurboAssembler {
 
   inline void Move(Register dst, Register src, ValueKind);
   inline void Move(DoubleRegister dst, DoubleRegister src, ValueKind);
-#ifdef V8_TARGET_ARCH_RISCV64
-  inline void Move(Simd128Register dst, Simd128Register src, ValueKind);
-#endif
 
   inline void Spill(int offset, LiftoffRegister, ValueKind);
   inline void Spill(int offset, WasmValue);

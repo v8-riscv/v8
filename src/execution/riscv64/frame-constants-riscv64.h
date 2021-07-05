@@ -54,8 +54,6 @@ class WasmDebugBreakFrameConstants : public TypedFrameConstants {
   //       fa6, fa7, ft8, ft9, ft10, ft11);
   static constexpr uint32_t kPushedFpRegs = wasm::kLiftoffAssemblerFpCacheRegs;
 
-  static constexpr uint32_t kPushedVRegs = wasm::kLiftoffAssemblerVpCacheRegs;
-
 
   static constexpr int kNumPushedGpRegisters =
       base::bits::CountPopulation(kPushedGpRegs);

@@ -155,30 +155,13 @@ class LinkageAllocator {
                              const DoubleRegister (&fp)[kNumFpRegs])
       : LinkageAllocator(gp, kNumGpRegs, fp, kNumFpRegs) {}
 
-  template <size_t kNumGpRegs, size_t kNumFpRegs, size_t kNumVpRegs>
-  constexpr LinkageAllocator(const Register (&gp)[kNumGpRegs],
-                             const DoubleRegister (&fp)[kNumFpRegs],
-                             const Simd128Register (&vp)[kNumVpRegs])
-      : LinkageAllocator(gp, kNumGpRegs, fp, kNumFpRegs, vp, kNumVpRegs) {}
 
   constexpr LinkageAllocator(const Register* gp, int gpc,
                              const DoubleRegister* fp, int fpc)
       : gp_count_(gpc),
         gp_regs_(gp),
         fp_count_(fpc),
-        fp_regs_(fp),
-        vp_regs_(NULL),
-        vp_count_(0) {}
-
-  constexpr LinkageAllocator(const Register* gp, int gpc,
-                             const DoubleRegister* fp, int fpc,
-                             const Simd128Register* vp, int vpc)
-      : gp_count_(gpc),
-        gp_regs_(gp),
-        fp_count_(fpc),
-        fp_regs_(fp),
-        vp_regs_(vp),
-        vp_count_(vpc) {}
+        fp_regs_(fp) {}
 
   bool CanAllocateGP() const { return gp_offset_ < gp_count_; }
   bool CanAllocateFP(MachineRepresentation rep) const {
@@ -206,8 +189,6 @@ class LinkageAllocator {
     return fp_offset_ < fp_count_;
 #endif
   }
-
-  bool CanAllocateVP() { return vp_offset_ < vp_count_; }
 
   int NextGpReg() {
     DCHECK_LT(gp_offset_, gp_count_);
@@ -246,11 +227,6 @@ class LinkageAllocator {
 #endif
   }
 
-  int NextVpReg() {
-    DCHECK_LT(vp_offset_, vp_count_);
-    return vp_regs_[vp_offset_++].code();
-  }
-
   // Stackslots are counted upwards starting from 0 (or the offset set by
   // {SetStackOffset}. If {type} needs more than one stack slot, the lowest
   // used stack slot is returned.
@@ -287,9 +263,6 @@ class LinkageAllocator {
   int fp_offset_ = 0;
 #endif
   const DoubleRegister* const fp_regs_;
-  const Simd128Register* const vp_regs_;
-  const int vp_count_;
-  int vp_offset_ = 0;
 
   AlignedSlotAllocator slot_allocator_;
 };

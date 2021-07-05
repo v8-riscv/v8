@@ -504,7 +504,7 @@ void LiftoffAssembler::Load(LiftoffRegister dst, Register src_addr,
       if (src_op.offset() != 0) {
         Add64(src_op.rm(), src_op.rm(), src_op.offset());
       }
-      vl(dst.vp(), src_op.rm(), 0, VSew::E8);
+      vl(dst.fp().toV(), src_op.rm(), 0, VSew::E8);
       break;
     default:
       UNREACHABLE();
@@ -565,7 +565,7 @@ void LiftoffAssembler::Store(Register dst_addr, Register offset_reg,
       if(dst_op.offset() != 0) {
         Add64(dst_op.rm() , dst_op.rm(), dst_op.offset());
       }
-      vs(src.vp(), dst_op.rm(), 0, VSew::E8);
+      vs(src.fp().toV(), dst_op.rm(), 0, VSew::E8);
       break;
     default:
       UNREACHABLE();
@@ -903,13 +903,11 @@ void LiftoffAssembler::Move(Register dst, Register src, ValueKind kind) {
 void LiftoffAssembler::Move(DoubleRegister dst, DoubleRegister src,
                             ValueKind kind) {
   DCHECK_NE(dst, src);
-  TurboAssembler::Move(dst, src);
-}
-
-void LiftoffAssembler::Move(Simd128Register dst, Simd128Register src,
-                            ValueKind kind) {
-  DCHECK_NE(dst, src);
-  TurboAssembler::vmv_vv(dst, src);
+  if (kind != kS128) {
+    TurboAssembler::Move(dst, src);
+  } else {
+    TurboAssembler::vmv_vv(dst.toV(), dst.toV());
+  }
 }
 
 void LiftoffAssembler::Spill(int offset, LiftoffRegister reg, ValueKind kind) {
@@ -935,7 +933,7 @@ void LiftoffAssembler::Spill(int offset, LiftoffRegister reg, ValueKind kind) {
     case kS128:
       VU.set(VSew::E8, Vlmul::m1);
       Add64(kScratchReg, dst.rm(), dst.offset());
-      vs(reg.vp(), dst.rm(), 0, VSew::E8);
+      vs(reg.fp().toV(), dst.rm(), 0, VSew::E8);
       break;
     default:
       UNREACHABLE();
@@ -1658,7 +1656,7 @@ void LiftoffAssembler::emit_i32x4_splat(LiftoffRegister dst,
 void LiftoffAssembler::emit_i64x2_splat(LiftoffRegister dst,
                                         LiftoffRegister src) {
   VU.set(kScratchReg, E64, m1);
-  vmv_vx(dst.vp(), src.gp());
+  vmv_vx(dst.fp().toV(), src.gp());
 }
 
 void LiftoffAssembler::emit_i64x2_eq(LiftoffRegister dst, LiftoffRegister lhs,
@@ -1906,7 +1904,7 @@ void LiftoffAssembler::emit_f64x2_le(LiftoffRegister dst, LiftoffRegister lhs,
 void LiftoffAssembler::emit_s128_const(LiftoffRegister dst,
                                        const uint8_t imms[16]) {
   li(kScratchReg, (int64_t)imms);
-  vl(dst.vp(), kScratchReg, 0, VSew::E8);
+  vl(dst.fp().toV(), kScratchReg, 0, VSew::E8);
 }
 
 void LiftoffAssembler::emit_s128_not(LiftoffRegister dst, LiftoffRegister src) {
@@ -1996,7 +1994,7 @@ void LiftoffAssembler::emit_i8x16_shri_u(LiftoffRegister dst,
 void LiftoffAssembler::emit_i8x16_add(LiftoffRegister dst, LiftoffRegister lhs,
                                       LiftoffRegister rhs) {
   VU.set(kScratchReg, E8, m1);
-  vadd_vv(dst.vp(), lhs.vp(), rhs.vp());
+  vadd_vv(dst.fp().toV(), lhs.fp().toV(), rhs.fp().toV());
 }
 
 void LiftoffAssembler::emit_i8x16_add_sat_s(LiftoffRegister dst,
@@ -2212,7 +2210,7 @@ void LiftoffAssembler::emit_i32x4_shri_u(LiftoffRegister dst,
 void LiftoffAssembler::emit_i32x4_add(LiftoffRegister dst, LiftoffRegister lhs,
                                       LiftoffRegister rhs) {
   VU.set(E32, m1);
-  vadd_vv(dst.vp(), lhs.vp(), rhs.vp());
+  vadd_vv(dst.fp().toV(), lhs.fp().toV(), rhs.fp().toV());
 }
 
 void LiftoffAssembler::emit_i32x4_sub(LiftoffRegister dst, LiftoffRegister lhs,
@@ -2635,7 +2633,7 @@ void LiftoffAssembler::emit_i32x4_extract_lane(LiftoffRegister dst,
                                                LiftoffRegister lhs,
                                                uint8_t imm_lane_idx) {
   VU.set(kScratchReg, E64, m1);
-  vslidedown_vi(v31, imm_lane_idx, lhs.vp());
+  vslidedown_vi(v31, imm_lane_idx, lhs.fp().toV());
   vmv_xs(dst.gp(), v31);
 }
 
@@ -2685,7 +2683,7 @@ void LiftoffAssembler::emit_i64x2_replace_lane(LiftoffRegister dst,
   VU.set(kScratchReg, E64, m1);
   li(t0, 0x1 << imm_lane_idx);
   vmv_sx(v0, t0);
-  vmerge_vx(dst.vp(), src2.gp(), src1.vp());
+  vmerge_vx(dst.fp().toV(), src2.gp(), src1.fp().toV());
 }
 
 void LiftoffAssembler::emit_f32x4_replace_lane(LiftoffRegister dst,

@@ -247,7 +247,6 @@ Register ToRegister(int num);
 
 constexpr bool kPadArguments = false;
 constexpr bool kSimpleFPAliasing = true;
-constexpr bool kHasVReg = true;
 constexpr bool kSimdMaskRegisters = false;
 
 enum DoubleRegisterCode {
@@ -256,6 +255,18 @@ enum DoubleRegisterCode {
 #undef REGISTER_CODE
       kDoubleAfterLast
 };
+
+enum VRegisterCode {
+#define REGISTER_CODE(R) kVRCode_##R,
+  VECTOR_REGISTERS(REGISTER_CODE)
+#undef REGISTER_CODE
+      kVRAfterLast
+};
+class VRegister : public RegisterBase<VRegister, kVRAfterLast> {
+  friend class RegisterBase;
+  explicit constexpr VRegister(int code) : RegisterBase(code) {}
+};
+
 
 // Coprocessor register.
 class FPURegister : public RegisterBase<FPURegister, kDoubleAfterLast> {
@@ -275,24 +286,13 @@ class FPURegister : public RegisterBase<FPURegister, kDoubleAfterLast> {
     return FPURegister::from_code(code() + 1);
   }
 
+  VRegister toV() const { return VRegister::from_code(code()); }
+
  private:
   friend class RegisterBase;
   explicit constexpr FPURegister(int code) : RegisterBase(code) {}
 };
 
-enum VRegisterCode {
-#define REGISTER_CODE(R) kVRCode_##R,
-  VECTOR_REGISTERS(REGISTER_CODE)
-#undef REGISTER_CODE
-      kVRAfterLast
-};
-
-// MIPS SIMD (MSA) register
-// FIXME (RISCV)
-class VRegister : public RegisterBase<VRegister, kVRAfterLast> {
-  friend class RegisterBase;
-  explicit constexpr VRegister(int code) : RegisterBase(code) {}
-};
 
 // A few double registers are reserved: one as a scratch register and one to
 //  hold 0.0.
