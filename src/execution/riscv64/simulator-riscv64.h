@@ -682,6 +682,10 @@ class Simulator : public SimulatorBase {
     using type = uint64_t;
   };
 
+  template <>
+  struct type_usew_t<128> {
+    using type = __uint128_t;
+  };
   template <uint64_t N>
   struct type_sew_t;
 
@@ -716,17 +720,36 @@ class Simulator : public SimulatorBase {
   type_sew_t<x>::type vs1 = Rvvelt<type_sew_t<x>::type>(rvv_vs1_reg(), i); \
   type_sew_t<x>::type vs2 = Rvvelt<type_sew_t<x>::type>(rvv_vs2_reg(), i);
 
+#define VV_UPARAMS(x)                                                        \
+  type_usew_t<x>::type& vd =                                                 \
+      Rvvelt<type_usew_t<x>::type>(rvv_vd_reg(), i, true);                   \
+  type_usew_t<x>::type vs1 = Rvvelt<type_usew_t<x>::type>(rvv_vs1_reg(), i); \
+  type_usew_t<x>::type vs2 = Rvvelt<type_usew_t<x>::type>(rvv_vs2_reg(), i);
+
 #define VX_PARAMS(x)                                                        \
   type_sew_t<x>::type& vd =                                                 \
       Rvvelt<type_sew_t<x>::type>(rvv_vd_reg(), i, true);                   \
   type_sew_t<x>::type rs1 = (type_sew_t<x>::type)(get_register(rs1_reg())); \
   type_sew_t<x>::type vs2 = Rvvelt<type_sew_t<x>::type>(rvv_vs2_reg(), i);
 
+#define VX_UPARAMS(x)                                                         \
+  type_usew_t<x>::type& vd =                                                  \
+      Rvvelt<type_usew_t<x>::type>(rvv_vd_reg(), i, true);                    \
+  type_usew_t<x>::type rs1 = (type_usew_t<x>::type)(get_register(rs1_reg())); \
+  type_usew_t<x>::type vs2 = Rvvelt<type_usew_t<x>::type>(rvv_vs2_reg(), i);
+
 #define VI_PARAMS(x)                                                    \
   type_sew_t<x>::type& vd =                                             \
       Rvvelt<type_sew_t<x>::type>(rvv_vd_reg(), i, true);               \
   type_sew_t<x>::type simm5 = (type_sew_t<x>::type)(instr_.RvvSimm5()); \
   type_sew_t<x>::type vs2 = Rvvelt<type_sew_t<x>::type>(rvv_vs2_reg(), i);
+
+
+#define VI_UPARAMS(x)                                                    \
+  type_usew_t<x>::type& vd =                                             \
+      Rvvelt<type_sew_t<x>::type>(rvv_vd_reg(), i, true);               \
+  type_usew_t<x>::type simm5 = (type_usew_t<x>::type)(instr_.RvvSimm5()); \
+  type_usew_t<x>::type vs2 = Rvvelt<type_usew_t<x>::type>(rvv_vs2_reg(), i);
 
 #define VXI_PARAMS(x)                                                       \
   type_sew_t<x>::type& vd =                                                 \
@@ -821,6 +844,30 @@ class Simulator : public SimulatorBase {
   RVV_VI_LOOP_END                  \
   rvv_trace_vd();
 
+#define RVV_VI_VV_ULOOP(BODY)       \
+  RVV_VI_GENERAL_LOOP_BASE         \
+  RVV_VI_LOOP_MASK_SKIP()          \
+  if (rvv_vsew() == E8) {          \
+    VV_UPARAMS(8);                  \
+    BODY                           \
+  } else if (rvv_vsew() == E16) {  \
+    VV_UPARAMS(16);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E32) {  \
+    VV_UPARAMS(32);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E64) {  \
+    VV_UPARAMS(64);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E128) { \
+    VV_UPARAMS(128);                \
+    BODY                           \
+  } else {                         \
+    UNREACHABLE();                 \
+  }                                \
+  RVV_VI_LOOP_END                  \
+  rvv_trace_vd();
+
 #define RVV_VI_VX_LOOP(BODY)       \
   RVV_VI_GENERAL_LOOP_BASE         \
   RVV_VI_LOOP_MASK_SKIP()          \
@@ -838,6 +885,30 @@ class Simulator : public SimulatorBase {
     BODY                           \
   } else if (rvv_vsew() == E128) { \
     VX_PARAMS(128);                \
+    BODY                           \
+  } else {                         \
+    UNREACHABLE();                 \
+  }                                \
+  RVV_VI_LOOP_END                  \
+  rvv_trace_vd();
+
+#define RVV_VI_VX_ULOOP(BODY)      \
+  RVV_VI_GENERAL_LOOP_BASE         \
+  RVV_VI_LOOP_MASK_SKIP()          \
+  if (rvv_vsew() == E8) {          \
+    VX_UPARAMS(8);                 \
+    BODY                           \
+  } else if (rvv_vsew() == E16) {  \
+    VX_UPARAMS(16);                \
+    BODY                           \
+  } else if (rvv_vsew() == E32) {  \
+    VX_UPARAMS(32);                \
+    BODY                           \
+  } else if (rvv_vsew() == E64) {  \
+    VX_UPARAMS(64);                \
+    BODY                           \
+  } else if (rvv_vsew() == E128) { \
+    VX_UPARAMS(128);               \
     BODY                           \
   } else {                         \
     UNREACHABLE();                 \

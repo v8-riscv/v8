@@ -708,23 +708,29 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
 #define ARG \
   VRegister vd, Register rs1, uint8_t lumop, VSew vsew, MaskType mask = NoMask
-  SegInstr(vl) SegInstr(vs)
+
+  SegInstr(vl)
+  SegInstr(vs)
 #undef ARG
 
 #define ARG \
   VRegister vd, Register rs1, Register rs2, VSew vsew, MaskType mask = NoMask
-      SegInstr(vls) SegInstr(vss)
+
+  SegInstr(vls)
+  SegInstr(vss)
 #undef ARG
 
 #define ARG \
   VRegister vd, Register rs1, VRegister rs2, VSew vsew, MaskType mask = NoMask
-          SegInstr(vsx) SegInstr(vlx)
+
+  SegInstr(vsx)
+  SegInstr(vlx)
 #undef ARG
 #undef SegInstr
 
       // RVV Vector Arithmetic Instruction
 
-      void vmv_vv(VRegister vd, VRegister vs1) {
+  void vmv_vv(VRegister vd, VRegister vs1) {
     GenInstrV(VMV_FUNCT6, OP_IVV, vd, vs1, v0, NoMask);
   }
 

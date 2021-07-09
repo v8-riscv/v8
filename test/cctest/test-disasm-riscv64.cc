@@ -527,5 +527,16 @@ TEST(Previleged) {
   VERIFY_RUN();
 }
 */
+
+TEST(RVV) {
+  SET_UP();
+  COMPARE(vl(v2, a0, 0, VSew::E8), "02050107       vle8.v       v2, (a0)");
+  COMPARE(vl(v2, a0, 0, VSew::E16), "02055107       vle16.v       v2, (a0)");
+  COMPARE(vl(v2, a0, 0, VSew::E32), "02056107       vle32.v       v2, (a0)");
+  COMPARE(vadd_vv(v0, v0, v1), "02100057       vadd.vv       v0, v1, v0");
+  COMPARE(vsub_vv(v0, v0, v1), "0a100057       vsub.vv       v0, v1, v0");
+  VERIFY_RUN();
+}
+
 }  // namespace internal
 }  // namespace v8

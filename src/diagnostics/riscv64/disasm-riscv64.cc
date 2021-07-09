@@ -396,7 +396,7 @@ void Decoder::PrintRvcImm8B(Instruction* instr) {
 void Decoder::PrintRvvVm(Instruction* instr) {
   uint8_t imm = instr->RvvVM();
   if (imm == 0) {
-    out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "vm");
+    out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "  vm");
   }
 }
 
@@ -1907,34 +1907,34 @@ void Decoder::DecodeRvvIVV(Instruction* instr) {
   DCHECK_EQ(instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVV);
   switch (instr->InstructionBits() & kVTypeMask) {
     case RO_V_VADD_VV:
-      Format(instr, "vadd.vv       'vd, 'vs2, 'vs1  'vm");
+      Format(instr, "vadd.vv       'vd, 'vs2, 'vs1'vm");
       break;
     case RO_V_VSUB_VV:
-      Format(instr, "vsub.vv       'vd, 'vs2, 'vs1  'vm");
+      Format(instr, "vsub.vv       'vd, 'vs2, 'vs1'vm");
       break;
     case RO_V_VMIN_VV:
-      Format(instr, "vmin.vv       'vd, 'vs2, 'vs1  'vm");
+      Format(instr, "vmin.vv       'vd, 'vs2, 'vs1'vm");
       break;
     case RO_V_VMINU_VV:
-      Format(instr, "vminu.vv       'vd, 'vs2, 'vs1  'vm");
+      Format(instr, "vminu.vv       'vd, 'vs2, 'vs1'vm");
       break;
     case RO_V_VMAX_VV:
-      Format(instr, "vmax.vv       'vd, 'vs2, 'vs1  'vm");
+      Format(instr, "vmax.vv       'vd, 'vs2, 'vs1'vm");
       break;
     case RO_V_VMAXU_VV:
-      Format(instr, "vmaxu.vv       'vd, 'vs2, 'vs1  'vm");
+      Format(instr, "vmaxu.vv       'vd, 'vs2, 'vs1'vm");
       break;
     case RO_V_VAND_VV:
-      Format(instr, "vand.vv       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vand.vv       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VOR_VV:
-      Format(instr, "vor.vv       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vor.vv       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VXOR_VV:
-      Format(instr, "vxor.vv       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vxor.vv       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VRGATHER_VV:
-      Format(instr, "vrgather.vv       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vrgather.vv       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VMV_VV:
       if (instr->RvvVM()) {
@@ -1953,22 +1953,22 @@ void Decoder::DecodeRvvIVI(Instruction* instr) {
   DCHECK_EQ(instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVI);
   switch (instr->InstructionBits() & kVTypeMask) {
     case RO_V_VADD_VI:
-      Format(instr, "vadd.vi       'vd, 'vs2, 'simm5  'vm");
+      Format(instr, "vadd.vi       'vd, 'vs2, 'simm5'vm");
       break;
     case RO_V_VRSUB_VI:
-      Format(instr, "vrsub.vi       'vd, 'vs2, 'simm5  'vm");
+      Format(instr, "vrsub.vi       'vd, 'vs2, 'simm5'vm");
       break;
     case RO_V_VAND_VI:
-      Format(instr, "vand.vi       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vand.vi       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VOR_VI:
-      Format(instr, "vor.vi       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vor.vi       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VXOR_VI:
-      Format(instr, "vxor.vi       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vxor.vi       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VRGATHER_VI:
-      Format(instr, "vrgather.vi       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vrgather.vi       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VMV_VI:
       if (instr->RvvVM()) {
@@ -1978,7 +1978,7 @@ void Decoder::DecodeRvvIVI(Instruction* instr) {
       }
       break;
     case RO_V_VSLIDEDOWN_VI:
-      Format(instr, "vslidedown.vi 'vd, 'vs2, 'uimm5 'vm");
+      Format(instr, "vslidedown.vi 'vd, 'vs2, 'uimm5'vm");
       break;
     default:
       UNSUPPORTED_RISCV();
@@ -1990,37 +1990,37 @@ void Decoder::DecodeRvvIVX(Instruction* instr) {
   DCHECK_EQ(instr->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVX);
   switch (instr->InstructionBits() & kVTypeMask) {
     case RO_V_VADD_VX:
-      Format(instr, "vadd.vx       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vadd.vx       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VSUB_VX:
-      Format(instr, "vsub.vx       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vsub.vx       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VRSUB_VX:
-      Format(instr, "vrsub.vx       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vrsub.vx       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VMIN_VX:
-      Format(instr, "vmin.vx       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vmin.vx       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VMINU_VX:
-      Format(instr, "vminu.vx       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vminu.vx       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VMAX_VX:
-      Format(instr, "vmax.vx       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vmax.vx       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VMAXU_VX:
-      Format(instr, "vmaxu.vx       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vmaxu.vx       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VAND_VX:
-      Format(instr, "vand.vx       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vand.vx       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VOR_VX:
-      Format(instr, "vor.vx       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vor.vx       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VXOR_VX:
-      Format(instr, "vxor.vx       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vxor.vx       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VRGATHER_VX:
-      Format(instr, "vrgather.vx       'vd, 'vs2, 'rs1  'vm");
+      Format(instr, "vrgather.vx       'vd, 'vs2, 'rs1'vm");
       break;
     case RO_V_VMV_VX:
       if (instr->RvvVM()) {
@@ -2030,7 +2030,7 @@ void Decoder::DecodeRvvIVX(Instruction* instr) {
       }
       break;
     case RO_V_VSLIDEDOWN_VX:
-      Format(instr, "vslidedown.vx 'vd, 'vs2, 'rs1 'vm");
+      Format(instr, "vslidedown.vx 'vd, 'vs2, 'rs1'vm");
       break;
     default:
       UNSUPPORTED_RISCV();
@@ -2149,21 +2149,21 @@ void Decoder::DecodeRvvVL(Instruction* instr) {
   //      (kRvvMopMask | kRvvNfMask | kBaseOpcodeMask)) {
   if (RO_V_VL == instr_temp) {
     if (!(instr->InstructionBits() & (kRvvRs2Mask))) {
-      snprintf(str, sizeof(str), "vle%d.v       'vd, ('rs1) 'vm",
+      snprintf(str, sizeof(str), "vle%d.v       'vd, ('rs1)'vm",
                instr->vl_vs_width());
       Format(instr, str);
     } else {
-      snprintf(str, sizeof(str), "vle%dff.v       'vd, ('rs1) 'vm",
+      snprintf(str, sizeof(str), "vle%dff.v       'vd, ('rs1)'vm",
                instr->vl_vs_width());
       Format(instr, str);
     }
   } else if (RO_V_VLS == instr_temp) {
-    snprintf(str, sizeof(str), "vlse%d.v       'vd, ('rs1), 'rs2 'vm",
+    snprintf(str, sizeof(str), "vlse%d.v       'vd, ('rs1), 'rs2'vm",
              instr->vl_vs_width());
     Format(instr, str);
 
   } else if (RO_V_VLX == instr_temp) {
-    snprintf(str, sizeof(str), "vlxei%d.v       'vd, ('rs1), 'vs2 'vm",
+    snprintf(str, sizeof(str), "vlxei%d.v       'vd, ('rs1), 'vs2'vm",
              instr->vl_vs_width());
     Format(instr, str);
   } else if (RO_V_VLSEG2 == instr_temp || RO_V_VLSEG3 == instr_temp ||
@@ -2171,10 +2171,10 @@ void Decoder::DecodeRvvVL(Instruction* instr) {
              RO_V_VLSEG6 == instr_temp || RO_V_VLSEG7 == instr_temp ||
              RO_V_VLSEG8 == instr_temp) {
     if (!(instr->InstructionBits() & (kRvvRs2Mask))) {
-      snprintf(str, sizeof(str), "vlseg%de%d.v       'vd, ('rs1) 'vm",
+      snprintf(str, sizeof(str), "vlseg%de%d.v       'vd, ('rs1)'vm",
                switch_nf(instr), instr->vl_vs_width());
     } else {
-      snprintf(str, sizeof(str), "vlseg%de%dff.v       'vd, ('rs1) 'vm",
+      snprintf(str, sizeof(str), "vlseg%de%dff.v       'vd, ('rs1)'vm",
                switch_nf(instr), instr->vl_vs_width());
     }
     Format(instr, str);
@@ -2182,14 +2182,14 @@ void Decoder::DecodeRvvVL(Instruction* instr) {
              RO_V_VLSSEG4 == instr_temp || RO_V_VLSSEG5 == instr_temp ||
              RO_V_VLSSEG6 == instr_temp || RO_V_VLSSEG7 == instr_temp ||
              RO_V_VLSSEG8 == instr_temp) {
-    snprintf(str, sizeof(str), "vlsseg%de%d.v       'vd, ('rs1), 'rs2 'vm",
+    snprintf(str, sizeof(str), "vlsseg%de%d.v       'vd, ('rs1), 'rs2'vm",
              switch_nf(instr), instr->vl_vs_width());
     Format(instr, str);
   } else if (RO_V_VLXSEG2 == instr_temp || RO_V_VLXSEG3 == instr_temp ||
              RO_V_VLXSEG4 == instr_temp || RO_V_VLXSEG5 == instr_temp ||
              RO_V_VLXSEG6 == instr_temp || RO_V_VLXSEG7 == instr_temp ||
              RO_V_VLXSEG8 == instr_temp) {
-    snprintf(str, sizeof(str), "vlxseg%dei%d.v       'vd, ('rs1), 'vs2 'vm",
+    snprintf(str, sizeof(str), "vlxseg%dei%d.v       'vd, ('rs1), 'vs2'vm",
              switch_nf(instr), instr->vl_vs_width());
     Format(instr, str);
   }
@@ -2237,40 +2237,40 @@ void Decoder::DecodeRvvVS(Instruction* instr) {
   uint32_t instr_temp =
       instr->InstructionBits() & (kRvvMopMask | kRvvNfMask | kBaseOpcodeMask);
   if (RO_V_VS == instr_temp) {
-    snprintf(str, sizeof(str), "vse%d.v       'vd, ('rs1) 'vm",
+    snprintf(str, sizeof(str), "vse%d.v       'vd, ('rs1)'vm",
              instr->vl_vs_width());
     Format(instr, str);
   } else if (RO_V_VSS == instr_temp) {
-    snprintf(str, sizeof(str), "vsse%d.v       'vd, ('rs1), 'rs2 'vm",
+    snprintf(str, sizeof(str), "vsse%d.v       'vd, ('rs1), 'rs2'vm",
              instr->vl_vs_width());
     Format(instr, str);
   } else if (RO_V_VSX == instr_temp) {
-    snprintf(str, sizeof(str), "vsxei%d.v       'vd, ('rs1), 'vs2 'vm",
+    snprintf(str, sizeof(str), "vsxei%d.v       'vd, ('rs1), 'vs2'vm",
              instr->vl_vs_width());
     Format(instr, str);
   } else if (RO_V_VSU == instr_temp) {
-    snprintf(str, sizeof(str), "vsuxei%d.v       'vd, ('rs1), 'vs2 'vm",
+    snprintf(str, sizeof(str), "vsuxei%d.v       'vd, ('rs1), 'vs2'vm",
              instr->vl_vs_width());
     Format(instr, str);
   } else if (RO_V_VSSEG2 == instr_temp || RO_V_VSSEG3 == instr_temp ||
              RO_V_VSSEG4 == instr_temp || RO_V_VSSEG5 == instr_temp ||
              RO_V_VSSEG6 == instr_temp || RO_V_VSSEG7 == instr_temp ||
              RO_V_VSSEG8 == instr_temp) {
-    snprintf(str, sizeof(str), "vsseg%de%d.v       'vd, ('rs1) 'vm",
+    snprintf(str, sizeof(str), "vsseg%de%d.v       'vd, ('rs1)'vm",
              switch_nf(instr), instr->vl_vs_width());
     Format(instr, str);
   } else if (RO_V_VSSSEG2 == instr_temp || RO_V_VSSSEG3 == instr_temp ||
              RO_V_VSSSEG4 == instr_temp || RO_V_VSSSEG5 == instr_temp ||
              RO_V_VSSSEG6 == instr_temp || RO_V_VSSSEG7 == instr_temp ||
              RO_V_VSSSEG8 == instr_temp) {
-    snprintf(str, sizeof(str), "vssseg%de%d.v       'vd, ('rs1), 'rs2 'vm",
+    snprintf(str, sizeof(str), "vssseg%de%d.v       'vd, ('rs1), 'rs2'vm",
              switch_nf(instr), instr->vl_vs_width());
     Format(instr, str);
   } else if (RO_V_VSXSEG2 == instr_temp || RO_V_VSXSEG3 == instr_temp ||
              RO_V_VSXSEG4 == instr_temp || RO_V_VSXSEG5 == instr_temp ||
              RO_V_VSXSEG6 == instr_temp || RO_V_VSXSEG7 == instr_temp ||
              RO_V_VSXSEG8 == instr_temp) {
-    snprintf(str, sizeof(str), "vsxseg%dei%d.v       'vd, ('rs1), 'vs2 'vm",
+    snprintf(str, sizeof(str), "vsxseg%dei%d.v       'vd, ('rs1), 'vs2'vm",
              switch_nf(instr), instr->vl_vs_width());
     Format(instr, str);
   }

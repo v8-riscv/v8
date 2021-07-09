@@ -3536,6 +3536,62 @@ void Simulator::DecodeRvvIVV() {
       RVV_VI_VV_LOOP({ vd = vs1 + vs2; });
       break;
     }
+    case RO_V_VSUB_VV: {
+      RVV_VI_VV_LOOP({ vd = vs2 - vs1; })
+      break;
+    }
+    case RO_V_VAND_VV: {
+      RVV_VI_VV_LOOP({ vd = vs1 & vs2; })
+      break;
+    }
+    case RO_V_VOR_VV: {
+      RVV_VI_VV_LOOP({ vd = vs1 | vs2; })
+      break;
+    }
+    case RO_V_VXOR_VV: {
+      RVV_VI_VV_LOOP({ vd = vs1 ^ vs2; })
+      break;
+    }
+    case RO_V_VMAXU_VV: {
+      RVV_VI_VV_ULOOP({
+        if (vs1 <= vs2) {
+          vd = vs2;
+        } else {
+          vd = vs1;
+        }
+      })
+      break;
+    }
+    case RO_V_VMAX_VV: {
+      RVV_VI_VV_LOOP({
+        if (vs1 <= vs2) {
+          vd = vs2;
+        } else {
+          vd = vs1;
+        }
+      })
+      break;
+    }
+    case RO_V_VMINU_VV: {
+      RVV_VI_VV_ULOOP({
+        if (vs1 <= vs2) {
+          vd = vs1;
+        } else {
+          vd = vs2;
+        }
+      })
+      break;
+    }
+    case RO_V_VMIN_VV: {
+      RVV_VI_VV_LOOP({
+        if (vs1 <= vs2) {
+          vd = vs1;
+        } else {
+          vd = vs2;
+        }
+      })
+      break;
+    }
     case RO_V_VMV_VV: {
       RVV_VI_VVXI_MERGE_LOOP({
         vd = vs1;
@@ -3568,6 +3624,22 @@ void Simulator::DecodeRvvIVI() {
       RVV_VI_VI_LOOP({ vd = simm5 + vs2; })
       break;
     }
+    case RO_V_VRSUB_VI: {
+      RVV_VI_VI_LOOP({ vd = vs2 - simm5; })
+      break;
+    }
+    case RO_V_VAND_VV: {
+      RVV_VI_VI_LOOP({ vd = simm5 & vs2; })
+      break;
+    }
+    case RO_V_VOR_VV: {
+      RVV_VI_VI_LOOP({ vd = simm5 | vs2; })
+      break;
+    }
+    case RO_V_VXOR_VX : {
+      RVV_VI_VI_LOOP({ vd = simm5 ^ vs2; })
+      break;
+    }
     case RO_V_VMV_VI:
       if (instr_.RvvVM()) {
         UNIMPLEMENTED_RISCV();
@@ -3591,6 +3663,66 @@ void Simulator::DecodeRvvIVX() {
   switch (instr_.InstructionBits() & kVTypeMask) {
     case RO_V_VADD_VX: {
       RVV_VI_VX_LOOP({ vd = rs1 + vs2; })
+      break;
+    }
+    case RO_V_VSUB_VX: {
+      RVV_VI_VX_LOOP({ vd = vs2 - rs1; })
+      break;
+    }
+    case RO_V_VRSUB_VX: {
+      RVV_VI_VX_LOOP({ vd = rs1 - vs2; })
+      break;
+    }
+    case RO_V_VAND_VX: {
+      RVV_VI_VX_LOOP({ vd = rs1 & vs2; })
+      break;
+    }
+    case RO_V_VOR_VX: {
+      RVV_VI_VX_LOOP({ vd = rs1 | vs2; })
+      break;
+    }
+    case RO_V_VXOR_VX: {
+      RVV_VI_VX_LOOP({ vd = rs1 ^ vs2; })
+      break;
+    }
+    case RO_V_VMAX_VX: {
+      RVV_VI_VX_LOOP({
+        if (rs1 <= vs2) {
+          vd = vs2;
+        } else {
+          vd = rs1;
+        }
+      })
+      break;
+    }
+    case RO_V_VMAXU_VX: {
+      RVV_VI_VX_ULOOP({
+        if (rs1 <= vs2) {
+          vd = vs2;
+        } else {
+          vd = rs1;
+        }
+      })
+      break;
+    }
+    case RO_V_VMINU_VX: {
+      RVV_VI_VX_ULOOP({
+        if (rs1 <= vs2) {
+          vd = rs1;
+        } else {
+          vd = vs2;
+        }
+      })
+      break;
+    }
+    case RO_V_VMIN_VX: {
+      RVV_VI_VX_LOOP({
+        if (rs1 <= vs2) {
+          vd = rs1;
+        } else {
+          vd = vs2;
+        }
+      })
       break;
     }
     case RO_V_VMV_VX:

@@ -1981,7 +1981,7 @@ TEST(li_estimate) {
 }
 
 #define UTEST_LOAD_STORE_RVV(ldname, stname, SEW, arg...)                 \
-  TEST(RISCV_UTEST_##stname##ldname##SEW) {                               \
+  TEST(RISCV_UTEST_##stname##ldname##SEW) {                          \
     CcTest::InitializeVM();                                               \
     Isolate* isolate = CcTest::i_isolate();                               \
     HandleScope scope(isolate);                                           \
@@ -2002,7 +2002,7 @@ TEST(li_estimate) {
 
 UTEST_LOAD_STORE_RVV(vl, vs, E8, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
                      15, 16)
-
+// UTEST_LOAD_STORE_RVV(vl, vs, E8, 127, 127, 127, 127, 127, 127, 127)
 #undef __
 
 }  // namespace internal
