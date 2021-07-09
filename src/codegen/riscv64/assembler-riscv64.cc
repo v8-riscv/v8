@@ -2405,9 +2405,10 @@ void Assembler::vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
   emit(instr);
 }
 
-void Assembler::vsetivli(Register rd, int8_t uimm, VSew vsew, Vlmul vlmul,
+void Assembler::vsetivli(Register rd, uint8_t uimm, VSew vsew, Vlmul vlmul,
                          TailAgnosticType tail, MaskAgnosticType mask) {
-  int32_t zimm = GenZimm(vsew, vlmul, tail, mask);
+  DCHECK(is_uint5(uimm));
+  int32_t zimm = GenZimm(vsew, vlmul, tail, mask) & 0x3FF;
   Instr instr = OP_V | ((rd.code() & 0x1F) << kRvvRdShift) | (0x7 << 12) |
                 ((uimm & 0x1F) << kRvvUimmShift) |
                 (((uint32_t)zimm << kRvvZimmShift) & kRvvZimmMask) | 0x3 << 30;

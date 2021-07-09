@@ -2003,6 +2003,17 @@ TEST(li_estimate) {
 UTEST_LOAD_STORE_RVV(vl, vs, E8, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
                      15, 16)
 // UTEST_LOAD_STORE_RVV(vl, vs, E8, 127, 127, 127, 127, 127, 127, 127)
+
+TEST(RVV_VSETIVLI) {
+  CcTest::InitializeVM();
+  Isolate* isolate = CcTest::i_isolate();
+  HandleScope scope(isolate);
+  auto fn = [](MacroAssembler& assm) {
+    __ VU.set(t0, VSew::E8, Vlmul::m1);
+    __ vsetivli(t0, 16, VSew::E128, Vlmul::m1);
+  };
+  GenAndRunTest(fn);
+}
 #undef __
 
 }  // namespace internal

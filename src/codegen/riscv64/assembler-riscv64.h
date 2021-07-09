@@ -664,7 +664,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void vsetvli(Register rd, Register rs1, VSew vsew, Vlmul vlmul,
                TailAgnosticType tail = tu, MaskAgnosticType mask = mu);
 
-  void vsetivli(Register rd, int8_t uimm, VSew vsew, Vlmul vlmul,
+  void vsetivli(Register rd, uint8_t uimm, VSew vsew, Vlmul vlmul,
                 TailAgnosticType tail = tu, MaskAgnosticType mask = mu);
 
   inline void vsetvlmax(Register rd, VSew vsew, Vlmul vlmul,

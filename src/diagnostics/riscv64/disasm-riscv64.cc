@@ -2106,7 +2106,7 @@ void Decoder::DecodeVType(Instruction* instr) {
       if (!(instr->InstructionBits() & 0x40000000)) {
         Format(instr, "vsetvl       'rd, 'rs1,  'rs2");
       } else {
-        Format(instr, "vsetivli       'rd, 'uimm");
+        Format(instr, "vsetivli       'rd, 'uimm, 'sew, 'lmul");
       }
       break;
     default:

@@ -809,7 +809,11 @@ class Simulator : public SimulatorBase {
 
   inline void rvv_trace_status() {
     if (::v8::internal::FLAG_trace_sim) {
-      SNPrintF(trace_buf_.SubVector(44, 100),
+      int i = 0;
+      for (; i < trace_buf_.length(); i++) {
+        if (trace_buf_[i] == '\0') break;
+      }
+      SNPrintF(trace_buf_.SubVector(i, trace_buf_.length()),
                "  sew:%s lmul:%s vstart:%lu vl:%lu", rvv_sew_s(), rvv_lmul_s(),
                rvv_vstart(), rvv_vl());
     }

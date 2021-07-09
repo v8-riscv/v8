@@ -3806,12 +3806,26 @@ void Simulator::DecodeVType() {
         } else {
           avl = rvv_vl();
         }
-        avl = avl <= rvv_vlmax() ? avl : rvv_vlmax();
+        avl = avl <= rvv_vlmax()        ? avl
+              : avl < (rvv_vlmax() * 2) ? avl / 2
+                                        : rvv_vlmax();
         set_rvv_vl(avl);
         set_rd(rvv_vl());
         rvv_trace_status();
       } else {
-        UNIMPLEMENTED();
+        DCHECK_EQ(instr_.InstructionBits() &
+                      (kBaseOpcodeMask | kFunct3Mask | 0xC0000000),
+                  RO_V_VSETIVLI);
+        uint64_t avl;
+        set_rvv_vtype(rvv_zimm());
+        avl = instr_.Rvvuimm();
+        avl = avl <= rvv_vlmax()        ? avl
+              : avl < (rvv_vlmax() * 2) ? avl / 2
+                                        : rvv_vlmax();
+        set_rvv_vl(avl);
+        set_rd(rvv_vl());
+        rvv_trace_status();
+        break;
       }
       break;
     }

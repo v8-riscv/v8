@@ -1514,12 +1514,28 @@ class InstructionGetters : public T {
   }
 
   inline uint32_t Rvvzimm() const {
+    if ((this->InstructionBits() &
+        (kBaseOpcodeMask | kFunct3Mask | 0x80000000)) == RO_V_VSETVLI) {
+      uint32_t Bits = this->InstructionBits();
+      uint32_t zimm = Bits & kRvvZimmMask;
+      return zimm >> kRvvZimmShift;
+    } else {
+      DCHECK_EQ(this->InstructionBits() &
+                    (kBaseOpcodeMask | kFunct3Mask | 0xC0000000),
+                RO_V_VSETIVLI);
+      uint32_t Bits = this->InstructionBits();
+      uint32_t zimm = Bits & kRvvZimmMask;
+      return (zimm >> kRvvZimmShift) & 0x3FF;
+    }
+  }
+
+  inline uint32_t Rvvuimm() const {
     DCHECK_EQ(
-        this->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask | 0x80000000),
-        RO_V_VSETVLI);
+        this->InstructionBits() & (kBaseOpcodeMask | kFunct3Mask | 0xC0000000),
+        RO_V_VSETIVLI);
     uint32_t Bits = this->InstructionBits();
-    uint32_t zimm = Bits & kRvvZimmMask;
-    return zimm >> kRvvZimmShift;
+    uint32_t uimm = Bits & kRvvUimmMask;
+    return uimm >> kRvvUimmShift;
   }
 
   inline uint32_t RvvVsew() const {
