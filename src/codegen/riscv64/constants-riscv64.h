@@ -712,6 +712,24 @@ enum Opcode : uint32_t {
   RO_V_VSUB_VX = OP_IVX | (VSUB_FUNCT6 << kRvvFunct6Shift),
   RO_V_VSUB_VV = OP_IVV | (VSUB_FUNCT6 << kRvvFunct6Shift),
 
+  VSADDU_FUNCT6 = 0b100000,
+  RO_V_VSADDU_VI = OP_IVI | (VSADDU_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VSADDU_VV = OP_IVV | (VSADDU_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VSADDU_VX = OP_IVX | (VSADDU_FUNCT6 << kRvvFunct6Shift),
+
+  VSADD_FUNCT6 = 0b100001,
+  RO_V_VSADD_VI = OP_IVI | (VSADD_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VSADD_VV = OP_IVV | (VSADD_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VSADD_VX = OP_IVX | (VSADD_FUNCT6 << kRvvFunct6Shift),
+
+  VSSUB_FUNCT6 = 0b100011,
+  RO_V_VSSUB_VV = OP_IVV | (VSSUB_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VSSUB_VX = OP_IVX | (VSSUB_FUNCT6 << kRvvFunct6Shift),
+
+  VSSUBU_FUNCT6 = 0b100010,
+  RO_V_VSSUBU_VV = OP_IVV | (VSSUBU_FUNCT6 << kRvvFunct6Shift),
+  RO_V_VSSUBU_VX = OP_IVX | (VSSUBU_FUNCT6 << kRvvFunct6Shift),
+
   VRSUB_FUNCT6 = 0b000011,
   RO_V_VRSUB_VX = OP_IVX | (VRSUB_FUNCT6 << kRvvFunct6Shift),
   RO_V_VRSUB_VI = OP_IVI | (VRSUB_FUNCT6 << kRvvFunct6Shift),
@@ -1515,7 +1533,7 @@ class InstructionGetters : public T {
 
   inline uint32_t Rvvzimm() const {
     if ((this->InstructionBits() &
-        (kBaseOpcodeMask | kFunct3Mask | 0x80000000)) == RO_V_VSETVLI) {
+         (kBaseOpcodeMask | kFunct3Mask | 0x80000000)) == RO_V_VSETVLI) {
       uint32_t Bits = this->InstructionBits();
       uint32_t zimm = Bits & kRvvZimmMask;
       return zimm >> kRvvZimmShift;
