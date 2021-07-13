@@ -533,8 +533,25 @@ TEST(RVV) {
   COMPARE(vl(v2, a0, 0, VSew::E8), "02050107       vle8.v       v2, (a0)");
   COMPARE(vl(v2, a0, 0, VSew::E16), "02055107       vle16.v       v2, (a0)");
   COMPARE(vl(v2, a0, 0, VSew::E32), "02056107       vle32.v       v2, (a0)");
-  COMPARE(vadd_vv(v0, v0, v1), "02100057       vadd.vv       v0, v1, v0");
-  COMPARE(vsub_vv(v0, v0, v1), "0a100057       vsub.vv       v0, v1, v0");
+  COMPARE(vadd_vv(v0, v0, v1), "02008057       vadd.vv       v0, v0, v1");
+  COMPARE(vadd_vx(v0, v1, t0), "0212c057       vadd.vx       v0, v1, t0");
+  COMPARE(vadd_vi(v0, v1, 3), "0211b057       vadd.vi       v0, v1, 3");
+  COMPARE(vsub_vv(v2, v3, v4), "0a320157       vsub.vv       v2, v3, v4");
+  COMPARE(vsub_vx(v2, v3, a4), "0a374157       vsub.vx       v2, v3, a4");
+  COMPARE(vsadd_vv(v0, v0, v1), "86008057       vsadd.vv       v0, v0, v1");
+  COMPARE(vsadd_vx(v4, v5, t1), "86534257       vsadd.vx       v4, v5, t1");
+  COMPARE(vsadd_vi(v6, v7, 5), "8672b357       vsadd.vi       v6, v7, 5");
+  COMPARE(vssub_vv(v2, v3, v4), "8e320157       vssub.vv       v2, v3, v4");
+  COMPARE(vssub_vx(v2, v3, t4), "8e3ec157       vssub.vx       v2, v3, t4");
+  COMPARE(vor_vv(v21, v31, v9), "2bf48ad7       vor.vv       v21, v31, v9");
+  COMPARE(vor_vx(v19, v29, s7), "2bdbc9d7       vor.vx       v19, v29, s7");
+  COMPARE(vor_vi(v17, v28, 7), "2bc3b8d7       vor.vi       v17, v28, 7");
+  COMPARE(vxor_vv(v21, v31, v9), "2ff48ad7       vxor.vv       v21, v31, v9");
+  COMPARE(vxor_vx(v19, v29, s7), "2fdbc9d7       vxor.vx       v19, v29, s7");
+  COMPARE(vxor_vi(v17, v28, 7), "2fc3b8d7       vxor.vi       v17, v28, 7");
+  COMPARE(vand_vv(v21, v31, v9), "27f48ad7       vand.vv       v21, v31, v9");
+  COMPARE(vand_vx(v19, v29, s7), "27dbc9d7       vand.vx       v19, v29, s7");
+  COMPARE(vand_vi(v17, v28, 7), "27c3b8d7       vand.vi       v17, v28, 7");
   VERIFY_RUN();
 }
 

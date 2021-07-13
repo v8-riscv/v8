@@ -3529,6 +3529,56 @@ void Simulator::DecodeCBType() {
   }
 }
 
+/**
+ * RISCV-ISA-SIM
+ *
+ * @link      https://github.com/riscv/riscv-isa-sim/
+ * @copyright Copyright (c)  The Regents of the University of California
+ * @license   hhttps://github.com/riscv/riscv-isa-sim/blob/master/LICENSE
+ */
+// ref:  https://locklessinc.com/articles/sat_arithmetic/
+template<typename T, typename UT>
+static inline T sat_add(T x, T y, bool &sat)
+{
+  UT ux = x;
+  UT uy = y;
+  UT res = ux + uy;
+  sat = false;
+  int sh = sizeof(T) * 8 - 1;
+
+  /* Calculate overflowed result. (Don't change the sign bit of ux) */
+  ux = (ux >> sh) + (((UT)0x1 << sh) - 1);
+
+  /* Force compiler to use cmovns instruction */
+  if ((T) ((ux ^ uy) | ~(uy ^ res)) >= 0) {
+    res = ux;
+    sat = true;
+  }
+
+  return res;
+}
+
+template<typename T, typename UT>
+static inline T sat_sub(T x, T y, bool &sat)
+{
+  UT ux = x;
+  UT uy = y;
+  UT res = ux - uy;
+  sat = false;
+  int sh = sizeof(T) * 8 - 1;
+
+  /* Calculate overflowed result. (Don't change the sign bit of ux) */
+  ux = (ux >> sh) + (((UT)0x1 << sh) - 1);
+
+  /* Force compiler to use cmovns instruction */
+  if ((T) ((ux ^ uy) & (ux ^ res)) < 0) {
+    res = ux;
+    sat = true;
+  }
+
+  return res;
+}
+
 void Simulator::DecodeRvvIVV() {
   DCHECK_EQ(instr_.InstructionBits() & (kBaseOpcodeMask | kFunct3Mask), OP_IVV);
   switch (instr_.InstructionBits() & kVTypeMask) {
@@ -3536,8 +3586,66 @@ void Simulator::DecodeRvvIVV() {
       RVV_VI_VV_LOOP({ vd = vs1 + vs2; });
       break;
     }
+    case RO_V_VSADD_VV: {
+      RVV_VI_GENERAL_LOOP_BASE
+      bool sat = false;
+      switch (rvv_vsew()) {
+        case E8: {
+          VV_PARAMS(8);
+          vd = sat_add<int8_t, uint8_t>(vs2, vs1, sat);
+          break;
+        }
+        case E16: {
+          VV_PARAMS(16);
+          vd = sat_add<int16_t, uint16_t>(vs2, vs1, sat);
+          break;
+        }
+        case E32: {
+          VV_PARAMS(32);
+          vd = sat_add<int32_t, uint32_t>(vs2, vs1, sat);
+          break;
+        }
+        default: {
+          VV_PARAMS(64);
+          vd = sat_add<int64_t, uint64_t>(vs2, vs1, sat);
+          break;
+        }
+      }
+      set_rvv_vxsat(sat);
+      RVV_VI_LOOP_END
+      break;
+    }
     case RO_V_VSUB_VV: {
       RVV_VI_VV_LOOP({ vd = vs2 - vs1; })
+      break;
+    }
+    case RO_V_VSSUB_VV: {
+      RVV_VI_GENERAL_LOOP_BASE
+      bool sat = false;
+      switch (rvv_vsew()) {
+        case E8: {
+          VV_PARAMS(8);
+          vd = sat_sub<int8_t, uint8_t>(vs2, vs1, sat);
+          break;
+        }
+        case E16: {
+          VV_PARAMS(16);
+          vd = sat_sub<int16_t, uint16_t>(vs2, vs1, sat);
+          break;
+        }
+        case E32: {
+          VV_PARAMS(32);
+          vd = sat_sub<int32_t, uint32_t>(vs2, vs1, sat);
+          break;
+        }
+        default: {
+          VV_PARAMS(64);
+          vd = sat_sub<int64_t, uint64_t>(vs2, vs1, sat);
+          break;
+        }
+      }
+      set_rvv_vxsat(sat);
+      RVV_VI_LOOP_END
       break;
     }
     case RO_V_VAND_VV: {
@@ -3624,19 +3732,48 @@ void Simulator::DecodeRvvIVI() {
       RVV_VI_VI_LOOP({ vd = simm5 + vs2; })
       break;
     }
+    case RO_V_VSADD_VI: {
+      RVV_VI_GENERAL_LOOP_BASE
+      bool sat = false;
+      switch (rvv_vsew()) {
+        case E8: {
+          VI_PARAMS(8);
+          vd = sat_add<int8_t, uint8_t>(vs2, simm5, sat);
+          break;
+        }
+        case E16: {
+          VI_PARAMS(16);
+          vd = sat_add<int16_t, uint16_t>(vs2, simm5, sat);
+          break;
+        }
+        case E32: {
+          VI_PARAMS(32);
+          vd = sat_add<int32_t, uint32_t>(vs2, simm5, sat);
+          break;
+        }
+        default: {
+          VI_PARAMS(64);
+          vd = sat_add<int64_t, uint64_t>(vs2, simm5, sat);
+          break;
+        }
+      }
+      set_rvv_vxsat(sat);
+      RVV_VI_LOOP_END
+      break;
+    }
     case RO_V_VRSUB_VI: {
       RVV_VI_VI_LOOP({ vd = vs2 - simm5; })
       break;
     }
-    case RO_V_VAND_VV: {
+    case RO_V_VAND_VI: {
       RVV_VI_VI_LOOP({ vd = simm5 & vs2; })
       break;
     }
-    case RO_V_VOR_VV: {
+    case RO_V_VOR_VI: {
       RVV_VI_VI_LOOP({ vd = simm5 | vs2; })
       break;
     }
-    case RO_V_VXOR_VX : {
+    case RO_V_VXOR_VI : {
       RVV_VI_VI_LOOP({ vd = simm5 ^ vs2; })
       break;
     }
@@ -3665,8 +3802,66 @@ void Simulator::DecodeRvvIVX() {
       RVV_VI_VX_LOOP({ vd = rs1 + vs2; })
       break;
     }
+    case RO_V_VSADD_VX: {
+      RVV_VI_GENERAL_LOOP_BASE
+      bool sat = false;
+      switch (rvv_vsew()) {
+        case E8: {
+          VX_PARAMS(8);
+          vd = sat_add<int8_t, uint8_t>(vs2, rs1, sat);
+          break;
+        }
+        case E16: {
+          VX_PARAMS(16);
+          vd = sat_add<int16_t, uint16_t>(vs2, rs1, sat);
+          break;
+        }
+        case E32: {
+          VX_PARAMS(32);
+          vd = sat_add<int32_t, uint32_t>(vs2, rs1, sat);
+          break;
+        }
+        default: {
+          VX_PARAMS(64);
+          vd = sat_add<int64_t, uint64_t>(vs2, rs1, sat);
+          break;
+        }
+      }
+      set_rvv_vxsat(sat);
+      RVV_VI_LOOP_END
+      break;
+    }
     case RO_V_VSUB_VX: {
       RVV_VI_VX_LOOP({ vd = vs2 - rs1; })
+      break;
+    }
+    case RO_V_VSSUB_VX: {
+      RVV_VI_GENERAL_LOOP_BASE
+      bool sat = false;
+      switch (rvv_vsew()) {
+        case E8: {
+          VX_PARAMS(8);
+          vd = sat_sub<int8_t, uint8_t>(vs2, rs1, sat);
+          break;
+        }
+        case E16: {
+          VX_PARAMS(16);
+          vd = sat_sub<int16_t, uint16_t>(vs2, rs1, sat);
+          break;
+        }
+        case E32: {
+          VX_PARAMS(32);
+          vd = sat_sub<int32_t, uint32_t>(vs2, rs1, sat);
+          break;
+        }
+        default: {
+          VX_PARAMS(64);
+          vd = sat_sub<int64_t, uint64_t>(vs2, rs1, sat);
+          break;
+        }
+      }
+      set_rvv_vxsat(sat);
+      RVV_VI_LOOP_END
       break;
     }
     case RO_V_VRSUB_VX: {

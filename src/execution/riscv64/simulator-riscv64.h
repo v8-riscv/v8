@@ -748,7 +748,7 @@ class Simulator : public SimulatorBase {
 #define VI_UPARAMS(x)                                                    \
   type_usew_t<x>::type& vd =                                             \
       Rvvelt<type_sew_t<x>::type>(rvv_vd_reg(), i, true);               \
-  type_usew_t<x>::type simm5 = (type_usew_t<x>::type)(instr_.RvvSimm5()); \
+  type_usew_t<x>::type simm5 = (type_usew_t<x>::type)(instr_.RvvUimm5()); \
   type_usew_t<x>::type vs2 = Rvvelt<type_usew_t<x>::type>(rvv_vs2_reg(), i);
 
 #define VXI_PARAMS(x)                                                       \

@@ -763,19 +763,19 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   }
 
 #define DEFINE_OPIVV(name, funct6)                           \
-  void name##_vv(VRegister vd, VRegister vs1, VRegister vs2, \
+  void name##_vv(VRegister vd, VRegister vs2, VRegister vs1, \
                  MaskType mask = NoMask) {                   \
     GenInstrV(funct6, OP_IVV, vd, vs1, vs2, mask);           \
   }
 
 #define DEFINE_OPIVX(name, funct6)                          \
-  void name##_vx(VRegister vd, Register rs1, VRegister vs2, \
+  void name##_vx(VRegister vd, VRegister vs2, Register rs1, \
                  MaskType mask = NoMask) {                  \
     GenInstrV(funct6, OP_IVX, vd, rs1, vs2, mask);          \
   }
 
 #define DEFINE_OPIVI(name, funct6)                          \
-  void name##_vi(VRegister vd, uint8_t imm5, VRegister vs2, \
+  void name##_vi(VRegister vd, VRegister vs2, uint8_t imm5, \
                  MaskType mask = NoMask) {                  \
     GenInstrV(funct6, vd, imm5, vs2, mask);                 \
   }
@@ -788,6 +788,9 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   DEFINE_OPIVX(vsadd, VSADD_FUNCT6)
   DEFINE_OPIVV(vsadd, VSADD_FUNCT6)
   DEFINE_OPIVI(vsadd, VSADD_FUNCT6)
+  DEFINE_OPIVX(vsaddu, VSADD_FUNCT6)
+  DEFINE_OPIVV(vsaddu, VSADD_FUNCT6)
+  DEFINE_OPIVI(vsaddu, VSADD_FUNCT6)
   DEFINE_OPIVX(vssub, VSSUB_FUNCT6)
   DEFINE_OPIVV(vssub, VSSUB_FUNCT6)
   DEFINE_OPIVX(vssubu, VSSUBU_FUNCT6)

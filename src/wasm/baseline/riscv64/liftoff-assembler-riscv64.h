@@ -2224,7 +2224,7 @@ void LiftoffAssembler::emit_i32x4_add(LiftoffRegister dst, LiftoffRegister lhs,
 void LiftoffAssembler::emit_i32x4_sub(LiftoffRegister dst, LiftoffRegister lhs,
                                       LiftoffRegister rhs) {
     VU.set(kScratchReg, E32, m1);
-  vsub_vv(dst.fp().toV(), lhs.fp().toV(), rhs.fp().toV())32
+  vsub_vv(dst.fp().toV(), lhs.fp().toV(), rhs.fp().toV());
 }
 
 void LiftoffAssembler::emit_i32x4_mul(LiftoffRegister dst, LiftoffRegister lhs,
@@ -2644,7 +2644,7 @@ void LiftoffAssembler::emit_i32x4_extract_lane(LiftoffRegister dst,
                                                LiftoffRegister lhs,
                                                uint8_t imm_lane_idx) {
   VU.set(kScratchReg, E64, m1);
-  vslidedown_vi(v31, imm_lane_idx, lhs.fp().toV());
+  vslidedown_vi(v31, lhs.fp().toV(), imm_lane_idx);
   vmv_xs(dst.gp(), v31);
 }
 
