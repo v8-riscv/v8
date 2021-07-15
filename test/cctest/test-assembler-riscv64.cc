@@ -1597,6 +1597,140 @@ TEST(RVC_CB_BRANCH) {
   CHECK_EQ(1, t.result);
 }
 
+TEST(RVZce_ZM1) {
+  FLAG_riscv_c_extension = true;
+  FLAG_riscv_zce_extension = true;
+  // Test RV64Zce extension ZM type instructions.
+  CcTest::InitializeVM();
+
+  // Test c.neg
+  {
+    auto fn = [](MacroAssembler& assm) { __ c_neg(a0); };
+    auto res = GenAndRunTest<int64_t, int64_t>(MIN_VAL_IMM12, fn);
+    CHECK_EQ(-(MIN_VAL_IMM12), res);
+  }
+}
+
+TEST(RVZce_ZM2) {
+  FLAG_riscv_c_extension = true;
+  FLAG_riscv_zce_extension = true;
+  // Test RV64Zce extension ZM type instructions.
+  CcTest::InitializeVM();
+
+  // Test c.zext.b
+  {
+    //int64_t data = -3;
+    int64_t expected_res = 253;
+    auto fn = [](MacroAssembler& assm) {
+	 __ RV_li(a0, -3);
+	 __ c_zext_b(a0);
+    };
+    int64_t res = GenAndRunTest(fn);
+    //auto res = GenAndRunTest<int64_t, int64_t>(data, fn);
+    CHECK_EQ(expected_res, res);
+  }
+}
+
+TEST(RVZce_ZM3) {
+  FLAG_riscv_c_extension = true;
+  FLAG_riscv_zce_extension = true;
+  // Test RV64Zce extension ZM type instructions.
+  CcTest::InitializeVM();
+
+  // Test c.sext.b
+  {
+    int64_t data = -300;
+    int64_t expected_res = -44;
+    auto fn = [](MacroAssembler& assm) { __ c_sext_b(a0); };
+    auto res = GenAndRunTest<int64_t, int64_t>(data, fn);
+    CHECK_EQ(expected_res, res);
+  }
+}
+
+TEST(RVZce_ZM4) {
+  FLAG_riscv_c_extension = true;
+  FLAG_riscv_zce_extension = true;
+  // Test RV64Zce extension ZM type instructions.
+  CcTest::InitializeVM();
+
+  // Test c.zext.h
+  {
+    int64_t data = -3;
+    int64_t expected_res = 65533;
+    auto fn = [](MacroAssembler& assm) { __ c_zext_h(a0); };
+    auto res = GenAndRunTest<int64_t, int64_t>(data, fn);
+    CHECK_EQ(expected_res, res);
+  }
+}
+
+TEST(RVZce_ZM5) {
+  FLAG_riscv_c_extension = true;
+  FLAG_riscv_zce_extension = true;
+  // Test RV64Zce extension ZM type instructions.
+  CcTest::InitializeVM();
+
+
+  // Test c.sext.h
+  {
+    int64_t data = -40000;
+    int64_t expected_res = 25536;
+    auto fn = [](MacroAssembler& assm) { __ c_sext_h(a0); };
+    auto res = GenAndRunTest<int64_t, int64_t>(data, fn);
+    CHECK_EQ(expected_res, res);
+  }
+}
+
+TEST(RVZce_ZM6) {
+  FLAG_riscv_c_extension = true;
+  FLAG_riscv_zce_extension = true;
+  // Test RV64Zce extension ZM type instructions.
+  CcTest::InitializeVM();
+
+  // Test c.zext.w
+  {
+    int64_t data = -3;
+    int64_t expected_res = 4294967293;
+    auto fn = [](MacroAssembler& assm) { __ c_zext_w(a0); };
+    auto res = GenAndRunTest<int64_t, int64_t>(data, fn);
+    CHECK_EQ(expected_res, res);
+  }
+}
+
+TEST(RVZce_ZM7) {
+  FLAG_riscv_c_extension = true;
+  FLAG_riscv_zce_extension = true;
+  // Test RV64Zce extension ZM type instructions.
+  CcTest::InitializeVM();
+
+  // Test c.not
+  {
+    int64_t data = -3;
+    int64_t expected_res = 2;
+    auto fn = [](MacroAssembler& assm) { __ c_not(a0); };
+    auto res = GenAndRunTest<int64_t, int64_t>(data, fn);
+    CHECK_EQ(expected_res, res);
+  }
+}
+
+TEST(RVZce_ZD) {
+  FLAG_riscv_c_extension = true;
+  FLAG_riscv_zce_extension = true;
+  // Test RV64Zce extension ZD type instructions.
+  CcTest::InitializeVM();
+
+  // Test c.mul
+  {
+    int64_t data = -3;
+    int64_t expected_res = 6144;
+    auto fn = [](MacroAssembler& assm) {
+      __ RV_li(a1, MIN_VAL_IMM12);
+      __ c_mul(a0,a1);
+    };
+    auto res = GenAndRunTest<int64_t, int64_t>(data, fn);
+    CHECK_EQ(expected_res, res);
+  }
+}
+
 TEST(TARGET_ADDR) {
   CcTest::InitializeVM();
   Isolate* isolate = CcTest::i_isolate();

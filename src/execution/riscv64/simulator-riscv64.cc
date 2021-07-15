@@ -3360,13 +3360,13 @@ void Simulator::DecodeCJType() {
 void Simulator::DecodeCBType() {
   switch (instr_.RvcOpcode()) {
     case RO_C_BNEZ:
-      if (rvc_rs1() != 0) {
+      if (rvc_rs1s() != 0) {
         int64_t next_pc = get_pc() + rvc_imm8_b();
         set_pc(next_pc);
       }
       break;
     case RO_C_BEQZ:
-      if (rvc_rs1() == 0) {
+      if (rvc_rs1s() == 0) {
         int64_t next_pc = get_pc() + rvc_imm8_b();
         set_pc(next_pc);
       }
@@ -3383,6 +3383,58 @@ void Simulator::DecodeCBType() {
         UNSUPPORTED();
       }
       break;
+    default:
+      UNSUPPORTED();
+  }
+}
+
+void Simulator::DecodeZMType() {
+  int64_t mask_z = 0;
+  int64_t res = 0;
+  int64_t au = (1LL << 32);
+  switch (instr_.InstructionBits() & kZMTypeMask) {
+    case RO_C_NEG:
+          set_rvzce_rd(sext_xlen( - rvzce_rd()));
+          break;
+    case RO_C_ZEXT_B:
+          mask_z = (1 << 8) -1;
+          res = rvzce_rd() & mask_z;
+          set_rvzce_rd(zext_xlen(res));
+          break;
+    case RO_C_SEXT_B:
+          mask_z = (1 << 8) -1;
+          res = rvzce_rd() & mask_z;
+          set_rvzce_rd(sext_xlen((res<<56)>>56));
+          break;
+    case RO_C_ZEXT_H:
+          mask_z = (1 << 16) -1;
+          res = rvzce_rd() & mask_z;
+          set_rvzce_rd(zext_xlen(res));
+          break;
+    case RO_C_SEXT_H:
+          mask_z = (1 << 16) -1;
+          res = rvzce_rd() & mask_z;
+          set_rvzce_rd(sext_xlen((res<<48)>>48));
+          break;
+    case RO_C_ZEXT_W:
+          mask_z = au -1;
+          res = rvzce_rd() & mask_z;
+          set_rvzce_rd(zext_xlen(res));
+          break;
+    case RO_C_NOT:
+          set_rvzce_rd(sext_xlen( ~ rvzce_rd()));
+          break;
+    default:
+      UNSUPPORTED();
+  }
+}
+
+void Simulator::DecodeZDType() {
+  switch (instr_.InstructionBits() & kZDTypeMask) {
+    case RO_C_MUL: {
+      set_rvzce_rd(sext_xlen(rvzce_rd() * rvzce_rs2()));
+      break;
+    }
     default:
       UNSUPPORTED();
   }
@@ -3457,6 +3509,12 @@ void Simulator::InstructionDecode(Instruction* instr) {
       break;
     case Instruction::kCSType:
       DecodeCSType();
+      break;
+    case Instruction::kZMType:
+      DecodeZMType();
+      break;
+    case Instruction::kZDType:
+      DecodeZDType();
       break;
     default:
       if (1) {

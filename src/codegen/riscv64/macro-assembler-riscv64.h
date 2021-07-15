@@ -541,19 +541,37 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void LoadZeroIfConditionZero(Register dest, Register condition);
 
   void SignExtendByte(Register rd, Register rs) {
-    slli(rd, rs, 64 - 8);
-    srai(rd, rd, 64 - 8);
+    if(FLAG_riscv_c_extension && FLAG_riscv_zce_extension && 
+       rd.code() == rs.code() && (rd.code() & 0b11000) == 0b01000){
+      c_sext_b(rd);
+    }
+    else{
+      slli(rd, rs, 64 - 8);
+      srai(rd, rd, 64 - 8);
+    }
   }
 
   void SignExtendShort(Register rd, Register rs) {
-    slli(rd, rs, 64 - 16);
-    srai(rd, rd, 64 - 16);
+    if(FLAG_riscv_c_extension && FLAG_riscv_zce_extension && 
+       rd.code() == rs.code() && (rd.code() & 0b11000) == 0b01000){
+      c_sext_h(rd);
+    }
+    else{
+      slli(rd, rs, 64 - 16);
+      srai(rd, rd, 64 - 16);
+    }
   }
 
   void SignExtendWord(Register rd, Register rs) { sext_w(rd, rs); }
   void ZeroExtendWord(Register rd, Register rs) {
-    slli(rd, rs, 32);
-    srli(rd, rd, 32);
+    if(FLAG_riscv_c_extension && FLAG_riscv_zce_extension && 
+       rd.code() == rs.code() && (rd.code() & 0b11000) == 0b01000){
+      c_zext_w(rd);
+    }
+    else{
+      slli(rd, rs, 32);
+      srli(rd, rd, 32);
+    }
   }
 
   void Clz32(Register rd, Register rs);

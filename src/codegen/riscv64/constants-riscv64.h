@@ -214,6 +214,11 @@ const int kRvcFunct2BShift = 10;
 const int kRvcFunct2Bits = 2;
 const int kRvcFunct6Shift = 10;
 const int kRvcFunct6Bits = 6;
+// for Zce extension
+const int kRvzceRdBits = 3;
+const int kRvzceRs2Bits = 3;
+const int kRvzceRdShift = 7;
+const int kRvzceRs2Shift = 2;
 
 // RISCV Instruction bit masks
 const uint32_t kBaseOpcodeMask = ((1 << kBaseOpcodeBits) - 1)
@@ -257,6 +262,10 @@ const uint32_t kCRTypeMask = kRvcOpcodeMask | kRvcFunct4Mask;
 const uint32_t kCSTypeMask = kRvcOpcodeMask | kRvcFunct6Mask;
 const uint32_t kCATypeMask = kRvcOpcodeMask | kRvcFunct6Mask | kRvcFunct2Mask;
 const uint32_t kRvcBImm8Mask = (((1 << 5) - 1) << 2) | (((1 << 3) - 1) << 10);
+
+
+const int kZMTypeMask = kRvcFunct6Mask | kRvcFunct2Mask | ((1 << 5) - 1);
+const int kZDTypeMask = kRvcFunct6Mask | kRvcFunct2Mask | 0b11;
 
 // RISCV CSR related bit mask and shift
 const int kFcsrFlagsBits = 5;
@@ -535,6 +544,16 @@ enum Opcode : uint32_t {
   RO_C_FSDSP = C2 | (0b101 << kRvcFunct3Shift),
   RO_C_SWSP = C2 | (0b110 << kRvcFunct3Shift),
   RO_C_SDSP = C2 | (0b111 << kRvcFunct3Shift),
+
+  // RV64Zce Standard Extension
+  RO_C_NEG = C0 | (0b100000 << kRvcFunct6Shift) | (0b00110 << kRvcRs2Shift),
+  RO_C_ZEXT_B = C0 | (0b100000 << kRvcFunct6Shift) | (0b00000 << kRvcRs2Shift),
+  RO_C_SEXT_B = C0 | (0b100000 << kRvcFunct6Shift) | (0b00001 << kRvcRs2Shift),
+  RO_C_ZEXT_H = C0 | (0b100000 << kRvcFunct6Shift) | (0b00010 << kRvcRs2Shift),
+  RO_C_SEXT_H = C0 | (0b100000 << kRvcFunct6Shift) | (0b00011 << kRvcRs2Shift),
+  RO_C_ZEXT_W = C0 | (0b100000 << kRvcFunct6Shift) | (0b00100 << kRvcRs2Shift),
+  RO_C_NOT = C0 | (0b100000 << kRvcFunct6Shift) | (0b00111 << kRvcRs2Shift),
+  RO_C_MUL = C1 | (0b100111 << kRvcFunct6Shift) | (0b10 << kRvcFunct2Shift),
 };
 
 // ----- Emulated conditions.
@@ -734,6 +753,9 @@ class InstructionBase {
     kCAType,
     kCBType,
     kCJType,
+    // Zce extension
+    kZMType,
+    kZDType,
     kUnsupported = -1
   };
 
@@ -886,6 +908,16 @@ class InstructionGetters : public T {
   inline int RvcRs2sValue() const {
     DCHECK(this->IsShortInstruction());
     return 0b1000 + this->Bits(kRvcRs2sShift + kRvcRs2sBits - 1, kRvcRs2sShift);
+  }
+
+  inline int RvzceRdValue() const {
+    DCHECK(this->IsShortInstruction());
+    return 0b1000 + this->Bits(kRvzceRdShift + kRvzceRdBits - 1, kRvzceRdShift);
+  }
+
+  inline int RvzceRs2Value() const {
+    DCHECK(this->IsShortInstruction());
+    return 0b1000 + this->Bits(kRvzceRs2Shift + kRvzceRs2Bits - 1, kRvzceRs2Shift);
   }
 
   inline int Funct7Value() const {

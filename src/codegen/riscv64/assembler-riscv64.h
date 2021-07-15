@@ -618,7 +618,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_addi(Register rd, int8_t imm6);
   void c_addiw(Register rd, int8_t imm6);
   void c_addi16sp(int16_t imm10);
-  void c_addi4spn(Register rd, int16_t uimm10);
+  void c_addi4spn(Register rd, uint16_t uimm10);
   void c_li(Register rd, int8_t imm6);
   void c_lui(Register rd, int8_t imm6);
   void c_slli(Register rd, uint8_t uimm6);
@@ -655,6 +655,16 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void c_srai(Register rs1, uint8_t uimm6);
   void c_andi(Register rs1, uint8_t uimm6);
 
+  // RV64Zce Standard Extension
+  void c_neg(Register rd);
+  void c_sext_b(Register rd);
+  void c_zext_b(Register rd);
+  void c_sext_h(Register rd);
+  void c_zext_h(Register rd);
+  void c_zext_w(Register rd);
+  void c_not(Register rd);
+  void c_mul(Register rd, Register rs2);
+
   // Privileged
   void uret();
   void sret();
@@ -673,8 +683,24 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void li_ptr(Register rd, int64_t imm);
 
   void mv(Register rd, Register rs) { addi(rd, rs, 0); }
-  void not_(Register rd, Register rs) { xori(rd, rs, -1); }
-  void neg(Register rd, Register rs) { sub(rd, zero_reg, rs); }
+  void not_(Register rd, Register rs) {
+    if(FLAG_riscv_c_extension && FLAG_riscv_zce_extension && 
+       rd.code() == rs.code() && (rd.code() & 0b11000) == 0b01000){
+       c_not(rd);
+    }
+    else{
+      xori(rd, rs, -1);
+    }
+  }
+  void neg(Register rd, Register rs) {
+    if(FLAG_riscv_c_extension && FLAG_riscv_zce_extension && 
+       rd.code() == rs.code() && (rd.code() & 0b11000) == 0b01000){
+       c_neg(rd);
+    }
+    else{
+      sub(rd, zero_reg, rs); 
+    }
+  }
   void negw(Register rd, Register rs) { subw(rd, zero_reg, rs); }
   void sext_w(Register rd, Register rs) { addiw(rd, rs, 0); }
   void seqz(Register rd, Register rs) { sltiu(rd, rs, 1); }
@@ -1136,6 +1162,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   void GenInstrCB(uint8_t funct3, Opcode opcode, Register rs1, uint8_t uimm8);
   void GenInstrCBA(uint8_t funct3, uint8_t funct2, Opcode opcode, Register rs1,
                    uint8_t uimm6);
+  void GenInstrZM(uint8_t funct6, Opcode opcode, Register rd, uint8_t funct5);
+  void GenInstrZD(uint8_t funct6, Opcode opcode, Register rd, uint8_t funct2, Register rs2);
 
   // ----- Instruction class templates match those in LLVM's RISCVInstrInfo.td
   void GenInstrBranchCC_rri(uint8_t funct3, Register rs1, Register rs2,
