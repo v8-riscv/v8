@@ -1360,7 +1360,15 @@ void Assembler::label_at_put(Label* L, int at_offset) {
 // Instructions
 //===----------------------------------------------------------------------===//
 
-void Assembler::lui(Register rd, int32_t imm20) { GenInstrU(LUI, rd, imm20); }
+void Assembler::lui(Register rd, int32_t imm20) {
+  if(FLAG_riscv_c_extension && rd.code()!=0b010 && is_int6(imm20) && imm20!=0){
+    int8_t imm6=imm20;
+    c_lui(rd, imm6);
+  }
+  else {
+    GenInstrU(LUI, rd, imm20);
+  }
+}
 
 void Assembler::auipc(Register rd, int32_t imm20) {
   GenInstrU(AUIPC, rd, imm20);
@@ -1369,23 +1377,51 @@ void Assembler::auipc(Register rd, int32_t imm20) {
 // Jumps
 
 void Assembler::jal(Register rd, int32_t imm21) {
-  GenInstrJ(JAL, rd, imm21);
-  BlockTrampolinePoolFor(1);
+  if(FLAG_riscv_c_extension && rd==zero_reg && is_int12(imm21)) {
+    int16_t imm12=imm21;
+    c_j(imm12);
+  }
+  else {
+    GenInstrJ(JAL, rd, imm21);
+    BlockTrampolinePoolFor(1);
+  }
 }
 
 void Assembler::jalr(Register rd, Register rs1, int16_t imm12) {
-  GenInstrI(0b000, JALR, rd, rs1, imm12);
-  BlockTrampolinePoolFor(1);
+  if(FLAG_riscv_c_extension && rd==zero_reg && rs1!=zero_reg && imm12==0) {
+    c_jr(rs1);
+  }
+  else if(FLAG_riscv_c_extension && rd.code()==0b01 && rs1!=zero_reg && imm12==0) {
+    c_jalr(rs1);
+  }
+  else {
+    GenInstrI(0b000, JALR, rd, rs1, imm12);
+    BlockTrampolinePoolFor(1);
+  }
 }
 
 // Branches
 
 void Assembler::beq(Register rs1, Register rs2, int16_t imm13) {
-  GenInstrBranchCC_rri(0b000, rs1, rs2, imm13);
+  if(FLAG_riscv_c_extension && rs2==zero_reg && is_int9(imm13) &&
+     (rs1.code() & 0b11000) == 0b01000) {
+    int16_t imm9=imm13;
+    c_beqz(rs1, imm9);
+  }
+  else {
+    GenInstrBranchCC_rri(0b000, rs1, rs2, imm13);
+  }
 }
 
 void Assembler::bne(Register rs1, Register rs2, int16_t imm13) {
-  GenInstrBranchCC_rri(0b001, rs1, rs2, imm13);
+  if(FLAG_riscv_c_extension && rs2==zero_reg && is_int9(imm13) &&
+     (rs1.code() & 0b11000) == 0b01000) {
+    int16_t imm9=imm13;
+    c_bnez(rs1, imm9);
+  }
+  else {
+    GenInstrBranchCC_rri(0b001, rs1, rs2, imm13);
+  }
 }
 
 void Assembler::blt(Register rs1, Register rs2, int16_t imm13) {
@@ -1415,7 +1451,18 @@ void Assembler::lh(Register rd, Register rs1, int16_t imm12) {
 }
 
 void Assembler::lw(Register rd, Register rs1, int16_t imm12) {
-  GenInstrLoad_ri(0b010, rd, rs1, imm12);
+  if(FLAG_riscv_c_extension && rs1.code()==0b010 && rd!=zero_reg && is_uint8(imm12)) {
+    uint16_t uimm8=imm12;
+    c_lwsp(rd, uimm8);
+  }
+  else if(FLAG_riscv_c_extension && is_uint7(imm12) && (rd.code() & 0b11000) == 0b01000 &&
+     (rs1.code() & 0b11000) == 0b01000) {
+    uint16_t uimm7=imm12;
+    c_lw(rd, rs1, uimm7);
+  }
+  else {
+    GenInstrLoad_ri(0b010, rd, rs1, imm12);
+  }
 }
 
 void Assembler::lbu(Register rd, Register rs1, int16_t imm12) {
@@ -1437,13 +1484,44 @@ void Assembler::sh(Register source, Register base, int16_t imm12) {
 }
 
 void Assembler::sw(Register source, Register base, int16_t imm12) {
-  GenInstrStore_rri(0b010, base, source, imm12);
+  if(FLAG_riscv_c_extension && base.code()==0b010 && is_uint8(imm12)) {
+    uint16_t uimm8=imm12;
+    c_swsp(source, uimm8);
+  }
+  else if(FLAG_riscv_c_extension && is_uint7(imm12) && (source.code() & 0b11000) == 0b01000 &&
+     (base.code() & 0b11000) == 0b01000) {
+    uint16_t uimm7=imm12;
+    c_sw(source, base, uimm7);
+  }
+  else {
+    GenInstrStore_rri(0b010, base, source, imm12);
+  }
 }
 
 // Arithmetic with immediate
 
 void Assembler::addi(Register rd, Register rs1, int16_t imm12) {
-  GenInstrALU_ri(0b000, rd, rs1, imm12);
+  if(FLAG_riscv_c_extension && rs1.code()==0b010 && is_uint10(imm12) && 
+     imm12!=0 && (rd.code() & 0b11000) == 0b01000) {
+    uint16_t uimm10=imm12;
+    c_addi4spn(rd,uimm10);
+  }
+  else if(FLAG_riscv_c_extension && rs1==zero_reg && is_int6(imm12)) {
+    int8_t imm6=imm12;
+    c_li(rd,imm6);
+  }
+  else if(FLAG_riscv_c_extension && rd.code()==rs1.code() && 
+          rd.code()==0b010 && is_int10(imm12) && imm12!=0) {
+    int16_t imm10=imm12;
+    c_addi16sp(imm10);
+  }
+  else if(FLAG_riscv_c_extension && rd.code()==rs1.code() && is_int6(imm12)) {
+    int8_t imm6=imm12;
+    c_addi(rd, imm6);
+  }
+  else {
+    GenInstrALU_ri(0b000, rd, rs1, imm12);
+  }
 }
 
 void Assembler::slti(Register rd, Register rs1, int16_t imm12) {
@@ -1463,29 +1541,69 @@ void Assembler::ori(Register rd, Register rs1, int16_t imm12) {
 }
 
 void Assembler::andi(Register rd, Register rs1, int16_t imm12) {
-  GenInstrALU_ri(0b111, rd, rs1, imm12);
+  if(FLAG_riscv_c_extension && rd.code()==rs1.code() && is_uint6(imm12)) {
+    uint8_t uimm6=imm12;
+    c_andi(rd,uimm6);
+  }
+  else {
+    GenInstrALU_ri(0b111, rd, rs1, imm12);
+  }
 }
 
 void Assembler::slli(Register rd, Register rs1, uint8_t shamt) {
-  GenInstrShift_ri(0, 0b001, rd, rs1, shamt & 0x3f);
+  if(FLAG_riscv_c_extension && rd.code()==rs1.code() && is_uint6(shamt)) {
+    uint8_t uimm6=shamt;
+    c_slli(rd,uimm6);
+  }
+  else {
+    GenInstrShift_ri(0, 0b001, rd, rs1, shamt & 0x3f);
+  }
 }
 
 void Assembler::srli(Register rd, Register rs1, uint8_t shamt) {
-  GenInstrShift_ri(0, 0b101, rd, rs1, shamt & 0x3f);
+  if(FLAG_riscv_c_extension && rd.code()==rs1.code() && is_uint6(shamt) &&
+     (rd.code() & 0b11000) == 0b01000) {
+    uint8_t uimm6=shamt;
+    c_srli(rs1, uimm6);
+  }
+  else {
+    GenInstrShift_ri(0, 0b101, rd, rs1, shamt & 0x3f);
+  }
 }
 
 void Assembler::srai(Register rd, Register rs1, uint8_t shamt) {
-  GenInstrShift_ri(1, 0b101, rd, rs1, shamt & 0x3f);
+  if(FLAG_riscv_c_extension && rd.code()==rs1.code() && is_uint6(shamt) &&
+     (rd.code() & 0b11000) == 0b01000) {
+    uint8_t uimm6=shamt;
+    c_srai(rs1, uimm6);
+  }
+  else {
+    GenInstrShift_ri(1, 0b101, rd, rs1, shamt & 0x3f);
+  }
 }
 
 // Arithmetic
 
 void Assembler::add(Register rd, Register rs1, Register rs2) {
-  GenInstrALU_rr(0b0000000, 0b000, rd, rs1, rs2);
+  if(FLAG_riscv_c_extension && rs1==zero_reg && rs2!=zero_reg) {
+    c_mv(rd, rs2);
+  }
+  else if(FLAG_riscv_c_extension && rd.code()==rs1.code() && rd!=zero_reg && rs2!=zero_reg) {
+    c_add(rd, rs2);
+  }
+  else {
+    GenInstrALU_rr(0b0000000, 0b000, rd, rs1, rs2);
+  }
 }
 
 void Assembler::sub(Register rd, Register rs1, Register rs2) {
-  GenInstrALU_rr(0b0100000, 0b000, rd, rs1, rs2);
+  if(FLAG_riscv_c_extension && rd.code()==rs1.code() && (rd.code() & 0b11000) == 0b01000 &&
+     (rs2.code() & 0b11000) == 0b01000) {
+    c_sub(rd, rs2);
+  }
+  else {
+    GenInstrALU_rr(0b0100000, 0b000, rd, rs1, rs2);
+  }
 }
 
 void Assembler::sll(Register rd, Register rs1, Register rs2) {
@@ -1501,7 +1619,13 @@ void Assembler::sltu(Register rd, Register rs1, Register rs2) {
 }
 
 void Assembler::xor_(Register rd, Register rs1, Register rs2) {
-  GenInstrALU_rr(0b0000000, 0b100, rd, rs1, rs2);
+  if(FLAG_riscv_c_extension && rd.code()==rs1.code() && (rd.code() & 0b11000) == 0b01000 &&
+     (rs2.code() & 0b11000) == 0b01000) {
+    c_xor(rd, rs2);
+  }
+  else {
+    GenInstrALU_rr(0b0000000, 0b100, rd, rs1, rs2);
+  }
 }
 
 void Assembler::srl(Register rd, Register rs1, Register rs2) {
@@ -1513,11 +1637,23 @@ void Assembler::sra(Register rd, Register rs1, Register rs2) {
 }
 
 void Assembler::or_(Register rd, Register rs1, Register rs2) {
-  GenInstrALU_rr(0b0000000, 0b110, rd, rs1, rs2);
+  if(FLAG_riscv_c_extension && rd.code()==rs1.code() && (rd.code() & 0b11000) == 0b01000 &&
+     (rs2.code() & 0b11000) == 0b01000) {
+    c_or(rd, rs2);
+  }
+  else {
+    GenInstrALU_rr(0b0000000, 0b110, rd, rs1, rs2);
+  }
 }
 
 void Assembler::and_(Register rd, Register rs1, Register rs2) {
-  GenInstrALU_rr(0b0000000, 0b111, rd, rs1, rs2);
+  if(FLAG_riscv_c_extension && rd.code()==rs1.code() && (rd.code() & 0b11000) == 0b01000 &&
+     (rs2.code() & 0b11000) == 0b01000) {
+    c_and(rd, rs2);
+  }
+  else {
+    GenInstrALU_rr(0b0000000, 0b111, rd, rs1, rs2);
+  }
 }
 
 // Memory fences
@@ -1540,7 +1676,12 @@ void Assembler::ecall() {
 }
 
 void Assembler::ebreak() {
-  GenInstrI(0b000, SYSTEM, ToRegister(0), ToRegister(0), 1);
+  if(FLAG_riscv_c_extension) {
+    c_ebreak();
+  }
+  else {
+    GenInstrI(0b000, SYSTEM, ToRegister(0), ToRegister(0), 1);
+  }
 }
 
 // This is a de facto standard (as set by GNU binutils) 32-bit unimplemented
@@ -1583,15 +1724,43 @@ void Assembler::lwu(Register rd, Register rs1, int16_t imm12) {
 }
 
 void Assembler::ld(Register rd, Register rs1, int16_t imm12) {
-  GenInstrLoad_ri(0b011, rd, rs1, imm12);
+  if(FLAG_riscv_c_extension && rs1.code()==0b010 && rd!=zero_reg && is_uint9(imm12)) {
+    uint16_t uimm9=imm12;
+    c_ldsp(rd, uimm9);
+  }
+  else if(FLAG_riscv_c_extension && is_uint8(imm12) && (rd.code() & 0b11000) == 0b01000 &&
+     (rs1.code() & 0b11000) == 0b01000) {
+    uint16_t uimm8=imm12;
+    c_ld(rd, rs1, uimm8);
+  }
+  else {
+    GenInstrLoad_ri(0b011, rd, rs1, imm12);
+  }
 }
 
 void Assembler::sd(Register source, Register base, int16_t imm12) {
-  GenInstrStore_rri(0b011, base, source, imm12);
+  if(FLAG_riscv_c_extension && base.code()==0b010 && is_uint9(imm12)) {
+    uint16_t uimm9=imm12;
+    c_sdsp(source, uimm9);
+  }
+  else if(FLAG_riscv_c_extension && is_uint8(imm12) && (source.code() & 0b11000) == 0b01000 &&
+     (base.code() & 0b11000) == 0b01000) {
+    uint16_t uimm8=imm12;
+    c_sd(source, base, uimm8);
+  }
+  else {
+    GenInstrStore_rri(0b011, base, source, imm12);
+  }
 }
 
 void Assembler::addiw(Register rd, Register rs1, int16_t imm12) {
-  GenInstrI(0b000, OP_IMM_32, rd, rs1, imm12);
+  if(FLAG_riscv_c_extension && rd.code()==rs1.code() && rd!=zero_reg && is_int6(imm12)) {
+    int8_t imm6=imm12;
+    c_addiw(rd, imm6);
+  }
+  else {
+    GenInstrI(0b000, OP_IMM_32, rd, rs1, imm12);
+  }
 }
 
 void Assembler::slliw(Register rd, Register rs1, uint8_t shamt) {
@@ -1607,11 +1776,23 @@ void Assembler::sraiw(Register rd, Register rs1, uint8_t shamt) {
 }
 
 void Assembler::addw(Register rd, Register rs1, Register rs2) {
-  GenInstrALUW_rr(0b0000000, 0b000, rd, rs1, rs2);
+  if(FLAG_riscv_c_extension && rd.code()==rs1.code() && (rd.code() & 0b11000) == 0b01000 &&
+     (rs2.code() & 0b11000) == 0b01000) {
+    c_addw(rd, rs2);
+  }
+  else {
+    GenInstrALUW_rr(0b0000000, 0b000, rd, rs1, rs2);
+  }
 }
 
 void Assembler::subw(Register rd, Register rs1, Register rs2) {
-  GenInstrALUW_rr(0b0100000, 0b000, rd, rs1, rs2);
+  if(FLAG_riscv_c_extension && rd.code()==rs1.code() && (rd.code() & 0b11000) == 0b01000 &&
+     (rs2.code() & 0b11000) == 0b01000) {
+    c_subw(rd, rs2);
+  }
+  else {
+    GenInstrALUW_rr(0b0100000, 0b000, rd, rs1, rs2);
+  }
 }
 
 void Assembler::sllw(Register rd, Register rs1, Register rs2) {
@@ -1929,11 +2110,33 @@ void Assembler::fcvt_s_lu(FPURegister rd, Register rs1, RoundingMode frm) {
 // RV32D Standard Extension
 
 void Assembler::fld(FPURegister rd, Register rs1, int16_t imm12) {
-  GenInstrLoadFP_ri(0b011, rd, rs1, imm12);
+  if(FLAG_riscv_c_extension && is_uint9(imm12) && rs1.code()==0b010) {
+    uint16_t uimm9=imm12;
+    c_fldsp(rd,uimm9);
+  }
+  else if(FLAG_riscv_c_extension && is_uint8(imm12) && 
+    (rd.code() & 0b11000) == 0b01000 && (rs1.code() & 0b11000) == 0b01000) {
+    uint16_t uimm8=imm12;
+    c_fld(rd, rs1, uimm8);
+  }
+  else {
+    GenInstrLoadFP_ri(0b011, rd, rs1, imm12);
+  }
 }
 
 void Assembler::fsd(FPURegister source, Register base, int16_t imm12) {
-  GenInstrStoreFP_rri(0b011, base, source, imm12);
+  if(FLAG_riscv_c_extension && base.code()==0b010 && is_uint9(imm12)) {
+    uint16_t uimm9=imm12;
+    c_fsdsp(source, uimm9);
+  }
+  else if(FLAG_riscv_c_extension && is_uint8(imm12) && 
+    (source.code() & 0b11000) == 0b01000 && (base.code() & 0b11000) == 0b01000) {
+    uint16_t uimm8=imm12;
+    c_fsd(source, base, uimm8);
+  }
+  else {
+    GenInstrStoreFP_rri(0b011, base, source, imm12);
+  }
 }
 
 void Assembler::fmadd_d(FPURegister rd, FPURegister rs1, FPURegister rs2,
@@ -2087,7 +2290,7 @@ void Assembler::c_addi16sp(int16_t imm10) {
   GenInstrCIU(0b011, C1, sp, uimm6);
 }
 
-void Assembler::c_addi4spn(Register rd, int16_t uimm10) {
+void Assembler::c_addi4spn(Register rd, uint16_t uimm10) {
   DCHECK(is_uint10(uimm10) && (uimm10 != 0));
   uint8_t uimm8 = ((uimm10 & 0x4) >> 1) | ((uimm10 & 0x8) >> 3) |
                   ((uimm10 & 0x30) << 2) | ((uimm10 & 0x3c0) >> 4);
@@ -2321,7 +2524,14 @@ void Assembler::sfence_vma(Register rs1, Register rs2) {
 
 // Assembler Pseudo Instructions (Tables 25.2 and 25.3, RISC-V Unprivileged ISA)
 
-void Assembler::nop() { addi(ToRegister(0), ToRegister(0), 0); }
+void Assembler::nop() { 
+  if (FLAG_riscv_c_extension) {
+    c_nop();
+  }
+  else {
+    addi(ToRegister(0), ToRegister(0), 0);
+  }
+}
 
 void Assembler::RV_li(Register rd, int64_t imm) {
   // 64-bit imm is put in the register rd.
